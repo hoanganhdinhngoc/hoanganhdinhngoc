@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Today Gift - Crafted Gifts for Meaningful Connections</title>
+    <link rel="icon" href="images/gift-icon.png">
+
+    <style>
+        :root {
+            --primary-blue: #0055ff;
+            --light-bg: #fdfdfd;
+            --dark-text: #1a1a1a;
+            --white: #ffffff;
+            --gray: #f4f4f4;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: var(--dark-text);
+            background-color: var(--white);
+            scroll-behavior: smooth;
+        }
+
+        /* Navigation */
+        nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 8%;
+            background: rgba(255, 255, 255, 0.95);
+            position: fixed;
+            width: 100%;
+            top: 0;
+            z-index: 1000;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--primary-blue);
+            text-transform: lowercase;
+        }
+
+        nav ul {
+            display: flex;
+            list-style: none;
+        }
+
+        nav ul li {
+            margin-left: 30px;
+        }
+
+        nav ul li a {
+            text-decoration: none;
+            color: var(--dark-text);
+            font-weight: 500;
+            transition: color 0.3s;
+        }
+
+        nav ul li a:hover {
+            color: var(--primary-blue);
+        }
+
+        /* Hero Section with Video Background */
+        header {
+            height: 100vh;
+            position: relative;
+            color: var(--white);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 0 20px;
+            overflow: hidden;
+        }
+
+        #video-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: -2;
+        }
+
+        .video-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6); /* Lớp phủ đen mờ */
+            z-index: -1;
+        }
+
+        .hero-content {
+            z-index: 1;
+            max-width: 900px;
+        }
+
+        header h1 {
+            font-size: 3.5rem;
+            margin-bottom: 20px;
+        }
+
+        header p {
+            font-size: 1.2rem;
+            margin-bottom: 30px;
+            opacity: 0.9;
+        }
+
+        /* Buttons */
+        .btn {
+            display: inline-block;
+            padding: 15px 35px;
+            background: var(--white);
+            color: var(--primary-blue);
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: bold;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        /* Sections General */
+        section {
+            padding: 80px 10%;
+        }
+
+        h2 {
+            font-size: 2.5rem;
+            color: var(--primary-blue);
+            margin-bottom: 40px;
+            text-align: center;
+        }
+
+        /* About Section */
+        .about-content {
+            max-width: 900px;
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        .core-values {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 30px;
+            margin-top: 50px;
+        }
+
+        .value-card {
+            padding: 30px;
+            background: var(--gray);
+            border-radius: 10px;
+        }
+
+        /* Services */
+        .services-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .service-item {
+            border: 1px solid #eee;
+            padding: 40px;
+            border-radius: 10px;
+            transition: all 0.3s;
+        }
+
+        .service-item:hover {
+            background: var(--primary-blue);
+            color: var(--white);
+        }
+
+        /* Process Section */
+        .process-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 20px;
+            text-align: center;
+        }
+
+        .process-step {
+            padding: 20px;
+        }
+
+        .step-num {
+            font-size: 2rem;
+            font-weight: bold;
+            color: rgba(0, 85, 255, 0.2);
+            margin-bottom: 10px;
+        }
+
+        /* Profile Section */
+        #profile {
+            background: var(--gray);
+        }
+
+        .pdf-wrapper {
+            background: #fff;
+            padding: 10px;
+            border-radius: 8px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        /* Contact Section (Split layout) */
+        #contact {
+            background: #111;
+            color: #fff;
+            padding: 100px 10%; /* Tăng padding để tạo không gian thở */
+        }
+
+        .contact-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 60px;
+            align-items: flex-start; /* Để thông tin bên trái không bị nhảy xuống giữa khi form cao */
+            text-align: left;
+        }
+
+        .contact-left {
+            flex: 1;
+            min-width: 300px;
+        }
+
+        .contact-right {
+            flex: 1.2; /* Cho form rộng hơn một chút để đẹp hơn */
+            min-width: 350px;
+            height: 560px; /* Khóa chiều cao cố định để bao trọn form */
+            overflow: hidden; /* Ngăn scroll bar hiện ra ở container */
+        }
+
+        .contact-info-list p {
+            margin: 20px 0;
+            font-size: 1.1rem;
+            border-bottom: 1px solid #222; /* Thêm đường kẻ nhẹ cho sang trọng */
+            padding-bottom: 10px;
+        }
+
+        .contact-info-list strong {
+            color: var(--primary-blue);
+            display: block; /* Xuống dòng cho tiêu đề nhỏ */
+            margin-bottom: 5px;
+        }
+
+        /* Responsive cho Mobile */
+        @media (max-width: 768px) {
+            .contact-container { 
+                flex-direction: column; 
+                gap: 40px;
+            }
+            .contact-left, .contact-right { 
+                width: 100%; 
+                min-width: 100%;
+            }
+            .contact-right {
+                height: 600px; /* Trên mobile form thường dài hơn một chút do bóp chiều ngang */
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <nav>
+        <div class="logo">today.gift</div>
+        <ul>
+            <li><a href="#about">Về chúng tôi</a></li>
+            <li><a href="#services">Dịch vụ</a></li>
+            <li><a href="#process">Quy trình</a></li>
+            <li><a href="#profile">Hồ sơ năng lực</a></li>
+            <li><a href="#contact">Liên hệ</a></li>
+        </ul>
+    </nav>
+
+    <header id="home">
+        <video id="video-bg" autoplay muted loop playsinline>
+            <source src="../../images/bds-background.mp4" type="video/mp4">
+        </video>
+        <div class="video-overlay"></div>
+        
+        <div class="hero-content">
+            <h1>Crafted Gifts for Meaningful Connections</h1>
+            <p>Giúp doanh nghiệp trao điều đúng — theo cách đẹp và tinh tế.</p>
+            <a href="#profile" class="btn">Khám phá Hồ sơ năng lực</a>
+        </div>
+    </header>
+
+    <section id="about">
+        <div class="about-content">
+            <h2>Câu chuyện thương hiệu</h2>
+            <p>Trong môi trường doanh nghiệp, quà tặng không chỉ là vật phẩm — đó là ngôn ngữ của sự quan tâm, là điểm chạm nuôi dưỡng quan hệ. Today Gift thiết kế những hộp quà chỉn chu, giàu mỹ cảm để mỗi món quà trở thành một lời chúc đáng nhớ.</p>
+            
+            <div class="core-values">
+                <div class="value-card">
+                    <h3>Curated with Care</h3>
+                    <p>Tuyển chọn kỹ lưỡng dựa trên chất lượng và thẩm mỹ.</p>
+                </div>
+                <div class="value-card">
+                    <h3>Thoughtful Detail</h3>
+                    <p>Chỉn chu trong từng chi tiết đóng gói và trải nghiệm mở hộp.</p>
+                </div>
+                <div class="value-card">
+                    <h3>Branding-First</h3>
+                    <p>Cá nhân hóa theo bản sắc thương hiệu của doanh nghiệp.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="services">
+        <h2>Giải pháp quà tặng toàn diện</h2>
+        <div class="services-grid">
+            <div class="service-item">
+                <h3>Corporate Gifting</h3>
+                <p>Quà tặng tri ân khách hàng, quà nội bộ và quà sự kiện chuyên nghiệp.</p>
+            </div>
+            <div class="service-item">
+                <h3>Seasonal Collections</h3>
+                <p>Bộ sưu tập quà tặng theo mùa: Trung Thu, Giáng Sinh, Tết.</p>
+            </div>
+            <div class="service-item">
+                <h3>Flowers for Business</h3>
+                <p>Hoa định kỳ văn phòng và hoa sự kiện phối tone màu thương hiệu.</p>
+            </div>
+        </div>
+    </section>
+
+    <section id="process">
+        <h2>Quy trình làm việc</h2>
+        <div class="process-list">
+            <div class="process-step">
+                <div class="step-num">01</div>
+                <h4>Lắng nghe</h4>
+                <p>Hiểu mục tiêu và ngân sách.</p>
+            </div>
+            <div class="process-step">
+                <div class="step-num">02</div>
+                <h4>Đề xuất</h4>
+                <p>Concept & Moodboard sản phẩm.</p>
+            </div>
+            <div class="process-step">
+                <div class="step-num">03</div>
+                <h4>Thiết kế</h4>
+                <p>Cá nhân hóa Branding.</p>
+            </div>
+            <div class="process-step">
+                <div class="step-num">04</div>
+                <h4>Sản xuất</h4>
+                <p>Hoàn thiện tỉ mỉ từng chi tiết.</p>
+            </div>
+            <div class="process-step">
+                <div class="step-num">05</div>
+                <h4>Giao nhận</h4>
+                <p>Triển khai đa điểm đúng tiến độ.</p>
+            </div>
+            <div class="process-step">
+                <div class="step-num">06</div>
+                <h4>Hậu mãi</h4>
+                <p>Đồng hành lâu dài cùng doanh nghiệp.</p>
+            </div>
+        </div>
+    </section>
+
+    <section id="profile">
+        <h2>Hồ Sơ Năng Lực 2025</h2>
+        <div class="pdf-wrapper">
+            <iframe src="materials/today-gift-company-profile.pdf#toolbar=0&navpanes=0&scrollbar=0" width="100%" height="800px" style="border: none;">
+                Trình duyệt của bạn không hỗ trợ xem PDF trực tiếp. 
+                <a href="materials/today-gift-company-profile.pdf">Nhấn vào đây để tải về xem.</a>
+            </iframe>
+        </div>
+    </section>
+
+<footer id="contact">
+    <div class="contact-container">
+        <div class="contact-left">
+            <h2 style="text-align: left; margin-bottom: 30px;">Kết nối với Today Gift</h2>
+            <div class="contact-info-list">
+                <p><strong>Địa chỉ:</strong> Hà Nội</p>
+                <p><strong>Hotline:</strong> 097 699 5363</p>
+                <p><strong>Email:</strong> info@todaygift.vn</p>
+                <p><strong>Website:</strong> www.todaygift.vn</p>
+                <p><strong>Social:</strong> @todaygift</p>
+            </div>
+        </div>
+
+        <div class="contact-right">
+            <iframe class="airtable-embed" 
+                    src="https://airtable.com/embed/appoeXVQckUsenLK7/pag1TnZS5x3SlLQAW/form" 
+                    frameborder="0" 
+                    scrolling="no" 
+                    width="100%" 
+                    height="560" 
+                    style="background: transparent; border: 1px solid #333; border-radius: 12px;">
+            </iframe>
+        </div>
+    </div>
+
+    <div class="footer-bottom">
+        <p>&copy; 2025 Today Gift. Crafted Gifts for Meaningful Connections.</p>
+    </div>
+</footer>
+
+    <script>
+        // Hiệu ứng cuộn mượt cho TẤT CẢ các liên kết có dấu # (bao gồm cả nút Hero)
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function(e) {
+                const targetId = this.getAttribute('href');
+                
+                // Đảm bảo href không phải chỉ là dấu # trống
+                if (targetId !== "#") {
+                    e.preventDefault();
+                    const targetElement = document.querySelector(targetId);
+                    
+                    if (targetElement) {
+                        targetElement.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'start' // Đảm bảo cuộn lên đúng đầu section
+                        });
+                    }
+                }
+            });
+        });
+
+        // Giữ nguyên hiệu ứng thay đổi màu nền Navbar khi cuộn
+        window.addEventListener('scroll', function() {
+            const nav = document.querySelector('nav');
+            if (window.scrollY > 50) {
+                nav.style.background = 'rgba(255, 255, 255, 0.98)';
+                nav.style.boxShadow = '0 2px 10px rgba(0,0,0,0.1)';
+            } else {
+                nav.style.background = 'rgba(255, 255, 255, 0.95)';
+                nav.style.boxShadow = 'none';
+            }
+        });
+    </script>
+</body>
+</html>
