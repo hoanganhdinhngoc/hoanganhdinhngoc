@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Demos Navigator || Optimized Nier</title>
+    <title>Loading...</title>
     <link rel="icon" href="https://hoanganhdinhngoc.github.io/images/Koi-Kanji.png">
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
@@ -23,73 +23,20 @@
         .coreSystem { display: flex; flex-direction: column; width: 100%; height: 100vh; box-shadow: inset 0px 0px 100px 20px rgba(0, 0, 0, 0.3); padding: 30px; }
         .header-section { margin-bottom: 20px; }
         .title-main { font-size: 26px; text-shadow: 4px 5px rgba(162, 156, 142, .8); margin-bottom: 10px; text-transform: uppercase; font-weight: 700; }
-
-        ::-moz-selection {
-        /* Code for Firefox */
-        color: #d3cebb;
-        background: rgba(100, 98, 86, 0.8);
-        }
-
-        ::selection {
-        color: #d3cebb;
-        background: rgba(100, 98, 86, 0.8);
-        }
+        ::-moz-selection {/* Code for Firefox */color: #d3cebb;background: rgba(100, 98, 86, 0.8);}
+        ::selection {color: #d3cebb;background: rgba(100, 98, 86, 0.8);}
         
-        /* Address Bar & Tooltip CSS */
         .address-bar { background: var(--nier-panel); box-shadow: 2px 2px 1px #4f4b42; padding: 15px 20px; font-weight: bold; font-size: 14px; display: flex; align-items: center; gap: 10px; border: 2px solid var(--nier-dark); }
-        .address-container {
-            position: relative;
-            cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-            padding: 2px 5px;
-            transition: background 0.2s, color 0.2s;
-        }
-        /* .address-container:hover {
-            background: var(--nier-highlight);
-            color: var(--nier-text-light);
-        } */
-        .tooltip {
-            position: absolute;
-            bottom: 100%;
-            left: 50%;
-            transform: translateX(-50%) translateY(-5px);
-            background-color: var(--nier-dark);
-            color: var(--nier-text-light);
-            padding: 6px 12px;
-            font-size: 12px;
-            white-space: nowrap;
-            opacity: 0;
-            visibility: hidden;
-            transition: all 0.2s ease;
-            pointer-events: none;
-            box-shadow: 2px 2px 0px rgba(0,0,0,0.3);
-            z-index: 10;
-            font-weight: normal;
-        }
-        .tooltip::after {
-            content: '';
-            position: absolute;
-            top: 100%;
-            left: 50%;
-            margin-left: -5px;
-            border-width: 5px;
-            border-style: solid;
-            border-color: var(--nier-dark) transparent transparent transparent;
-        }
-        .address-container:hover .tooltip {
-            opacity: 1;
-            visibility: visible;
-            transform: translateX(-50%) translateY(-10px);
-        }
+        .address-container { position: relative; cursor: pointer; display: inline-flex; align-items: center; padding: 2px 5px; transition: background 0.2s, color 0.2s; }
+        .tooltip { position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%) translateY(-5px); background-color: var(--nier-dark); color: var(--nier-text-light); padding: 6px 12px; font-size: 12px; white-space: nowrap; opacity: 0; visibility: hidden; transition: all 0.2s ease; pointer-events: none; box-shadow: 2px 2px 0px rgba(0,0,0,0.3); z-index: 10; font-weight: normal; }
+        .tooltip::after { content: ''; position: absolute; top: 100%; left: 50%; margin-left: -5px; border-width: 5px; border-style: solid; border-color: var(--nier-dark) transparent transparent transparent; }
+        .address-container:hover .tooltip { opacity: 1; visibility: visible; transform: translateX(-50%) translateY(-10px); }
 
         .miller-container { flex: 1; display: flex; flex-direction: row; gap: 15px; overflow-x: auto; overflow-y: hidden; padding-bottom: 15px; align-items: flex-start; }
         .miller-column { flex: 0 0 320px; height: 100%; background: var(--nier-panel); box-shadow: 2px 2px 1px #4f4b42; border: 2px solid var(--nier-dark); display: flex; flex-direction: column; animation: slideIn 0.3s ease-out; }
         @keyframes slideIn { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: translateX(0); } }
         
-        /* Bỏ text-transform: uppercase; ở đây để giữ nguyên case của folder */
         .miller-header { padding: 12px 15px; color: var(--nier-text-light); background: var(--nier-highlight); font-weight: bold; font-size: 14px; display: flex; justify-content: space-between; align-items: center; }
-        
         .miller-content { flex: 1; overflow-y: auto; padding: 5px; }
         .miller-item { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; margin: 4px 0; cursor: pointer; font-size: 14px; transition: all 0.2s ease-out; }
         .miller-item:hover, .miller-item.active { background: var(--nier-bg-btn); color: var(--nier-text-light); }
@@ -106,11 +53,11 @@
 
     <div class="coreSystem">
         <div class="header-section">
-            <h1 class="title-main">Full Repository Navigator</h1>
+            <h1 class="title-main" id="page-title-display">Loading...</h1>
             <div class="address-bar" id="address-bar">
                 <i class="fas fa-database"></i> 
                 <div class="address-container" id="address-container">
-                    <span id="breadcrumb-content">demos</span>
+                    <span id="breadcrumb-content">...</span>
                     <span class="tooltip" id="tooltip-text">Copy address</span>
                 </div>
                 <i class="fas fa-circle-notch loader" id="main-loader"></i>
@@ -120,16 +67,27 @@
     </div>
 
     <script>
-        const GITHUB_OWNER = "hoanganhdinhngoc";
-        const GITHUB_REPO = "hoanganhdinhngoc";
-        const BASE_FOLDER = "demos";
-        const PREVIEW_DOMAIN = "https://hoanganhdinhngoc.pages.dev";
-        
+        // =========================================================================
+        // ⚙️ CONFIGURATION
+        // =========================================================================
+        const CONFIG = {
+            PAGE_TITLE: "Demos Navigator",
+            GITHUB_OWNER: "hoanganhdinhngoc",
+            GITHUB_REPO: "hoanganhdinhngoc",
+            BRANCH: "main",
+            BASE_FOLDER: "demos",
+            PREVIEW_DOMAIN: "https://hoanganhdinhngoc.pages.dev"
+        };
+        // =========================================================================
+
         let fullTreeData = {}; 
 
         const playSnd = (id) => { const s = document.getElementById(id); s.currentTime = 0; s.play().catch(()=>{}); };
 
-        // Logic Copy Address
+        document.title = CONFIG.PAGE_TITLE;
+        document.getElementById('page-title-display').textContent = CONFIG.PAGE_TITLE;
+        document.getElementById('breadcrumb-content').textContent = CONFIG.BASE_FOLDER;
+
         const addressContainer = document.getElementById('address-container');
         const tooltipText = document.getElementById('tooltip-text');
 
@@ -144,9 +102,7 @@
         });
 
         addressContainer.addEventListener('mouseleave', () => {
-            setTimeout(() => {
-                tooltipText.innerText = "Copy address";
-            }, 300);
+            setTimeout(() => { tooltipText.innerText = "Copy address"; }, 300);
         });
 
         function updateBreadcrumb() {
@@ -155,15 +111,13 @@
             let paths = [];
             
             columns.forEach(col => {
-                // Dùng .textContent thay cho .innerText để lấy text thuần túy (không bị ảnh hưởng bởi CSS)
                 const headerText = col.querySelector('.miller-header span').textContent;
                 paths.push(headerText);
             });
             
-            // Text hiển thị và URL nay sẽ khớp chính xác 100% với tên folder gốc
             const breadcrumbText = paths.join(" > ");
             const fullPath = paths.join("/");
-            const fullUrl = `${PREVIEW_DOMAIN}/${fullPath}`;
+            const fullUrl = `${CONFIG.PREVIEW_DOMAIN}/${fullPath}`;
             
             const bcElement = document.getElementById('breadcrumb-content');
             bcElement.textContent = breadcrumbText;
@@ -172,19 +126,22 @@
 
         async function fetchFullTree() {
             $('#main-loader').show();
-            const url = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/git/trees/main?recursive=1`;
+            const url = `https://api.github.com/repos/${CONFIG.GITHUB_OWNER}/${CONFIG.GITHUB_REPO}/git/trees/${CONFIG.BRANCH}?recursive=1`;
             try {
                 const res = await fetch(url);
                 const data = await res.json();
                 buildMemoryTree(data.tree);
-            } catch (e) { console.error("API Error", e); }
+            } catch (e) { 
+                console.error("API Error", e); 
+                document.getElementById('miller-container').innerHTML = `<p style="padding: 20px; color: red;">Lỗi kết nối GitHub API. Vui lòng kiểm tra lại cấu hình Owner/Repo/Branch.</p>`;
+            }
             $('#main-loader').hide();
         }
 
         function buildMemoryTree(files) {
             fullTreeData = {};
             files.forEach(file => {
-                if (file.path.startsWith(BASE_FOLDER)) {
+                if (file.path.startsWith(CONFIG.BASE_FOLDER)) {
                     let parts = file.path.split('/');
                     let current = fullTreeData;
                     
@@ -201,8 +158,9 @@
                     });
                 }
             });
-            if (fullTreeData[BASE_FOLDER]) {
-                renderColumn(0, fullTreeData[BASE_FOLDER]._content, BASE_FOLDER);
+            if (fullTreeData[CONFIG.BASE_FOLDER]) {
+                renderColumn(0, fullTreeData[CONFIG.BASE_FOLDER]._content, CONFIG.BASE_FOLDER);
+                updateBreadcrumb();
             }
         }
 
@@ -248,7 +206,7 @@
                         renderColumn(level + 1, item._content, item._name);
                     } else {
                         playSnd('open-link-sound');
-                        window.open(`${PREVIEW_DOMAIN}/${item._path}`, '_blank');
+                        window.open(`${CONFIG.PREVIEW_DOMAIN}/${item._path}`, '_blank');
                     }
                 };
                 contentDiv.appendChild(itemDiv);
