@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mera Network - Flat Infrastructure Map</title>
+  <script src="https://unpkg.com/three"></script>
+  <script src="https://unpkg.com/globe.gl"></script>
+  <style>
+    body { margin: 0; background: #05080a; overflow: hidden; font-family: sans-serif; }
+    #mapViz { width: 100vw; height: 100vh; }
+    #mapViz canvas { filter: brightness(1.2) contrast(1.1); }
+
+    /* Overlay UI cho các Button */
+    .controls-container {
+      position: absolute; bottom: 40px; left: 50%;
+      transform: translateX(-50%); display: flex; gap: 20px; z-index: 100;
+    }
+
+    .nav-btn {
+      width: 240px; padding: 14px 0;
+      background: rgba(34, 197, 94, 0.1);
+      border: 1px solid rgba(34, 197, 94, 0.4);
+      color: #22c55e; border-radius: 4px;
+      cursor: pointer; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 1px;
+      transition: all 0.3s ease; backdrop-filter: blur(8px);
+    }
+
+    .nav-btn:hover { background: rgba(34, 197, 94, 0.2); }
+    .nav-btn.active {
+      background: #22c55e; color: #000; border-color: #22c55e;
+      box-shadow: 0 0 20px rgba(34, 197, 94, 0.5);
+    }
+
+    .title-box {
+      position: absolute; top: 25px; left: 25px; color: white;
+      pointer-events: none; z-index: 10;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="title-box">
+    <h1 style="margin:0; color: #ff3333; font-size: 22px; letter-spacing: 1px;">MERA INFRASTRUCTURE</h1>
+    <p style="margin:5px 0; opacity: 0.6; font-size: 13px;">Hệ thống hạ tầng cáp quang phẳng 2D</p>
+  </div>
+
+  <div class="controls-container">
+    <button class="nav-btn active" onclick="showRoute('backbone', this)">Vietnam Backbone</button>
+    <button class="nav-btn" onclick="showRoute('inland', this)">International Inland</button>
+    <button class="nav-btn" onclick="showRoute('submarine', this)">International Submarine</button>
+  </div>
+
+  <div id="mapViz"></div>
+
+  <script>
+    // Link texture tương đối dựa trên cấu trúc folder của Sir
+    const textureImg = '../images/earth-night.jpg'; 
+
+    // 1. Dữ liệu các Nodes (Điểm)
+    const nodes = [
+      { id: 'HN', lat: 21.0285, lng: 105.8542, name: 'Ha Noi', type: 'backbone' },
+      { id: 'Vinh', lat: 18.6734, lng: 105.6923, name: 'Vinh', type: 'backbone' },
+      { id: 'DN', lat: 16.0471, lng: 108.2062, name: 'Da Nang', type: 'backbone' },
+      { id: 'QN', lat: 13.7767, lng: 109.2243, name: 'Quy Nhon', type: 'backbone' },
+      { id: 'HCM', lat: 10.8231, lng: 106.6297, name: 'Ho Chi Minh', type: 'backbone' },
+      { id: 'VT', lat: 10.3460, lng: 107.0843, name: 'Vung Tau', type: 'backbone' },
+      { id: 'MB', lat: 11.0825, lng: 106.2081, name: 'Moc Bai', type: 'backbone' },
+      { id: 'TT', lat: 21.8510, lng: 106.7570, name: 'Tan Thanh', type: 'backbone' },
+      { id: 'QN_L', lat: 21.0068, lng: 107.2925, name: 'Quang Ninh', type: 'backbone' },
+      { id: 'MC', lat: 21.5297, lng: 107.9558, name: 'Mong Cai', type: 'backbone' },
+      // Inland
+      { id: 'PP', lat: 11.5564, lng: 104.9282, name: 'Phnom Penh', type: 'inland' },
+      { id: 'PY', lat: 14.7397, lng: 107.5753, name: 'Po Y', type: 'inland' },
+      { id: 'LB', lat: 16.6204, lng: 106.6022, name: 'Lao Bao', type: 'inland' },
+      { id: 'SV', lat: 16.5663, lng: 104.7523, name: 'Savannakhet', type: 'inland' },
+      { id: 'BK', lat: 13.7563, lng: 100.5018, name: 'Bangkok', type: 'inland' },
+      { id: 'ST', lat: 7.0096, lng: 100.4705, name: 'South Thailand', type: 'inland' },
+      { id: 'MY', lat: 4.2105, lng: 101.9758, name: 'Malaysia', type: 'inland' },
+      { id: 'NN', lat: 22.8170, lng: 108.3661, name: 'Nam Ninh', type: 'inland' },
+      // Submarine
+      { id: 'HK', lat: 22.3193, lng: 114.1694, name: 'Hong Kong', type: 'submarine' },
+      { id: 'SG', lat: 1.3521, lng: 103.8198, name: 'Singapore', type: 'submarine' },
+      { id: 'CS', lat: 10.5, lng: 103.8, name: 'South Cambodia', type: 'submarine' },
+      { id: 'TS', lat: 12.5, lng: 101.5, name: 'SE Thailand', type: 'submarine' }
+    ];
+
+    // 2. Dữ liệu các Links (Đường kết nối)
+    const links = [
+      { from: 'HN', to: 'Vinh', type: 'backbone' }, { from: 'Vinh', to: 'DN', type: 'backbone' },
+      { from: 'DN', to: 'QN', type: 'backbone' }, { from: 'QN', to: 'HCM', type: 'backbone' },
+      { from: 'HCM', to: 'VT', type: 'backbone' }, { from: 'HCM', to: 'MB', type: 'backbone' },
+      { from: 'HN', to: 'TT', type: 'backbone' }, { from: 'HN', to: 'QN_L', type: 'backbone' },
+      { from: 'QN_L', to: 'MC', type: 'backbone' },
+      { from: 'TT', to: 'NN', type: 'inland' }, { from: 'Vinh', to: 'LB', type: 'inland' },
+      { from: 'LB', to: 'SV', type: 'inland' }, { from: 'SV', to: 'BK', type: 'inland' },
+      { from: 'MB', to: 'PP', type: 'inland' }, { from: 'PP', to: 'BK', type: 'inland' },
+      { from: 'BK', to: 'ST', type: 'inland' }, { from: 'ST', to: 'MY', type: 'inland' },
+      { from: 'MY', to: 'SG', type: 'inland' }, { from: 'DN', to: 'PY', type: 'inland' },
+      { from: 'PY', to: 'SV', type: 'inland' },
+      { from: 'HK', to: 'DN', type: 'submarine' }, { from: 'DN', to: 'QN', type: 'submarine' },
+      { from: 'QN', to: 'VT', type: 'submarine' }, { from: 'VT', to: 'SG', type: 'submarine' },
+      { from: 'CS', to: 'SG', type: 'submarine' }, { from: 'TS', to: 'SG', type: 'submarine' },
+      { from: 'HK', to: 'MC', type: 'submarine' }
+    ];
+
+    const formattedLinks = links.map(l => {
+      const s = nodes.find(n => n.id === l.from);
+      const e = nodes.find(n => n.id === l.to);
+      return { startLat: s.lat, startLng: s.lng, endLat: e.lat, endLng: e.lng, type: l.type };
+    });
+
+    // 3. KHỞI TẠO BẢN ĐỒ PHẲNG
+    const world = Globe()(document.getElementById('mapViz'))
+      // Chuyển sang phép chiếu hình chữ nhật phẳng 
+      .projection('equirectangular') 
+      .globeImageUrl(textureImg)
+      .backgroundColor('#05080a')
+      .showAtmosphere(false)
+      // Thiết lập các điểm (Points)
+      .pointsData(nodes)
+      .pointColor(() => '#ff1111')
+      .pointRadius(0.18)
+      .pointAltitude(0.01)
+      // Thiết lập nhãn tên
+      .labelsData(nodes)
+      .labelText('name').labelSize(0.6).labelColor(() => '#ffffff').labelResolution(3)
+      // Đường line xanh liền nét (Paths)
+      .pathsData(formattedLinks.map(l => [[l.startLat, l.startLng], [l.endLat, l.endLng]]))
+      .pathColor(() => '#0088ff')
+      .pathStroke(0.35)
+      // Gói tín hiệu trắng thưa thớt (Arcs nhưng không có độ cao)
+      .arcsData(formattedLinks.filter(l => l.type === 'backbone'))
+      .arcColor(() => '#ffffff')
+      .arcAltitude(0) // Độ cao bằng 0 để nằm trên mặt phẳng
+      .arcDashLength(0.02).arcDashGap(3.5).arcDashAnimateTime(2000).arcStroke(0.5);
+
+    // Tải biên giới GeoJSON cục bộ
+    fetch('./ne_10m_admin_0_countries.geojson')
+      .then(res => res.json())
+      .then(countries => {
+        const target = ['Vietnam', 'Laos', 'Cambodia', 'Thailand', 'Malaysia', 'Singapore'];
+        const filtered = countries.features.filter(d => target.includes(d.properties.NAME) || target.includes(d.properties.admin));
+        world.polygonsData(filtered)
+          .polygonCapColor(() => 'rgba(0,0,0,0)')
+          .polygonStrokeColor(() => '#0a2e5c')
+          .polygonAltitude(0.005);
+      });
+
+    // Khóa Zoom chuột
+    world.controls().enableZoom = false;
+    // Góc nhìn mặc định tập trung Đông Nam Á
+    world.pointOfView({ lat: 14, lng: 108, altitude: 0.8 });
+
+    // Hàm chuyển đổi tuyến cáp và Zoom sát hơn
+    function showRoute(type, btn) {
+      document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+
+      // Làm mờ Points & Paths không thuộc tuyến được chọn (Opacity 40%)
+      world.pointColor(n => {
+        const nodeType = Object.keys(nodes).find(key => nodes[key].some(node => node.id === n.id));
+        const currentType = nodes.find(node => node.id === n.id).type;
+        return currentType === type ? '#ff1111' : 'rgba(255, 17, 17, 0.4)';
+      });
+
+      world.pathColor(p => {
+        const link = links.find(l => {
+          const s = nodes.find(node => node.id === l.from);
+          return s.lat === p[0][0] && s.lng === p[0][1];
+        });
+        return (link && link.type === type) ? '#0088ff' : 'rgba(0, 136, 255, 0.1)';
+      });
+
+      // Cập nhật tín hiệu trắng chỉ chạy trên tuyến được chọn
+      world.arcsData(formattedLinks.filter(l => l.type === type));
+
+      // Zoom sát hơn vào tâm điểm của tuyến đó
+      if(type === 'backbone') world.pointOfView({ lat: 16, lng: 107, altitude: 0.7 }, 800);
+      if(type === 'inland') world.pointOfView({ lat: 15, lng: 105, altitude: 0.9 }, 800);
+      if(type === 'submarine') world.pointOfView({ lat: 12, lng: 112, altitude: 0.9 }, 800);
+    }
+
+    window.addEventListener('resize', () => world.width(window.innerWidth).height(window.innerHeight));
+  </script>
+</body>
+</html>

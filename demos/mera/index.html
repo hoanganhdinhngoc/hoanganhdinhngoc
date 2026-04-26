@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mera AI - We Connect The World</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #070b14;
+            --bg-card: rgba(255, 255, 255, 0.03);
+            --border-color: rgba(255, 255, 255, 0.1);
+            --text-light: #ffffff;
+            --text-muted: #8a94a6;
+            --primary-green: #22c55e;
+            --primary-blue: #2563eb;
+            --gradient-accent: linear-gradient(135deg, #22c55e, #3b82f6);
+            --dark-blue-text: #0f2a4a;
+        }
+
+        html { scroll-behavior: smooth; }
+
+        body {
+            margin: 0; padding: 0;
+            background-color: var(--bg-dark);
+            color: var(--text-light);
+            font-family: 'Inter', sans-serif;
+            overflow-x: hidden;
+            line-height: 1.6;
+        }
+
+        /* --- HEADER --- */
+        header {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 20px 5%;
+            background: rgba(7, 11, 20, 0.85);
+            backdrop-filter: blur(10px);
+            position: fixed; top: 0; width: 90%; z-index: 100;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .logo-container { 
+            display: flex; align-items: center; gap: 8px; font-weight: bold; font-size: 1.6rem; 
+        }
+        .logo-mera {
+            background: var(--gradient-accent);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        nav ul { list-style: none; display: flex; gap: 40px; margin: 0; padding: 0; }
+        nav a { color: var(--text-light); text-decoration: none; font-size: 0.95rem; transition: color 0.3s; }
+        nav a:hover { color: var(--primary-green); }
+        .contact-info { font-size: 0.9rem; color: var(--text-light); display: flex; gap: 15px; }
+
+        /* --- SECTION 1: HERO --- */
+        .hero {
+            height: 100vh; display: flex; flex-direction: column;
+            justify-content: center; align-items: center; text-align: center;
+            padding: 0 20px;
+            background: radial-gradient(circle at 50% 100%, rgba(34, 197, 94, 0.15), rgba(37, 99, 235, 0.1) 40%, transparent 70%);
+        }
+
+        .hero h1 { font-size: 4.5rem; margin-bottom: 20px; letter-spacing: -1px; }
+        .hero p { font-size: 1.2rem; color: var(--text-muted); max-width: 600px; margin-bottom: 40px; }
+
+        .btn {
+            padding: 15px 35px; border-radius: 30px; font-weight: 600;
+            text-decoration: none; display: inline-block; cursor: pointer;
+            transition: all 0.3s ease; border: 1px solid transparent;
+        }
+        .btn-outline { background: transparent; border-color: var(--text-light); color: var(--text-light); }
+        .btn-outline:hover { background: rgba(255,255,255,0.1); }
+        .btn-green { background: var(--primary-green); color: #000; }
+        .btn-blue { background: var(--primary-blue); color: white; }
+
+        /* --- LAYOUT CHUNG --- */
+        .section-container { padding: 100px 8%; max-width: 1400px; margin: 0 auto; }
+        .section-title { font-size: 3.5rem; margin-bottom: 20px; font-weight: 500; text-align: center; }
+
+        /* --- SECTION 2: INFRASTRUCTURE --- */
+        .scale-grid { display: grid; grid-template-columns: 1fr 1.5fr; gap: 30px; margin-top: 60px; }
+        .card {
+            background: var(--bg-card); border: 1px solid var(--border-color);
+            border-radius: 30px; padding: 50px; position: relative; overflow: hidden;
+            display: flex; flex-direction: column; justify-content: flex-end; min-height: 450px;
+        }
+        
+        /* Cập nhật ảnh kỹ sư kéo cáp viễn thông cho card bên trái */
+        .card-left { 
+            background: linear-gradient(to top, rgba(0,0,0,0.8), transparent), url('https://images.unsplash.com/photo-1544724569-5f546fd6f2b6?auto=format&fit=crop&q=80') center/cover; 
+        }
+        
+        .card-right { 
+            background: linear-gradient(to top, rgba(0,0,0,0.9), rgba(0,0,0,0.2)), url('https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&q=80') center/cover; 
+        }
+        
+        /* --- SECTION 3: OUR NETWORK (QUẢ CẦU) --- */
+        .network-section { background: linear-gradient(to bottom, transparent, rgba(37, 99, 235, 0.05), transparent); text-align: center;}
+        .iframe-container {
+            width: 100%; height: 750px; border-radius: 30px; overflow: hidden;
+            border: 1px solid var(--border-color); background: #000; margin-top: 40px;
+        }
+
+        /* --- SECTION 4: PROVEN --- */
+        .proven-grid {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 50px;
+            border-radius: 30px; padding: 80px; margin-top: 60px;
+            background: linear-gradient(rgba(240, 248, 255, 0.85), rgba(240, 248, 255, 0.9)), url('https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&q=80') center/cover;
+            border: 1px solid rgba(255,255,255,0.2);
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+        }
+        .proven-text-dark { color: var(--dark-blue-text); }
+        .proven-grid p { color: #334155; }
+        
+        .stat-grid { display: grid; gap: 40px; }
+        .stat-number { font-size: 3.5rem; font-weight: 700; margin-bottom: 5px; color: var(--primary-blue); }
+        .stat-title { font-size: 1.2rem; font-weight: 600; margin-bottom: 5px; }
+
+        /* --- SECTION 5: WHAT CLIENTS SAY --- */
+        .clients-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 60px; }
+        .quote-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 30px; padding: 60px; }
+        .stars { color: var(--primary-green); font-size: 1.5rem; margin-bottom: 20px; }
+        .quote-text { font-size: 1.8rem; line-height: 1.4; font-weight: 500; margin-bottom: 40px; }
+        .client-img-card {
+            border-radius: 30px; min-height: 500px; position: relative;
+            background: url('https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&q=80') center/cover;
+        }
+        .client-info-badge {
+            position: absolute; bottom: 40px; left: 40px;
+            background: rgba(0,0,0,0.6); backdrop-filter: blur(10px);
+            padding: 15px 25px; border-radius: 20px; border: 1px solid var(--border-color);
+        }
+
+        /* --- SECTION 6: CONNECT --- */
+        .connect-wrapper {
+            background-color: #f8fafc;
+            padding: 100px 0;
+            color: #0f172a;
+        }
+        .connect-wrapper .section-title { color: #0f172a; text-align: left; font-size: 4rem; }
+        .connect-grid { display: grid; grid-template-columns: 1fr 1.5fr; gap: 60px; margin-top: 40px; }
+        .contact-info-list { display: flex; flex-direction: column; gap: 30px; margin-top: 40px; }
+        .contact-item { display: flex; align-items: flex-start; gap: 15px; color: #475569; font-weight: 500;}
+        .contact-icon { width: 24px; height: 24px; color: var(--primary-blue); font-size: 1.2rem;}
+
+        /* --- FOOTER --- */
+        .site-footer {
+            background: #02040a; padding: 80px 8% 40px;
+            border-top: 1px solid var(--border-color); font-size: 0.9rem;
+        }
+        .footer-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1.5fr; gap: 40px; margin-bottom: 60px; }
+        .footer-heading { color: var(--text-light); font-weight: 600; margin-bottom: 25px; font-size: 1rem;}
+        .footer-links { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 15px; }
+        .footer-links a { color: var(--text-muted); text-decoration: none; transition: color 0.3s; }
+        .footer-links a:hover { color: var(--text-light); }
+        
+        .footer-bottom {
+            display: flex; justify-content: space-between; align-items: center;
+            padding-top: 30px; border-top: 1px solid var(--border-color); color: var(--text-muted);
+        }
+        .social-icons { display: flex; gap: 15px; }
+        .social-btn {
+            width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--border-color);
+            display: flex; justify-content: center; align-items: center; color: var(--text-light);
+            text-decoration: none; transition: all 0.3s;
+        }
+        .social-btn:hover { background: var(--text-light); color: var(--bg-dark); }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="logo-container">
+            <span class="logo-mera">Mera</span> <span style="font-weight: 400; font-size: 1rem;">AI</span>
+        </div>
+        <nav>
+            <ul>
+                <li><a href="#">Home</a></li>
+                <li><a href="#">About Us</a></li>
+                <li><a href="#">Services</a></li>
+                <li><a href="#">Contact</a></li>
+            </ul>
+        </nav>
+        <div class="contact-info">
+            <span>(+84) 123 4567 980</span>
+            <span style="color: var(--text-muted);">|</span>
+            <span>EN <span style="color: var(--text-muted);">VN</span></span>
+        </div>
+    </header>
+
+    <section class="hero">
+        <h1>We connect the world</h1>
+        <p>Built on decades of experience, we deliver the infrastructure that keeps enterprises moving forward. From startups to Fortune companies, our networks span the globe.</p>
+        <a href="#our-network" class="btn btn-outline">Discover our infrastructure</a>
+    </section>
+
+    <section class="section-container">
+        <h2 class="section-title">Infrastructure Built For Scale</h2>
+        <div class="scale-grid">
+            <div class="card card-left"></div>
+            <div class="card card-right">
+                <div style="position: relative; z-index: 2;">
+                    <p style="color: #e2e8f0; margin-bottom: 30px; max-width: 80%;">From fiber networks to cloud connectivity, we handle the backbone of modern business. Our infrastructure reaches across continents and connects what matters most.</p>
+                    <div style="display: flex; gap: 15px;">
+                        <a href="#" class="btn btn-green">Explore &rarr;</a>
+                        <a href="#" class="btn btn-blue">Contact &rarr;</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="our-network" class="section-container network-section">
+        <h2 class="section-title" style="margin-bottom: 10px;">Our Network</h2>
+        <p style="color: var(--text-muted);">Interactive map of Mera's global infrastructure</p>
+        <div class="iframe-container">
+            <iframe 
+                src="https://hoanganhdinhngoc.github.io/YOUR-GLOBE-REPO/" 
+                width="100%" height="100%" frameborder="0" scrolling="no" loading="lazy">
+            </iframe>
+        </div>
+    </section>
+
+    <section class="section-container">
+        <h2 class="section-title">Proven</h2>
+        <div class="proven-grid">
+            <div>
+                <h3 class="proven-text-dark" style="font-size: 3.5rem; margin-top: 0; line-height: 1.1;">Numbers That<br>Speak</h3>
+                <p style="font-size: 1.1rem;">We've been doing this for years.<br>The results show it.</p>
+            </div>
+            <div class="stat-grid">
+                <div>
+                    <div class="stat-number">99.99%</div>
+                    <div class="stat-title proven-text-dark">Uptime guarantee</div>
+                    <p style="margin-top: -5px;">Reliability you can count on every day</p>
+                </div>
+                <div>
+                    <div class="stat-number">500+</div>
+                    <div class="stat-title proven-text-dark">Active clients</div>
+                    <p style="margin-top: -5px;">Companies trusting us with their networks</p>
+                </div>
+                <div>
+                    <div class="stat-number">6</div>
+                    <div class="stat-title proven-text-dark">Global coverage</div>
+                    <p style="margin-top: -5px;">Continents connected through our infrastructure</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="section-container">
+        <div style="display: flex; justify-content: space-between; align-items: flex-end;">
+            <p style="color: var(--text-muted); font-size: 1.1rem;">Real Stories From Real Companies</p>
+            <h2 class="section-title" style="margin: 0;">What Clients Say</h2>
+        </div>
+        
+        <div class="clients-grid">
+            <div class="quote-card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 40px;">
+                    <h3 style="color: var(--primary-blue); font-size: 2rem; margin: 0;">Digiflex</h3>
+                    <div class="stars">★★★★★</div>
+                </div>
+                <div class="quote-text">
+                    "They Delivered What They Promised. No Excuses, No Delays. That's Rare."
+                </div>
+                <div style="display: flex; gap: 15px; margin-top: 60px;">
+                    <a href="#" class="btn btn-green">Explore &rarr;</a>
+                    <a href="#" class="btn btn-blue">Contact &rarr;</a>
+                </div>
+            </div>
+            <div class="client-img-card">
+                <div class="client-info-badge">
+                    <div style="font-weight: 600; font-size: 1.1rem;">Marcus Chen</div>
+                    <div style="color: var(--text-muted); font-size: 0.9rem;">CTO, TechVenture Inc</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="connect-wrapper">
+        <section class="section-container" style="padding-top: 0; padding-bottom: 0;">
+            <h2 class="section-title">Connect</h2>
+            <div class="connect-grid">
+                <div>
+                    <h3 style="font-size: 1.5rem; margin-bottom: 10px; color: #0f172a;">Send Us A Message</h3>
+                    <p style="color: #64748b;">Tell us what you need and we'll respond fast.</p>
+                    
+                    <div class="contact-info-list">
+                        <div class="contact-item">
+                            <span class="contact-icon">📞</span>
+                            <div>(84) 123 456 7890</div>
+                        </div>
+                        <div class="contact-item">
+                            <span class="contact-icon">✉️</span>
+                            <div>mera.vietnam@gmail.com</div>
+                        </div>
+                        <div class="contact-item">
+                            <span class="contact-icon">📍</span>
+                            <div>3rd Floor, Grand Plaza building, 117 Tran Duy Hung st., Ha Noi, Vietnam</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <iframe class="airtable-embed" 
+                            src="https://airtable.com/embed/appX52xnq2UKme26q/pag1TnZS5x3SlLQAW/form" 
+                            frameborder="0" onmousewheel="" width="100%" height="650" 
+                            style="background: transparent; border: 1px solid #cbd5e1; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); overflow: hidden;">
+                    </iframe>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <footer class="site-footer">
+        <div class="footer-grid">
+            <div>
+                <div class="logo-container" style="margin-bottom: 20px;">
+                    <span class="logo-mera">Mera</span> <span style="font-weight: 400; font-size: 1rem;">AI</span>
+                </div>
+            </div>
+            
+            <div>
+                <div class="footer-heading">Explore</div>
+                <ul class="footer-links">
+                    <li><a href="#">Connectivity</a></li>
+                    <li><a href="#">Infrastructure</a></li>
+                    <li><a href="#">Strategy</a></li>
+                    <li><a href="#">Operations</a></li>
+                </ul>
+            </div>
+
+            <div>
+                <div class="footer-heading">Menu</div>
+                <ul class="footer-links">
+                    <li><a href="#">Home</a></li>
+                    <li><a href="#">About Us</a></li>
+                    <li><a href="#">Services</a></li>
+                    <li><a href="#">Solutions</a></li>
+                </ul>
+            </div>
+
+            <div>
+                <div class="footer-heading">OFFICE LOCATION</div>
+                <p style="color: var(--text-muted); margin-bottom: 30px;">
+                    3rd Floor, Grand Plaza building,<br>
+                    117 Tran Duy Hung st., Ha Noi, Vietnam
+                </p>
+                <div class="footer-heading">CONTACT</div>
+                <p style="color: var(--text-muted);">(+84) 123 4567 980</p>
+            </div>
+        </div>
+
+        <div class="footer-bottom">
+            <div style="display: flex; gap: 30px;">
+                <a href="#" style="color: var(--text-muted); text-decoration: none;">Terms</a>
+                <a href="#" style="color: var(--text-muted); text-decoration: none;">Privacy</a>
+                <a href="#" style="color: var(--text-muted); text-decoration: none;">Cookies</a>
+            </div>
+            
+            <div>&copy; 2026 Mera AI. All rights reserved.</div>
+            
+            <div class="social-icons">
+                <a href="#" class="social-btn">f</a>
+                <a href="#" class="social-btn">in</a>
+                <a href="#" class="social-btn">X</a>
+                <a href="#" class="social-btn">Y</a>
+            </div>
+        </div>
+    </footer>
+
+</body>
+</html>
