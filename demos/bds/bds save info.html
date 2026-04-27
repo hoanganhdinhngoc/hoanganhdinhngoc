@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta property="og:type" content="AI Agent" /> 
+	<meta property="og:title" content="Any AI || BDS Agent chat" /> 
+	<meta property="og:description" content="Any AI Demo - Trợ lý ảo tư vấn nhu cầu bất động sản, phát triển bởi Any AI" />
+	<meta property="og:url" content="https://anyai.aah.id.vn/demos/bds/" /> 
+    <link rel="icon" href="https://anyai.aah.id.vn/images/Any-AI-icon.png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link rel="stylesheet" href="https://hoanganhdinhngoc.github.io/cdn/deepshit-chat/deepshit-common-css.css">
+    <title>Any AI || BDS Agent chat</title>
+    <style>
+        #overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: -1;
+        }
+    </style>
+</head>
+<body>
+    <video id="video-background" autoplay loop muted>
+        <source src="https://anyai.aah.id.vn/images/bds-background.mp4" type="video/mp4">
+    </video>
+    <div id="overlay"></div>
+    <button id="new-chat-button">Start a new chat</button>
+    <div id="chat-container">
+        <div id="brand-wrapper">
+            <div id="brand-title">BDS Agent</div>
+            <p id="subtitle">Powered by Any AI</p>
+        </div>
+        <div id="chat-wrapper">
+            <div id="chat-history">
+                <div id="chat-history-content"></div>
+            </div>
+        </div>
+        <div id="chat-box">
+            <textarea id="chat-input" placeholder="Bạn cần tìm gì?"></textarea>
+            <button id="send-button"><i class="fa fa-arrow-up" aria-hidden="true"></i></button>
+        </div>
+    </div>
+
+    <script>
+        // Custom values for this site
+        const userIdCookieKey = 'bds_userId';
+        const webhookEndpoint = 'https://agent.aah.id.vn/webhook/bds-assistant';
+        const dbName = 'bds-chat';
+    </script>
+    <script src="https://hoanganhdinhngoc.github.io/cdn/deepshit-chat/deepshit-common-js.js" defer></script>
+</body>
+</html>

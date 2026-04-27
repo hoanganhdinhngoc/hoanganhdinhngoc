@@ -1,0 +1,982 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta property="og:type" content="AI Agent" /> 
+    <meta property="og:title" content="Any AI || Japanese teacher" /> 
+    <meta property="og:description" content="Any AI Demo - Giáo viên AI, phát triển bởi Any AI" />
+    <meta property="og:url" content="https://anyai.aah.id.vn/demos/goodtrip/" /> 
+    <link rel="icon" href="https://anyai.aah.id.vn/images/Any-AI-icon.png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link rel="stylesheet" href="https://hoanganhdinhngoc.github.io/cdn/teacher-chat/teacher-chat-common-css.css">
+    <title>Any AI || Japanese teacher</title>
+    <style>
+        #overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: -1;
+        }
+        .user-message .message-text, .ai-message .message-text {
+            overflow-wrap: anywhere;
+            word-break: break-word;
+            max-width: 100%;
+        }
+        .user-message .message-text > a, .ai-message .message-text > a {
+            overflow-wrap: anywhere;
+            word-break: break-word;
+            max-width: 100%;
+        }
+        #container {
+            display: flex;
+            width: 100%;
+            height: 100vh;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        #chat-container {
+            width: 100%;
+            transition: width 0.3s ease;
+            position: relative;
+            padding: 0;
+        }
+        #chat-container.shrunk {
+            width: 60%;
+        }
+        #new-chat-button {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.5);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 8px 12px;
+            font-size: 14px;
+            cursor: pointer;
+            z-index: 3;
+            transition: background 0.2s ease;
+        }
+        #chat-container.shrunk #new-chat-button {
+            right: 20px;
+        }
+        #exercise-board {
+            width: 40%;
+            height: 100vh;
+            background: radial-gradient(circle at 50% 50%, #1a3c2b 40%, #123522 100%);
+            color: #fff;
+            font-family: 'Chalkduster', 'Arial', sans-serif;
+            position: fixed;
+            right: -40%;
+            top: 0;
+            z-index: 10;
+            transition: right 0.3s ease;
+            overflow-y: auto;
+            box-sizing: border-box;
+        }
+        #exercise-board.active {
+            right: 0;
+        }
+        #exercise-board-header {
+            position: sticky;
+            top: 0;
+            width: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            padding: 37px;
+            z-index: 11;
+            box-sizing: border-box;
+        }
+        #exercise-board .close-btn {
+            position: relative;
+            top: -1.2em;
+            background: rgba(0, 0, 0, 0);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            float: right;
+        }
+        #exercise-board .finish-btn {
+            position: relative;
+            top: -1.2em;
+            background: rgba(0, 0, 0, 0.5);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 8px 12px;
+            cursor: pointer;
+            font-size: 14px;
+            float: left;
+            transition: background 0.2s ease;
+        }
+        #exercise-board .finish-btn:hover {
+            background: #666;
+        }
+
+        #exercise-content > h2 {
+            margin: 40px 50px 30px 0px;
+            font-size: 28px;
+        }
+
+        #exercise-content .section h3 {
+            margin-bottom: 30px;
+            font-size: 24px;
+        }
+
+        #exercise-content {
+            margin: 40px 50px 0px 50px;
+        }
+        #exercise-content .section {
+            margin-bottom: 40px;
+        }
+        #exercise-content .section h2 {
+            margin-bottom: 30px;
+            font-size: 24px;
+        }
+        #exercise-content .question {
+            margin-bottom: 30px;
+        }
+        #exercise-content .question p:first-child {
+            margin-bottom: 20px;
+            font-size: 18px;
+        }
+        #exercise-content .question input {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid white;
+            border-radius: 5px;
+            margin-left: 10px;
+            padding: 5px;
+            color: white;
+        }
+        #exercise-content .image-container {
+            margin: 20px 0;
+        }
+        #exercise-content img {
+            max-width: 100%;
+            margin: 10px;
+            box-sizing: border-box;
+        }
+        .show-exercise-btn {
+            background: rgba(0, 0, 0, 0.5);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 8px 12px;
+            font-size: 14px;
+            cursor: pointer;
+            margin: 10px 0;
+            display: block;
+            max-width: 150px;
+        }
+        .show-exercise-btn:hover {
+            background: #666;
+        }
+        #resize-handle {
+            width: 5px;
+            height: 100%;
+            background: #555;
+            cursor: ew-resize;
+            position: absolute;
+            left: 60%;
+            top: 0;
+            z-index: 15;
+            opacity: 0;
+            transition: opacity 1s ease;
+        }
+        #resize-handle.active {
+            opacity: 1;
+            transition: opacity 0.1s ease;
+        }
+        #exercise-board::-webkit-scrollbar {
+            width: 8px;
+        }
+        #exercise-board::-webkit-scrollbar-track {
+            background: #333;
+        }
+        #exercise-board::-webkit-scrollbar-thumb {
+            background: #555;
+            border-radius: 4px;
+        }
+        @media (max-width: 750px) {
+            #chat-container.shrunk {
+                width: 100%;
+            }
+            #exercise-board {
+                width: 100%;
+                right: -100%;
+            }
+            #exercise-board.active {
+                right: 0;
+            }
+            #exercise-board-header {
+                width: 100%;
+            }
+            #chat-container.shrunk #new-chat-button {
+                right: 20px;
+            }
+            #resize-handle {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <img id="background-image" src="https://anyai.aah.id.vn/images/hiroyoshi-urushima-classroom.jpg" alt="Background">
+    <div id="overlay"></div>
+    <div id="container">
+        <div id="chat-container">
+            <button id="new-chat-button">Start a new chat</button>
+            <div id="brand-wrapper">
+                <div id="brand-title">日本語教師</div>
+                <p id="subtitle">Powered by Any AI</p>
+            </div>
+            <div id="chat-wrapper">
+                <div id="chat-history">
+                    <div id="chat-history-content"></div>
+                </div>
+            </div>
+            <div id="chat-box">
+                <textarea id="chat-input" placeholder="何か質問ある？..."></textarea>
+                <button id="send-button"><i class="fa fa-arrow-up" aria-hidden="true"></i></button>
+            </div>
+        </div>
+        <div id="exercise-board">
+            <div id="exercise-board-header">
+                <button class="finish-btn">Finish & Check</button>
+                <button class="close-btn">✖</button>
+            </div>
+            <div id="exercise-content"></div>
+        </div>
+        <div id="resize-handle"></div>
+    </div>
+
+    <script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex));
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+    </script>
+    <script>
+        const userIdCookieKey = 'japaneseTeacher_userId';
+        const webhookEndpoint = 'https://agent.aah.id.vn/webhook/japanese-teacher';
+        const finishExerciseEndpoint = 'https://agent.aah.id.vn/webhook/japanese-teacher-finish-exercise';
+        const dbName = 'japaneseTeacher-chat';
+        let userId;
+        const pathHistoryCookieKey = 'pathHistory';
+        const maxMessages = 200;
+        let exerciseData = null;
+        const storeName = 'chat_history';
+
+        function generateUUID() {
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                const r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+                return v.toString(16);
+            });
+        }
+
+        function setCookie(name, value, days) {
+            const date = new Date();
+            date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+            const expires = `expires=${date.toUTCString()}`;
+            document.cookie = `${name}=${encodeURIComponent(value)};${expires};path=/;SameSite=Strict`;
+        }
+
+        function getCookie(name) {
+            const nameEQ = `${name}=`;
+            const cookies = document.cookie.split(';');
+            for (let cookie of cookies) {
+                cookie = cookie.trim();
+                if (cookie.startsWith(nameEQ)) {
+                    return decodeURIComponent(cookie.substring(nameEQ.length));
+                }
+            }
+            return null;
+        }
+
+        function deleteCookie(name) {
+            document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/;SameSite=Strict`;
+        }
+
+        async function initUserId() {
+            let savedUserId = getCookie(userIdCookieKey);
+            if (savedUserId) {
+                userId = savedUserId;
+                return;
+            }
+            try {
+                const response = await fetch('https://api64.ipify.org?format=json', { mode: 'cors' });
+                if (!response.ok) throw new Error(`IP fetch failed: ${response.status}`);
+                const data = await response.json();
+                userId = btoa(data.ip);
+            } catch (error) {
+                console.error('Error fetching IP:', error);
+                userId = generateUUID();
+            }
+            setCookie(userIdCookieKey, userId, 30);
+        }
+
+        const chatInput = document.getElementById('chat-input');
+        const chatHistoryContent = document.getElementById('chat-history-content');
+        const chatWrapper = document.getElementById('chat-wrapper');
+        const brandWrapper = document.getElementById('brand-wrapper');
+        const sendButton = document.getElementById('send-button');
+        const newChatButton = document.getElementById('new-chat-button');
+        const chatContainer = document.getElementById('chat-container');
+        const exerciseBoard = document.getElementById('exercise-board');
+        const exerciseContent = document.getElementById('exercise-content');
+        const closeBtn = document.querySelector('#exercise-board .close-btn');
+        const finishBtn = document.querySelector('#exercise-board .finish-btn');
+        const resizeHandle = document.getElementById('resize-handle');
+
+        function openDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open(dbName, 1);
+
+                request.onupgradeneeded = event => {
+                    const db = event.target.result;
+                    if (!db.objectStoreNames.contains(storeName)) {
+                        db.createObjectStore(storeName, { keyPath: 'id', autoIncrement: true })
+                            .createIndex('timestamp', 'timestamp', { unique: false });
+                    }
+                };
+
+                request.onsuccess = event => {
+                    resolve(event.target.result);
+                };
+
+                request.onerror = event => {
+                    console.error('DB open error:', event.target.error);
+                    reject(event.target.error);
+                };
+
+                request.onblocked = () => {
+                    console.warn('DB open blocked, closing open connections');
+                    reject(new Error('Database access blocked'));
+                };
+            });
+        }
+
+        function updatePathHistory() {
+            let pathHistory = getCookie(pathHistoryCookieKey);
+            let paths = pathHistory ? JSON.parse(pathHistory) : [];
+            const path = window.location.pathname;
+            if (!paths.includes(path)) {
+                paths.push(path);
+                setCookie(pathHistoryCookieKey, JSON.stringify(paths), 30);
+            }
+        }
+
+        function removePathFromHistory() {
+            let pathHistory = getCookie(pathHistoryCookieKey);
+            if (pathHistory) {
+                let paths = JSON.parse(pathHistory);
+                const path = window.location.pathname;
+                paths = paths.filter(p => p !== path);
+                if (paths.length > 0) {
+                    setCookie(pathHistoryCookieKey, JSON.stringify(paths), 30);
+                } else {
+                    deleteCookie(pathHistoryCookieKey);
+                }
+            }
+        }
+
+        async function migrateOldData() {
+            const oldCookieKey = `chatHistory_${window.location.pathname.replace(/\//g, '_')}`;
+            const oldStorageKey = oldCookieKey;
+            let savedChat;
+
+            if (localStorage.getItem(oldStorageKey)) {
+                savedChat = localStorage.getItem(oldStorageKey);
+                localStorage.removeItem(oldStorageKey);
+            } else if (getCookie(oldCookieKey)) {
+                savedChat = getCookie(oldCookieKey);
+                deleteCookie(oldCookieKey);
+            }
+
+            if (savedChat) {
+                try {
+                    const messages = JSON.parse(savedChat);
+                    const db = await openDB();
+                    const tx = db.transaction([storeName], 'readwrite');
+                    const store = tx.objectStore(storeName);
+                    messages.forEach(msg => {
+                        store.add({
+                            type: msg.type,
+                            text: msg.text,
+                            images: msg.images || [],
+                            timestamp: Date.now()
+                        });
+                    });
+                    await new Promise((resolve, reject) => {
+                        tx.oncomplete = resolve;
+                        tx.onerror = () => reject(tx.error);
+                    });
+                } catch (error) {
+                    console.error('Error migrating old data:', error);
+                }
+            }
+        }
+
+        async function loadChatHistory() {
+            await initUserId();
+            await migrateOldData();
+            try {
+                const db = await openDB();
+                const tx = db.transaction([storeName], 'readonly');
+                const store = tx.objectStore(storeName);
+                const request = store.getAll();
+
+                request.onsuccess = () => {
+                    const messages = request.result;
+                    messages.forEach(message => {
+                        const messageDiv = document.createElement('div');
+                        messageDiv.className = message.type === 'user' ? 'user-message' : 'ai-message';
+                        const textSpan = document.createElement('span');
+                        textSpan.className = 'message-text';
+                        textSpan.innerHTML = message.text || '';
+                        messageDiv.appendChild(textSpan);
+
+                        if (message.images && message.images.length > 0) {
+                            const imageContainer = document.createElement('div');
+                            imageContainer.className = 'image-container';
+                            if (message.images.length === 1) {
+                                imageContainer.classList.add('single');
+                            } else if (message.images.length === 2) {
+                                imageContainer.classList.add('pair');
+                            } else {
+                                imageContainer.classList.add('multiple');
+                            }
+                            message.images.forEach(url => {
+                                const img = document.createElement('img');
+                                img.src = url;
+                                img.alt = 'Assistant image';
+                                imageContainer.appendChild(img);
+                            });
+                            messageDiv.appendChild(imageContainer);
+                        }
+
+                        if (message.exercise && Object.keys(message.exercise).length > 0) {
+                            const showExerciseBtn = document.createElement('button');
+                            showExerciseBtn.className = 'show-exercise-btn';
+                            showExerciseBtn.innerText = 'Show exercise';
+                            showExerciseBtn.addEventListener('click', () => showExercise(message.exercise));
+                            messageDiv.appendChild(showExerciseBtn);
+                        }
+
+                        chatHistoryContent.appendChild(messageDiv);
+                    });
+                    if (messages.length > 0) {
+                        brandWrapper.classList.add('top-left');
+                        chatWrapper.scrollTop = chatWrapper.scrollHeight;
+                    }
+                    addImageClickListeners();
+                };
+
+                request.onerror = () => console.error('Error loading history:', request.error);
+                updatePathHistory();
+            } catch (error) {
+                console.error('Error opening DB:', error);
+                // Clear existing database and retry
+                try {
+                    await indexedDB.deleteDatabase(dbName);
+                    const db = await openDB();
+                    await loadChatHistory();
+                } catch (retryError) {
+                    console.error('Retry failed:', retryError);
+                }
+            }
+        }
+
+        async function saveChatHistory(message) {
+            try {
+                const db = await openDB();
+                const tx = db.transaction([storeName], 'readwrite');
+                const store = tx.objectStore(storeName);
+
+                const addRequest = store.add({
+                    type: message.type,
+                    text: message.text,
+                    images: message.images || [],
+                    exercise: message.exercise || {},
+                    timestamp: Date.now()
+                });
+                addRequest.onerror = () => console.error('Error adding message:', addRequest.error);
+
+                const countRequest = store.count();
+                countRequest.onsuccess = () => {
+                    if (countRequest.result > maxMessages) {
+                        const index = store.index('timestamp');
+                        const cursorRequest = index.openCursor(null, 'next');
+                        cursorRequest.onsuccess = event => {
+                            const cursor = event.target.result;
+                            if (cursor) {
+                                const toDelete = countRequest.result - maxMessages;
+                                for (let i = 0; i < toDelete && cursor; i++) {
+                                    store.delete(cursor.primaryKey);
+                                    cursor.continue();
+                                }
+                            }
+                        };
+                        cursorRequest.onerror = () => console.error('Error pruning messages:', cursorRequest.error);
+                    }
+                };
+
+                await new Promise((resolve, reject) => {
+                    tx.oncomplete = resolve;
+                    tx.onerror = () => reject(tx.error);
+                });
+            } catch (error) {
+                console.error('Error saving to DB:', error);
+                // Clear existing database and retry
+                try {
+                    await indexedDB.deleteDatabase(dbName);
+                    const db = await openDB();
+                    await saveChatHistory(message);
+                } catch (retryError) {
+                    console.error('Retry failed:', retryError);
+                }
+            }
+        }
+
+        async function clearChatHistory(reload = false) {
+            try {
+                const db = await openDB();
+                const tx = db.transaction([storeName], 'readwrite');
+                const store = tx.objectStore(storeName);
+                const clearRequest = store.clear();
+                clearRequest.onerror = () => console.error('Error clearing history:', clearRequest.error);
+                await new Promise((resolve, reject) => {
+                    tx.oncomplete = resolve;
+                    tx.onerror = () => reject(tx.error);
+                });
+                chatHistoryContent.innerHTML = '';
+                brandWrapper.classList.remove('top-left');
+                removePathFromHistory();
+                hideExerciseBoard();
+                if (reload) {
+                    window.location.reload();
+                }
+            } catch (error) {
+                console.error('Error clearing DB:', error);
+                // Clear existing database and retry
+                try {
+                    await indexedDB.deleteDatabase(dbName);
+                    const db = await openDB();
+                    await clearChatHistory(reload);
+                } catch (retryError) {
+                    console.error('Retry failed:', retryError);
+                }
+            }
+        }
+
+        loadChatHistory();
+
+        newChatButton.addEventListener('click', () => clearChatHistory(true));
+
+        chatInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
+        sendButton.addEventListener('click', sendMessage);
+
+        function linkifyText(text) {
+            let result = text.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
+
+            result = result.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, (match, displayText, url) => {
+                if (url.length > 12) {
+                    let wrappedUrl = '';
+                    for (let i = 0; i < url.length; i += 12) {
+                        wrappedUrl += url.slice(i, i + 12) + '<span style="display: inline;"></span>';
+                    }
+                    return `<a href="${url}" target="_blank">${displayText}</a>`;
+                }
+                return `<a href="${url}" target="_blank">${displayText}</a>`;
+            });
+
+            const urlRegex = /(https?:\/\/[^\s<]+)(?=[.,!?]?(\s|$))/g;
+            result = result.replace(urlRegex, (match, url) => {
+                const cleanUrl = url.replace(/[.,!?]$/, '');
+                const isAlreadyLinked = result.includes(`<a href="${cleanUrl}"`) || result.includes(`<a href="${cleanUrl.slice(0, -1)}"`);
+                if (!isAlreadyLinked) {
+                    if (cleanUrl.length > 12) {
+                        let wrappedUrl = '';
+                        for (let i = 0; i < cleanUrl.length; i += 12) {
+                            wrappedUrl += cleanUrl.slice(i, i + 12) + '<span style="display: inline;"></span>';
+                        }
+                        return `<a href="${cleanUrl}" target="_blank">${wrappedUrl}</a>`;
+                    }
+                    return `<a href="${cleanUrl}" target="_blank">${cleanUrl}</a>`;
+                }
+                return match;
+            });
+
+            return result;
+        }
+
+        async function sendMessage() {
+            const messageText = chatInput.value.trim();
+            if (!messageText) return;
+            if (!userId) await initUserId();
+            if (!userId) {
+                console.error('User ID not initialized');
+                return;
+            }
+
+            const userMessage = {
+                type: 'user',
+                text: linkifyText(messageText),
+                images: [],
+                exercise: {}
+            };
+            const userMessageDiv = document.createElement('div');
+            userMessageDiv.className = 'user-message';
+            const userTextSpan = document.createElement('span');
+            userTextSpan.className = 'message-text';
+            userTextSpan.innerHTML = userMessage.text;
+            userMessageDiv.appendChild(userTextSpan);
+            chatHistoryContent.appendChild(userMessageDiv);
+            chatWrapper.scrollTop = chatWrapper.scrollHeight;
+
+            chatInput.value = '';
+            if (!brandWrapper.classList.contains('top-left')) {
+                brandWrapper.classList.add('top-left');
+            }
+
+            await saveChatHistory(userMessage);
+
+            try {
+                console.log('Sending to endpoint:', webhookEndpoint, { userId, message: messageText });
+                const response = await fetch(webhookEndpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({ userId, message: messageText }),
+                    mode: 'cors'
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`Server error: ${response.status} - ${errorText}`);
+                }
+
+                const result = await response.json();
+                console.log('Received response:', result);
+                const aiMessage = document.createElement('div');
+                aiMessage.className = 'ai-message';
+
+                let output = result.output ? result.output : (Array.isArray(result) && result[0]?.output ? result[0].output : null);
+                let outputMessage = 'Error: No valid message received';
+                let photoUrls = [];
+                let exercise = {};
+
+                if (output && output.outputMessage) {
+                    outputMessage = output.outputMessage;
+                    photoUrls = Array.isArray(output.photoUrls) ? output.photoUrls : [];
+                    exercise = output.exercise || {};
+                } else {
+                    console.warn('Unexpected response structure:', result);
+                }
+
+                const aiTextSpan = document.createElement('span');
+                aiTextSpan.className = 'message-text';
+                aiTextSpan.innerHTML = linkifyText(outputMessage);
+                aiMessage.appendChild(aiTextSpan);
+
+                if (photoUrls.length > 0) {
+                    const imageContainer = document.createElement('div');
+                    imageContainer.className = 'image-container';
+                    if (photoUrls.length === 1) {
+                        imageContainer.classList.add('single');
+                    } else if (photoUrls.length === 2) {
+                        imageContainer.classList.add('pair');
+                    } else {
+                        imageContainer.classList.add('multiple');
+                    }
+                    photoUrls.forEach(url => {
+                        if (typeof url === 'string' && url.trim() !== '') {
+                            const img = document.createElement('img');
+                            img.src = url;
+                            img.alt = 'Assistant image';
+                            imageContainer.appendChild(img);
+                        }
+                    });
+                    aiMessage.appendChild(imageContainer);
+                }
+
+                if (Object.keys(exercise).length > 0) {
+                    const showExerciseBtn = document.createElement('button');
+                    showExerciseBtn.className = 'show-exercise-btn';
+                    showExerciseBtn.innerText = 'Show exercise';
+                    showExerciseBtn.addEventListener('click', () => showExercise(exercise));
+                    aiMessage.appendChild(showExerciseBtn);
+                    showExercise(exercise);
+                }
+
+                chatHistoryContent.appendChild(aiMessage);
+                chatWrapper.scrollTop = chatWrapper.scrollHeight;
+
+                await saveChatHistory({
+                    type: 'ai',
+                    text: linkifyText(outputMessage),
+                    images: photoUrls,
+                    exercise: exercise
+                });
+                addImageClickListeners();
+            } catch (error) {
+                console.error('Error sending message:', error);
+                const errorMessage = document.createElement('div');
+                errorMessage.className = 'ai-message';
+                const errorTextSpan = document.createElement('span');
+                errorTextSpan.className = 'message-text';
+                errorTextSpan.innerText = `Error: ${error.message}`;
+                errorMessage.appendChild(errorTextSpan);
+                chatHistoryContent.appendChild(errorMessage);
+                chatWrapper.scrollTop = chatWrapper.scrollHeight;
+                await saveChatHistory({
+                    type: 'ai',
+                    text: `Error: ${error.message}`,
+                    images: [],
+                    exercise: {}
+                });
+            }
+        }
+
+        function addImageClickListeners() {
+            const images = document.querySelectorAll('.ai-message img');
+            images.forEach(img => {
+                img.removeEventListener('click', openImageModal);
+                img.addEventListener('click', openImageModal);
+            });
+        }
+
+        function openImageModal(event) {
+            const src = event.target.src;
+
+            const modal = document.createElement('div');
+            modal.className = 'image-modal';
+
+            const img = document.createElement('img');
+            img.src = src;
+            img.alt = 'Enlarged image';
+
+            const closeBtn = document.createElement('button');
+            closeBtn.className = 'close-btn';
+            closeBtn.innerText = '✖';
+            closeBtn.addEventListener('click', closeImageModal);
+
+            modal.appendChild(img);
+            modal.appendChild(closeBtn);
+
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    closeImageModal();
+                }
+            });
+
+            document.body.appendChild(modal);
+        }
+
+        function closeImageModal() {
+            const modal = document.querySelector('.image-modal');
+            if (modal) modal.remove();
+        }
+
+        function showExercise(data) {
+            exerciseData = data;
+            exerciseContent.innerHTML = '';
+            chatContainer.style.width = '60%';
+            chatContainer.classList.add('shrunk');
+            exerciseBoard.style.width = '40%';
+            exerciseBoard.style.right = '0';
+            exerciseBoard.classList.add('active');
+            resizeHandle.style.left = '60%';
+            resizeHandle.classList.add('active');
+
+            try {
+                // Display the main exercise title at the top
+                const exerciseTitle = document.createElement('h2');
+                exerciseTitle.innerText = data['exercise-title'] || 'Exercise';
+                exerciseContent.appendChild(exerciseTitle);
+
+                // Render each section
+                exerciseData.sections.forEach((section, index) => {
+                    const sectionDiv = document.createElement('div');
+                    sectionDiv.className = 'section';
+                    sectionDiv.innerHTML = `<h3>${section.title}</h3>`;
+                    section.questions.forEach((question, qIndex) => {
+                        const questionDiv = document.createElement('div');
+                        questionDiv.className = 'question';
+                        let questionContent = `<p>${question.text}</p>`;
+                        if (question.image && Array.isArray(question.image) && question.image.length > 0) {
+                            questionContent += `<div class="image-container">`;
+                            question.image.forEach(imgObj => {
+                                questionContent += `<img src="${imgObj.url}" alt="${imgObj['img-des'] || 'Exercise image'}">`;
+                            });
+                            questionContent += `</div>`;
+                        }
+                        questionContent += `
+                            ${question.examples ? question.examples.map(ex => `<p>例: ${ex}</p>`).join('') : ''}
+                            ${question.items.map((item, iIndex) => `
+                                <p>${iIndex + 1}) ${item.prompt} <input type="text" id="answer_${index}_${qIndex}_${iIndex}" value="${item.answer || ''}"></p>
+                            `).join('')}
+                        `;
+                        questionDiv.innerHTML = questionContent;
+                        sectionDiv.appendChild(questionDiv);
+                    });
+                    exerciseContent.appendChild(sectionDiv);
+                });
+            } catch (e) {
+                exerciseContent.innerHTML = '<p style="color: red;">Invalid exercise format</p>';
+            }
+        }
+
+        function hideExerciseBoard() {
+            chatContainer.style.width = '100%';
+            chatContainer.classList.remove('shrunk');
+            exerciseBoard.classList.remove('active');
+            resizeHandle.classList.remove('active');
+            exerciseContent.innerHTML = '';
+            exerciseData = null;
+            exerciseBoard.style.width = '40%';
+            exerciseBoard.style.right = '-40%';
+            resizeHandle.style.left = '60%';
+        }
+
+        async function finishAndCheck() {
+            if (!exerciseData) return;
+
+            exerciseData.sections.forEach((section, index) => {
+                section.questions.forEach((question, qIndex) => {
+                    question.items.forEach((item, iIndex) => {
+                        const input = document.getElementById(`answer_${index}_${qIndex}_${iIndex}`);
+                        if (input) {
+                            item.answer = input.value;
+                        }
+                    });
+                });
+            });
+
+            try {
+                const response = await fetch(finishExerciseEndpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({ userId, exercise: exerciseData }),
+                    mode: 'cors'
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`Server error: ${response.status} - ${errorText}`);
+                }
+
+                const result = await response.json();
+                const aiMessage = document.createElement('div');
+                aiMessage.className = 'ai-message';
+                const aiTextSpan = document.createElement('span');
+                aiTextSpan.className = 'message-text';
+                aiTextSpan.innerHTML = linkifyText(result.outputMessage || 'Exercise submitted successfully!');
+                aiMessage.appendChild(aiTextSpan);
+                chatHistoryContent.appendChild(aiMessage);
+                chatWrapper.scrollTop = chatWrapper.scrollHeight;
+
+                await saveChatHistory({
+                    type: 'ai',
+                    text: linkifyText(result.outputMessage || 'Exercise submitted successfully!'),
+                    images: [],
+                    exercise: {}
+                });
+            } catch (error) {
+                console.error('Error submitting exercise:', error);
+                const errorMessage = document.createElement('div');
+                errorMessage.className = 'ai-message';
+                const errorTextSpan = document.createElement('span');
+                errorTextSpan.className = 'message-text';
+                errorTextSpan.innerText = `Error: ${error.message}`;
+                errorMessage.appendChild(errorTextSpan);
+                chatHistoryContent.appendChild(errorMessage);
+                chatWrapper.scrollTop = chatWrapper.scrollHeight;
+                await saveChatHistory({
+                    type: 'ai',
+                    text: `Error: ${error.message}`,
+                    images: [],
+                    exercise: {}
+                });
+            }
+        }
+
+        closeBtn.addEventListener('click', () => {
+            hideExerciseBoard();
+        });
+        finishBtn.addEventListener('click', finishAndCheck);
+
+        let isResizing = false;
+        resizeHandle.addEventListener('mousedown', (e) => {
+            isResizing = true;
+            document.addEventListener('mousemove', resize);
+            document.addEventListener('mouseup', stopResize);
+        });
+
+        function resize(e) {
+            if (!isResizing) return;
+            const containerWidth = document.getElementById('container').offsetWidth;
+            const newChatWidth = (e.clientX / containerWidth) * 100;
+            const maxBoardWidth = 66.67;
+            if (newChatWidth >= 33.33 && newChatWidth <= 70) {
+                chatContainer.style.width = `${newChatWidth}%`;
+                exerciseBoard.style.width = `${100 - newChatWidth}%`;
+                resizeHandle.style.left = `${newChatWidth}%`;
+            } else if (newChatWidth < 33.33) {
+                chatContainer.style.width = '33.33%';
+                exerciseBoard.style.width = '66.67%';
+                resizeHandle.style.left = '33.33%';
+            }
+        }
+
+        function stopResize() {
+            isResizing = false;
+            document.removeEventListener('mousemove', resize);
+            document.removeEventListener('mouseup', stopResize);
+        }
+    </script>
+</body>
+</html>

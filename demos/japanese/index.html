@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta property="og:type" content="AI Agent" /> 
+	<meta property="og:title" content="Any AI || Japanese teacher" /> 
+	<meta property="og:description" content="Any AI Demo - Giáo viên AI, phát triển bởi Any AI" />
+	<meta property="og:url" content="https://anyai.aah.id.vn/demos/goodtrip/" /> 
+    <link rel="icon" href="https://anyai.aah.id.vn/images/Any-AI-icon.png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link rel="stylesheet" href="https://hoanganhdinhngoc.github.io/cdn/teacher-chat/teacher-chat-common-css.css">
+    <title>Any AI || Japanese teacher</title>
+    <style>
+        #overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: -1;
+        }
+        .user-message .message-text, .ai-message .message-text {
+            overflow-wrap: anywhere;
+            word-break: break-word;
+            max-width: 100%;
+        }
+        .user-message .message-text > a, .ai-message .message-text > a {
+            overflow-wrap: anywhere;
+            word-break: break-word;
+            max-width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <img id="background-image" src="../../images/hiroyoshi-urushima-classroom.jpg" alt="Background">
+    <div id="overlay"></div>
+    <button id="new-chat-button">Start a new chat</button>
+    <div id="chat-container">
+        <div id="brand-wrapper">
+            <div id="brand-title">日本語教師</div>
+            <p id="subtitle">Powered by Any AI</p>
+        </div>
+        <div id="chat-wrapper">
+            <div id="chat-history">
+                <div id="chat-history-content"></div>
+            </div>
+        </div>
+        <div id="chat-box">
+            <textarea id="chat-input" placeholder="何か質問ある？..."></textarea>
+            <button id="send-button"><i class="fa fa-arrow-up" aria-hidden="true"></i></button>
+        </div>
+    </div>
+
+    <script>
+        // Custom values for this site
+        const userIdCookieKey = 'japaneseTeacher_userId';
+        const webhookEndpoint = 'https://agent.aah.id.vn/webhook/japanese-teacher';
+        const dbName = 'japaneseTeacher-chat';
+    </script>
+    <script src="https://hoanganhdinhngoc.github.io/cdn/teacher-chat/teacher-chat-common-js.js" defer></script>
+</body>
+</html>
