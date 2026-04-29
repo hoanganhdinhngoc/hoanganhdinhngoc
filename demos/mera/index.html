@@ -25,9 +25,12 @@
             background-color: var(--bg-dark);
             color: var(--text-light);
             font-family: 'Inter', sans-serif;
+            font-weight: 300; 
             overflow-x: hidden;
             line-height: 1.6;
         }
+
+        h1, h2, h3, h4 { font-weight: 500; margin-top: 0; }
 
         /* --- HEADER --- */
         header {
@@ -39,19 +42,13 @@
             border-bottom: 1px solid var(--border-color);
         }
 
-        .logo-container { 
-            display: flex; align-items: center; gap: 8px; font-weight: bold; font-size: 1.6rem; 
-        }
-        .logo-mera {
-            background: var(--gradient-accent);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
+        .logo-container { display: flex; align-items: center; }
+        .site-logo { height: 35px; width: auto; object-fit: contain; }
 
         nav ul { list-style: none; display: flex; gap: 40px; margin: 0; padding: 0; }
-        nav a { color: var(--text-light); text-decoration: none; font-size: 0.95rem; transition: color 0.3s; }
+        nav a { color: var(--text-light); text-decoration: none; font-size: 0.95rem; font-weight: 400; transition: color 0.3s; }
         nav a:hover { color: var(--primary-green); }
-        .contact-info { font-size: 0.9rem; color: var(--text-light); display: flex; gap: 15px; }
+        .contact-info { font-size: 0.9rem; color: var(--text-light); display: flex; gap: 15px; font-weight: 400;}
 
         /* --- SECTION 1: HERO --- */
         .hero {
@@ -61,67 +58,130 @@
             background: radial-gradient(circle at 50% 100%, rgba(34, 197, 94, 0.15), rgba(37, 99, 235, 0.1) 40%, transparent 70%);
         }
 
-        .hero h1 { font-size: 4.5rem; margin-bottom: 20px; letter-spacing: -1px; }
+        .hero h1 { font-size: 4.5rem; margin-bottom: 20px; letter-spacing: -1px; font-weight: 600;}
         .hero p { font-size: 1.2rem; color: var(--text-muted); max-width: 600px; margin-bottom: 40px; }
 
         .btn {
-            padding: 15px 35px; border-radius: 30px; font-weight: 600;
+            padding: 15px 35px; border-radius: 30px; font-weight: 500;
             text-decoration: none; display: inline-block; cursor: pointer;
-            transition: all 0.3s ease; border: 1px solid transparent;
+            transition: all 0.3s ease; border: 1px solid transparent; font-family: 'Inter', sans-serif;
         }
         .btn-outline { background: transparent; border-color: var(--text-light); color: var(--text-light); }
         .btn-outline:hover { background: rgba(255,255,255,0.1); }
-        .btn-green { background: var(--primary-green); color: #000; }
+        .btn-green { background: var(--primary-green); color: #ffffff; }
+        .btn-green:hover { filter: brightness(1.1); box-shadow: 0 5px 15px rgba(34, 197, 94, 0.3); }
         .btn-blue { background: var(--primary-blue); color: white; }
 
-        /* --- LAYOUT CHUNG --- */
-        .section-container { padding: 100px 8%; max-width: 1400px; margin: 0 auto; }
-        .section-title { font-size: 3.5rem; margin-bottom: 20px; font-weight: 500; text-align: center; }
+        /* --- CHUẨN HÓA KHOẢNG CÁCH (SPACING) --- */
+        .section-container { 
+            padding: 100px 8%; 
+            max-width: 1400px; 
+            margin: 0 auto; 
+            position: relative;
+        }
+        .section-title { 
+            font-size: 3.5rem; 
+            margin-bottom: 50px; 
+            font-weight: 500; 
+            text-align: center; 
+        }
 
         /* --- SECTION 2: INFRASTRUCTURE --- */
-        .scale-grid { display: grid; grid-template-columns: 1fr 1.5fr; gap: 30px; margin-top: 60px; }
+        .scale-grid { display: grid; grid-template-columns: 0.8fr 1.7fr; gap: 30px; }
         .card {
             background: var(--bg-card); border: 1px solid var(--border-color);
             border-radius: 30px; padding: 50px; position: relative; overflow: hidden;
             display: flex; flex-direction: column; justify-content: flex-end; min-height: 450px;
         }
+        .card-left { background: linear-gradient(to top, rgba(0,0,0,0.8), transparent), url('./images/pexels-hanako-2148376889-30090282.jpg') center/cover; }
+        .card-right { background: linear-gradient(to top, rgba(0,0,0,0.9), rgba(0,0,0,0.2)), url('./images/conect%20lines.png') center/cover; }
         
-        /* Cập nhật ảnh kỹ sư kéo cáp viễn thông cho card bên trái */
-        .card-left { 
-            background: linear-gradient(to top, rgba(0,0,0,0.8), transparent), url('https://images.unsplash.com/photo-1544724569-5f546fd6f2b6?auto=format&fit=crop&q=80') center/cover; 
-        }
-        
-        .card-right { 
-            background: linear-gradient(to top, rgba(0,0,0,0.9), rgba(0,0,0,0.2)), url('https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&q=80') center/cover; 
-        }
-        
-        /* --- SECTION 3: OUR NETWORK (QUẢ CẦU) --- */
+        /* --- SECTION 3: OUR NETWORK --- */
         .network-section { background: linear-gradient(to bottom, transparent, rgba(37, 99, 235, 0.05), transparent); text-align: center;}
         .iframe-container {
             width: 100%; height: 750px; border-radius: 30px; overflow: hidden;
-            border: 1px solid var(--border-color); background: #000; margin-top: 40px;
+            border: 1px solid var(--border-color); background: #000;
         }
 
         /* --- SECTION 4: PROVEN --- */
         .proven-grid {
-            display: grid; grid-template-columns: 1fr 1fr; gap: 50px;
-            border-radius: 30px; padding: 80px; margin-top: 60px;
-            background: linear-gradient(rgba(240, 248, 255, 0.85), rgba(240, 248, 255, 0.9)), url('https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&q=80') center/cover;
+            position: relative; 
+            min-height: 660px; 
+            display: block;
+            border-radius: 30px; overflow: hidden;
+            background: linear-gradient(to right, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.3) 100%), url('https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&q=80') center/cover;
             border: 1px solid rgba(255,255,255,0.2);
             box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+            color: #ffffff;
         }
-        .proven-text-dark { color: var(--dark-blue-text); }
-        .proven-grid p { color: #334155; }
+
+        .proven-title-box { position: absolute; top: 60px; left: 60px; }
         
-        .stat-grid { display: grid; gap: 40px; }
-        .stat-number { font-size: 3.5rem; font-weight: 700; margin-bottom: 5px; color: var(--primary-blue); }
-        .stat-title { font-size: 1.2rem; font-weight: 600; margin-bottom: 5px; }
+        .proven-subtitle-box {
+            position: absolute; top: 60px; right: 129px;
+            width: 250px; 
+            text-align: left;
+            font-size: 1rem; font-weight: 300;
+        }
+
+        /* --- SỬA LẠI CỘT STATS CHO ĐÚNG THIẾT KẾ 2 CỘT --- */
+        .proven-stats-box {
+            position: absolute; bottom: 80px; right: 40px;
+            display: flex; flex-direction: column; gap: 60px;
+            width: 560px; /* Tăng chiều rộng để vừa layout 2 cột */
+            text-align: left; 
+        }
+
+        .stat-item {
+            display: flex;
+            align-items: flex-start; /* Căn cho dòng đầu tiên bằng nhau */
+            gap: 20px;
+        }
+
+        .stat-item .stat-number { 
+            font-size: 3.2rem; 
+            font-weight: 500; 
+            line-height: 0.85; /* Giúp đỉnh của số bằng với đỉnh của dòng chữ Title */
+            color: #ffffff; 
+            width: 200px; /* Cố định width của số để cột chữ luôn thẳng hàng */
+            flex-shrink: 1;
+        }
+        
+        .stat-item .stat-text {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .stat-item .stat-title { 
+            font-size: 1.25rem; 
+            font-weight: 600; 
+            margin: 0 0 5px 0; 
+        }
+        
+        .stat-item p { 
+            margin: 0; 
+            font-size: 0.95rem; 
+            font-weight: 300; 
+            opacity: 0.8; 
+            line-height: 1.4;
+        }
 
         /* --- SECTION 5: WHAT CLIENTS SAY --- */
-        .clients-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 60px; }
-        .quote-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 30px; padding: 60px; }
+        .glow-left {
+            position: absolute; top: 10%; left: -15%; width: 50%; height: 80%;
+            background: radial-gradient(circle at center, rgba(34, 197, 94, 0.12), transparent 60%);
+            pointer-events: none; z-index: 0;
+        }
+        .glow-right {
+            position: absolute; top: 10%; right: -15%; width: 50%; height: 80%;
+            background: radial-gradient(circle at center, rgba(37, 99, 235, 0.12), transparent 60%);
+            pointer-events: none; z-index: 0;
+        }
+
+        .clients-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; position: relative; z-index: 1;}
+        .quote-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 30px; padding: 60px; backdrop-filter: blur(5px);}
         .stars { color: var(--primary-green); font-size: 1.5rem; margin-bottom: 20px; }
-        .quote-text { font-size: 1.8rem; line-height: 1.4; font-weight: 500; margin-bottom: 40px; }
+        .quote-text { font-size: 1.6rem; line-height: 1.5; font-weight: 300; margin-bottom: 40px; }
         .client-img-card {
             border-radius: 30px; min-height: 500px; position: relative;
             background: url('https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&q=80') center/cover;
@@ -134,30 +194,73 @@
 
         /* --- SECTION 6: CONNECT --- */
         .connect-wrapper {
-            background-color: #f8fafc;
-            padding: 100px 0;
-            color: #0f172a;
+            background-color: var(--bg-dark);
+            padding: 80px 0 60px 0; 
         }
-        .connect-wrapper .section-title { color: #0f172a; text-align: left; font-size: 4rem; }
-        .connect-grid { display: grid; grid-template-columns: 1fr 1.5fr; gap: 60px; margin-top: 40px; }
-        .contact-info-list { display: flex; flex-direction: column; gap: 30px; margin-top: 40px; }
-        .contact-item { display: flex; align-items: flex-start; gap: 15px; color: #475569; font-weight: 500;}
-        .contact-icon { width: 24px; height: 24px; color: var(--primary-blue); font-size: 1.2rem;}
+        .connect-grid { 
+            display: grid; grid-template-columns: 1fr 1.5fr; gap: 60px; 
+            align-items: flex-start; 
+        }
+        
+        .connect-left {
+            display: flex; flex-direction: column;
+        }
+        .connect-left .section-title { text-align: left; font-size: 4rem; margin-bottom: 30px; line-height: 1; }
+        
+        .contact-info-list { display: flex; flex-direction: column; gap: 25px; margin-top: 30px; }
+        .contact-item { display: flex; align-items: flex-start; gap: 15px; color: var(--text-muted); font-weight: 300;}
+        .contact-icon { width: 24px; height: 24px; color: var(--text-light); font-size: 1.2rem;}
+
+        /* CSS Custom Form */
+        .custom-form {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 20px;
+            background: rgba(255, 255, 255, 0.02);
+            padding: 40px; border-radius: 20px; border: 1px solid var(--border-color);
+            margin: 0; 
+        }
+        .form-group { position: relative; }
+        .form-group.full-width { grid-column: 1 / -1; }
+        .form-label { display: block; margin-bottom: 8px; font-size: 0.85rem; color: var(--text-muted); font-weight: 300;}
+        .asterisk { color: #ff3333; font-weight: bold; margin-left: 3px; }
+        .form-input {
+            width: 100%; box-sizing: border-box;
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 8px; padding: 12px 16px;
+            color: white; font-family: 'Inter', sans-serif; font-weight: 300; font-size: 0.95rem;
+            transition: all 0.3s ease;
+        }
+        .form-input:focus { outline: none; border-color: rgba(255,255,255,0.5); background: rgba(255,255,255,0.05); }
+        textarea.form-input { resize: vertical; min-height: 100px; }
+        
+        .submit-area {
+            grid-column: 1 / -1; display: flex; justify-content: flex-end; align-items: center; gap: 20px; margin-top: 5px;
+        }
+        .success-msg { color: white; font-style: italic; font-size: 0.9rem; font-weight: 300; display: none; }
 
         /* --- FOOTER --- */
         .site-footer {
-            background: #02040a; padding: 80px 8% 40px;
+            position: relative; overflow: hidden;
+            background-color: var(--bg-dark);
+            padding: 80px 8% 40px;
             border-top: 1px solid var(--border-color); font-size: 0.9rem;
         }
+        .site-footer::before {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            background: radial-gradient(circle at 50% 100%, rgba(34, 197, 94, 0.15), rgba(37, 99, 235, 0.1) 40%, transparent 70%);
+            pointer-events: none; z-index: 0;
+        }
+
+        .footer-grid, .footer-bottom { position: relative; z-index: 1; }
         .footer-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1.5fr; gap: 40px; margin-bottom: 60px; }
-        .footer-heading { color: var(--text-light); font-weight: 600; margin-bottom: 25px; font-size: 1rem;}
+        .footer-heading { color: var(--text-light); font-weight: 500; margin-bottom: 25px; font-size: 1rem;}
         .footer-links { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 15px; }
-        .footer-links a { color: var(--text-muted); text-decoration: none; transition: color 0.3s; }
+        .footer-links a { color: var(--text-muted); text-decoration: none; transition: color 0.3s; font-weight: 300;}
         .footer-links a:hover { color: var(--text-light); }
         
         .footer-bottom {
             display: flex; justify-content: space-between; align-items: center;
-            padding-top: 30px; border-top: 1px solid var(--border-color); color: var(--text-muted);
+            padding-top: 30px; border-top: 1px solid var(--border-color); color: var(--text-muted); font-weight: 300;
         }
         .social-icons { display: flex; gap: 15px; }
         .social-btn {
@@ -172,7 +275,7 @@
 
     <header>
         <div class="logo-container">
-            <span class="logo-mera">Mera</span> <span style="font-weight: 400; font-size: 1rem;">AI</span>
+            <a href="#"><img src="YOUR_LOGO_URL.png" alt="Mera AI Logo" class="site-logo"></a>
         </div>
         <nav>
             <ul>
@@ -204,7 +307,7 @@
                     <p style="color: #e2e8f0; margin-bottom: 30px; max-width: 80%;">From fiber networks to cloud connectivity, we handle the backbone of modern business. Our infrastructure reaches across continents and connects what matters most.</p>
                     <div style="display: flex; gap: 15px;">
                         <a href="#" class="btn btn-green">Explore &rarr;</a>
-                        <a href="#" class="btn btn-blue">Contact &rarr;</a>
+                        <a href="#" class="btn btn-outline">Contact &rarr;</a>
                     </div>
                 </div>
             </div>
@@ -212,8 +315,7 @@
     </section>
 
     <section id="our-network" class="section-container network-section">
-        <h2 class="section-title" style="margin-bottom: 10px;">Our Network</h2>
-        <p style="color: var(--text-muted);">Interactive map of Mera's global infrastructure</p>
+        <h2 class="section-title">Our Network</h2>
         <div class="iframe-container">
             <iframe 
                 src="https://hoanganhdinhngoc.github.io/YOUR-GLOBE-REPO/" 
@@ -224,34 +326,52 @@
 
     <section class="section-container">
         <h2 class="section-title">Proven</h2>
+        
         <div class="proven-grid">
-            <div>
-                <h3 class="proven-text-dark" style="font-size: 3.5rem; margin-top: 0; line-height: 1.1;">Numbers That<br>Speak</h3>
-                <p style="font-size: 1.1rem;">We've been doing this for years.<br>The results show it.</p>
+            <div class="proven-title-box">
+                <h3 style="font-size: 3rem; margin: 0; line-height: 1.1; font-weight: 400;">Numbers That<br>Speak</h3>
             </div>
-            <div class="stat-grid">
-                <div>
+            
+            <div class="proven-subtitle-box">
+                We've been doing this for years.<br>The results show it.
+            </div>
+            
+            <div class="proven-stats-box">
+                
+                <div class="stat-item">
                     <div class="stat-number">99.99%</div>
-                    <div class="stat-title proven-text-dark">Uptime guarantee</div>
-                    <p style="margin-top: -5px;">Reliability you can count on every day</p>
+                    <div class="stat-text">
+                        <div class="stat-title">Uptime guarantee</div>
+                        <p>Reliability you can count on every day</p>
+                    </div>
                 </div>
-                <div>
+                
+                <div class="stat-item">
                     <div class="stat-number">500+</div>
-                    <div class="stat-title proven-text-dark">Active clients</div>
-                    <p style="margin-top: -5px;">Companies trusting us with their networks</p>
+                    <div class="stat-text">
+                        <div class="stat-title">Active clients</div>
+                        <p>Companies trusting us with their networks</p>
+                    </div>
                 </div>
-                <div>
+                
+                <div class="stat-item">
                     <div class="stat-number">6</div>
-                    <div class="stat-title proven-text-dark">Global coverage</div>
-                    <p style="margin-top: -5px;">Continents connected through our infrastructure</p>
+                    <div class="stat-text">
+                        <div class="stat-title">Global coverage</div>
+                        <p>Continents connected through our infrastructure</p>
+                    </div>
                 </div>
+
             </div>
         </div>
     </section>
 
     <section class="section-container">
-        <div style="display: flex; justify-content: space-between; align-items: flex-end;">
-            <p style="color: var(--text-muted); font-size: 1.1rem;">Real Stories From Real Companies</p>
+        <div class="glow-left"></div>
+        <div class="glow-right"></div>
+        
+        <div style="display: flex; justify-content: space-between; align-items: flex-end; position: relative; z-index: 1; margin-bottom: 50px;">
+            <p style="color: var(--text-muted); font-size: 1.1rem; margin: 0;">Real Stories From Real Companies</p>
             <h2 class="section-title" style="margin: 0;">What Clients Say</h2>
         </div>
         
@@ -266,12 +386,12 @@
                 </div>
                 <div style="display: flex; gap: 15px; margin-top: 60px;">
                     <a href="#" class="btn btn-green">Explore &rarr;</a>
-                    <a href="#" class="btn btn-blue">Contact &rarr;</a>
+                    <a href="#" class="btn btn-outline">Contact &rarr;</a>
                 </div>
             </div>
             <div class="client-img-card">
                 <div class="client-info-badge">
-                    <div style="font-weight: 600; font-size: 1.1rem;">Marcus Chen</div>
+                    <div style="font-weight: 500; font-size: 1.1rem;">Marcus Chen</div>
                     <div style="color: var(--text-muted); font-size: 0.9rem;">CTO, TechVenture Inc</div>
                 </div>
             </div>
@@ -280,11 +400,12 @@
 
     <div class="connect-wrapper">
         <section class="section-container" style="padding-top: 0; padding-bottom: 0;">
-            <h2 class="section-title">Connect</h2>
             <div class="connect-grid">
-                <div>
-                    <h3 style="font-size: 1.5rem; margin-bottom: 10px; color: #0f172a;">Send Us A Message</h3>
-                    <p style="color: #64748b;">Tell us what you need and we'll respond fast.</p>
+                
+                <div class="connect-left">
+                    <h2 class="section-title">Connect</h2>
+                    <h3 style="font-size: 1.5rem; margin-bottom: 10px; font-weight: 400;">Send Us A Message</h3>
+                    <p style="color: var(--text-muted); margin: 0;">Tell us what you need and we'll respond fast.</p>
                     
                     <div class="contact-info-list">
                         <div class="contact-item">
@@ -303,11 +424,32 @@
                 </div>
 
                 <div>
-                    <iframe class="airtable-embed" 
-                            src="https://airtable.com/embed/appX52xnq2UKme26q/pag1TnZS5x3SlLQAW/form" 
-                            frameborder="0" onmousewheel="" width="100%" height="650" 
-                            style="background: transparent; border: 1px solid #cbd5e1; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); overflow: hidden;">
-                    </iframe>
+                    <form id="meraContactForm" class="custom-form">
+                        <div class="form-group">
+                            <label class="form-label">First name <span class="asterisk">*</span></label>
+                            <input type="text" id="fName" class="form-input" required placeholder="John Doe">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Email <span class="asterisk">*</span></label>
+                            <input type="email" id="fEmail" class="form-input" required placeholder="john@company.com">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Phone Number <span class="asterisk">*</span></label>
+                            <input type="tel" id="fPhone" class="form-input" required placeholder="+84 901 234 567">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Company Name</label>
+                            <input type="text" id="fCompany" class="form-input" placeholder="Optional">
+                        </div>
+                        <div class="form-group full-width">
+                            <label class="form-label">Message</label>
+                            <textarea id="fMessage" class="form-input" placeholder="How can we help you?"></textarea>
+                        </div>
+                        <div class="submit-area">
+                            <span id="formFeedback" class="success-msg">Thanks for submit your information</span>
+                            <button type="submit" class="btn btn-green" style="border:none;">Send</button>
+                        </div>
+                    </form>
                 </div>
             </div>
         </section>
@@ -317,7 +459,7 @@
         <div class="footer-grid">
             <div>
                 <div class="logo-container" style="margin-bottom: 20px;">
-                    <span class="logo-mera">Mera</span> <span style="font-weight: 400; font-size: 1rem;">AI</span>
+                    <a href="#"><img src="YOUR_LOGO_URL.png" alt="Mera AI Logo" class="site-logo"></a>
                 </div>
             </div>
             
@@ -370,5 +512,55 @@
         </div>
     </footer>
 
+    <script>
+        document.getElementById('meraContactForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const btn = this.querySelector('button[type="submit"]');
+            const feedback = document.getElementById('formFeedback');
+            
+            const payload = {
+                Full_Name: document.getElementById('fName').value,
+                Email_Address: document.getElementById('fEmail').value,
+                Phone_Number: document.getElementById('fPhone').value,
+                Company_Name: document.getElementById('fCompany').value
+            };
+
+            btn.disabled = true;
+            btn.innerText = 'Sending...';
+            btn.style.opacity = '0.7';
+
+            fetch('https://hooks.airtable.com/workflows/v1/genericWebhook/appX52xnq2UKme26q/wfltz4pK2n30ecaVw/wtrO5XZLHOBlIBcGZ', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            })
+            .then(response => {
+                if(response.ok) {
+                    feedback.innerText = "Thanks for submit your information";
+                    feedback.style.color = "#ffffff";
+                    feedback.style.display = "block";
+                    this.reset();
+                } else {
+                    throw new Error('Server response error');
+                }
+            })
+            .catch(error => {
+                feedback.innerText = "Error sending message. Please try again.";
+                feedback.style.color = "#ff3333";
+                feedback.style.display = "block";
+            })
+            .finally(() => {
+                btn.disabled = false;
+                btn.innerText = 'Send';
+                btn.style.opacity = '1';
+                setTimeout(() => {
+                    feedback.style.display = "none";
+                }, 5000);
+            });
+        });
+    </script>
 </body>
 </html>
