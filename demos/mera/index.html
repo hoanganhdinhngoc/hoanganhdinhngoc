@@ -512,7 +512,7 @@
         </div>
     </footer>
 
-    <script>
+<script>
         document.getElementById('meraContactForm').addEventListener('submit', function(e) {
             e.preventDefault();
             
@@ -531,14 +531,14 @@
             btn.innerText = 'Sending...';
             btn.style.opacity = '0.7';
 
-            // Dùng CORS Proxy để làm trạm trung chuyển đánh lừa Airtable
-            const proxyUrl = 'https://corsproxy.io/?';
-            const airtableWebhookUrl = 'https://hooks.airtable.com/workflows/v1/genericWebhook/appX52xnq2UKme26q/wfltz4pK2n30ecaVw/wtrO5XZLHOBlIBcGZ';
+            // DÁN WEB APP URL CỦA GOOGLE MÀ SIR VỪA COPY VÀO ĐÂY
+            const googleScriptUrl = 'https://script.google.com/macros/s/AKfycbxOKURC7m3cP3TtPUicPaGGTwVUiCC9WODgHpSVhze5P6fQBUxsr8WZzv2htGoQDRI/exec';
 
-            fetch(proxyUrl + airtableWebhookUrl, {
+            fetch(googleScriptUrl, {
                 method: 'POST',
+                // SỬ DỤNG text/plain ĐỂ TRÁNH LỖI CORS PREFLIGHT
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'text/plain;charset=utf-8'
                 },
                 body: JSON.stringify(payload)
             })
@@ -547,13 +547,12 @@
                     feedback.innerText = "Thanks for submit your information";
                     feedback.style.color = "#ffffff";
                     feedback.style.display = "block";
-                    this.reset(); // Xóa form sau khi gửi thành công
+                    this.reset();
                 } else {
                     throw new Error('Server response error');
                 }
             })
             .catch(error => {
-                console.error('Error:', error);
                 feedback.innerText = "Error sending message. Please try again.";
                 feedback.style.color = "#ff3333";
                 feedback.style.display = "block";
