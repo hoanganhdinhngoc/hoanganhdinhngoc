@@ -523,14 +523,19 @@
                 Full_Name: document.getElementById('fName').value,
                 Email_Address: document.getElementById('fEmail').value,
                 Phone_Number: document.getElementById('fPhone').value,
-                Company_Name: document.getElementById('fCompany').value
+                Company_Name: document.getElementById('fCompany').value,
+                Message: document.getElementById('fMessage').value
             };
 
             btn.disabled = true;
             btn.innerText = 'Sending...';
             btn.style.opacity = '0.7';
 
-            fetch('https://hooks.airtable.com/workflows/v1/genericWebhook/appX52xnq2UKme26q/wfltz4pK2n30ecaVw/wtrO5XZLHOBlIBcGZ', {
+            // Dùng CORS Proxy để làm trạm trung chuyển đánh lừa Airtable
+            const proxyUrl = 'https://corsproxy.io/?';
+            const airtableWebhookUrl = 'https://hooks.airtable.com/workflows/v1/genericWebhook/appX52xnq2UKme26q/wfltz4pK2n30ecaVw/wtrO5XZLHOBlIBcGZ';
+
+            fetch(proxyUrl + airtableWebhookUrl, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -542,12 +547,13 @@
                     feedback.innerText = "Thanks for submit your information";
                     feedback.style.color = "#ffffff";
                     feedback.style.display = "block";
-                    this.reset();
+                    this.reset(); // Xóa form sau khi gửi thành công
                 } else {
                     throw new Error('Server response error');
                 }
             })
             .catch(error => {
+                console.error('Error:', error);
                 feedback.innerText = "Error sending message. Please try again.";
                 feedback.style.color = "#ff3333";
                 feedback.style.display = "block";
