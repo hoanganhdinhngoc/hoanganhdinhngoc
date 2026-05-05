@@ -4,95 +4,71 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mera Network Map</title>
+    <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        /* CSS cho Section nhúng */
+        .leaflet-control-attribution { display: none !important; }
+
+        /* [SỬA Ở ĐÂY 1] Trả lại 100vh để bản đồ lấp đầy tuyệt đối Iframe, không bao giờ bị mảng đen */
         #mera-map-section {
             position: relative;
             width: 100%;
-            height: 800px; /* Chiều cao section, Sir có thể tùy chỉnh */
-            background-color: #0a0e17; /* Nền biển tối màu */
-            font-family: Arial, sans-serif;
+            height: 100vh; /* Bắt buộc là 100vh */
+            background-color: #090830;
+            font-family: 'SVN-Gilroy', Arial, sans-serif;
             overflow: hidden;
         }
 
-        #mera-map {
-            width: 100%;
-            height: 100%;
-            background: transparent;
-        }
+        #mera-map { width: 100%; height: 100%; background: transparent; }
 
-        /* Tùy chỉnh label (tên địa danh) */
-        .map-label {
-            background: transparent;
-            border: none;
-            box-shadow: none;
-            color: #ffffff;
-            font-weight: bold;
-            font-size: 13px;
-            text-shadow: 1px 1px 3px #000, -1px -1px 3px #000, 1px -1px 3px #000, -1px 1px 3px #000;
-        }
-        .map-label::before { display: none; } /* Ẩn mũi tên của tooltip */
-
-        /* Hiệu ứng data chạy trên tuyến cáp */
-        .cable-line {
-            stroke: #00b4d8; /* Màu xanh dương nhạt cho line kết nối */
-            stroke-width: 3;
-            transition: stroke-opacity 0.5s ease;
-        }
-        
+        /* UI STYLE CHO CÁC PHẦN TỬ CỦA MAP */
+        .cable-line, .cable-data-flow, .unified-marker { transition: filter 0.4s ease, opacity 0.4s ease !important; }
+        .cable-line { stroke: #6bd5ff; stroke-width: 3; vector-effect: non-scaling-stroke; }
         .cable-data-flow {
-            stroke: #ffffff;
-            stroke-width: 3;
-            stroke-dasharray: 5, 20; /* Tạo vạch đứt (hạt data) */
-            animation: flowData 2s linear infinite;
-            transition: stroke-opacity 0.5s ease;
+            stroke: #ffffff; stroke-width: 4; stroke-linecap: round; stroke-dasharray: 4, 26; 
+            animation: flowData 2s linear infinite; 
+            filter: drop-shadow(0px 0px 3px #ffffff) drop-shadow(0px 0px 8px #ffffff) drop-shadow(0px 0px 15px #22c0ff);
+            vector-effect: non-scaling-stroke; 
         }
 
         @keyframes flowData {
-            0% { stroke-dashoffset: 25; }
+            0% { stroke-dashoffset: 30; } 
             100% { stroke-dashoffset: 0; }
         }
 
-        /* Khu vực Buttons */
+        .inactive-element { filter: grayscale(100%) !important; opacity: 0.25 !important; }
+
+        .unified-marker { position: absolute; pointer-events: none; transition: filter 0.4s ease, opacity 0.4s ease !important; }
+        .custom-red-dot {
+            position: absolute; width: 10px; height: 10px; background-color: #ff0000;
+            border: 1.5px solid #fff; border-radius: 50%; transform: translate(-50%, -50%); box-shadow: 0 0 5px rgba(0,0,0,0.8);
+        }
+
+        .map-label-overlay {
+            position: absolute; color: #ffffff; font-weight: bold; font-size: 13px;
+            text-shadow: 2px 2px 4px #000, -2px -2px 4px #000, 2px -2px 4px #000, -2px 2px 4px #000; white-space: nowrap;
+        }
+
         .map-controls {
-            position: absolute;
-            bottom: 30px;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 1000; /* Đảm bảo nằm trên map */
-            display: flex;
-            gap: 15px;
-            pointer-events: auto;
+            position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+            z-index: 1000; display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; pointer-events: auto; width: 95%; 
         }
 
         .btn-network {
-            background: rgba(13, 27, 42, 0.85);
-            border: 1px solid #00b4d8;
-            color: #fff;
-            padding: 12px 24px;
-            font-size: 14px;
-            font-weight: bold;
-            border-radius: 4px;
-            cursor: pointer;
-            width: 250px; /* Width lớn hơn height theo yêu cầu */
-            text-align: center;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+            background: rgba(7, 11, 20, 0.85); border: 1px solid #ffffff; color: #ffffff;
+            padding: 8px 18px; font-size: 13px; font-weight: 500; border-radius: 30px; cursor: pointer;
+            text-align: center; transition: all 0.3s ease; white-space: nowrap; font-family: 'SVN-Gilroy', Arial, sans-serif; backdrop-filter: blur(5px);
         }
-
-        .btn-network:hover, .btn-network.active {
-            background: #00b4d8;
-            color: #000;
-            box-shadow: 0 0 15px #00b4d8;
-        }
+        .btn-network:hover { background: rgba(255, 255, 255, 0.1); }
+        .btn-network.active { background: #22c55e; color: #ffffff; border-color: #22c55e; box-shadow: 0 5px 15px rgba(34, 197, 94, 0.3); }
     </style>
 </head>
 <body>
 
     <div id="mera-map-section">
         <div id="mera-map"></div>
-        <div class="map-controls">
+        <div class="map-controls" id="control-panel">
+            <button class="btn-network active" data-network="default">Mera network</button>
             <button class="btn-network" data-network="backbone">Vietnam Backbone</button>
             <button class="btn-network" data-network="inland">International Inland Network</button>
             <button class="btn-network" data-network="submarine">International Submarine Network</button>
@@ -102,190 +78,215 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
         document.addEventListener("DOMContentLoaded", function() {
-            // 1. KHỞI TẠO MAP (Chặn tương tác người dùng)
+            
+            // [SỬA Ở ĐÂY 2] Hạ thông số zoom xuống để bản đồ nhìn bao quát hơn khi bị nhúng vào khung nhỏ
+            const viewConfigs = {
+                default:   { center: [11.5, 107.0], zoom: 5 }, // Cũ là 5
+                backbone:  { center: [16, 106.5], zoom: 5.8 }, // Cũ là 6
+                inland:    { center: [11.5, 103.5], zoom: 5 }, // Cũ là 5.2
+                submarine: { center: [10.0, 109.0], zoom: 5 }  // Cũ là 5.2
+            };
+
             const map = L.map('mera-map', {
-                zoomControl: false,
-                dragging: false,
-                scrollWheelZoom: false,
-                doubleClickZoom: false,
-                boxZoom: false,
-                keyboard: false,
-                touchZoom: false
+                zoomSnap: 0, 
+                bounceAtZoomLimits: false, 
+                renderer: L.svg({ padding: 10 }), 
+                zoomControl: false, dragging: true, scrollWheelZoom: false,
+                doubleClickZoom: false, boxZoom: false, keyboard: false, touchZoom: false,
+                attributionControl: false
             });
 
-            // 2. VẼ ĐẤT LIỀN MÀU XANH LÁ (Dùng GeoJSON)
-            // Lấy dữ liệu viền các quốc gia (chỉ dùng màu, không dùng nền raster)
-            fetch('https://raw.githubusercontent.com/johan/world.geo.json/master/countries.geo.json')
-                .then(res => res.json())
-                .then(data => {
-                    L.geoJSON(data, {
-                        style: function (feature) {
-                            return {
-                                color: "#000000", // Viền quốc gia màu đen
-                                weight: 1,
-                                fillColor: "#0b3b24", // Màu đất liền xanh lá đậm tương phản
-                                fillOpacity: 1
-                            };
-                        }
-                    }).addTo(map);
-                });
+            map.createPane('baseMapPane');
+            map.getPane('baseMapPane').style.zIndex = 100;
+            
+            const imageUrl = '../images/mera-base-map-highres.png'; 
+            const topLeftCoord = [35.0, 67.9]; 
+            const mapWidthDegrees = 84.3; 
+            
+            const img = new Image();
+            img.src = imageUrl;
+            img.onload = function() {
+                const nw = L.latLng(topLeftCoord[0], topLeftCoord[1]);
+                const ne = L.latLng(nw.lat, nw.lng + mapWidthDegrees);
+                
+                const nwPoint = map.project(nw, 10); 
+                const nePoint = map.project(ne, 10);
+                
+                const scale = (nePoint.x - nwPoint.x) / img.width;
+                const sePoint = L.point(nePoint.x, nwPoint.y + (img.height * scale));
+                const se = map.unproject(sePoint, 10);
+                
+                const imgBounds = L.latLngBounds(nw, se);
+                L.imageOverlay(imageUrl, imgBounds, { pane: 'baseMapPane' }).addTo(map);
 
-            // 3. ĐỊNH NGHĨA TỌA ĐỘ CÁC POINT
+                map.setMaxBounds(imgBounds);
+                map.options.maxBoundsViscosity = 1.0;
+                // [SỬA Ở ĐÂY 3] Hạ minZoom xuống 3.5 để chống lỗi dội viền khi container quá bé
+                map.options.minZoom = 3.5; 
+            };
+
             const points = {
-                // Vietnam
-                hanoi: { lat: 21.0285, lng: 105.8542, name: "Hà Nội" },
-                vinh: { lat: 18.6796, lng: 105.6813, name: "Vinh" },
-                danang: { lat: 16.0471, lng: 108.2068, name: "Đà Nẵng" },
-                quynhon: { lat: 13.7829, lng: 109.2196, name: "Quy Nhơn" },
-                hcm: { lat: 10.8231, lng: 106.6297, name: "Hồ Chí Minh" },
-                vungtau: { lat: 10.3459, lng: 107.0842, name: "Vũng Tàu" },
-                quangninh: { lat: 20.9504, lng: 107.0733, name: "Quảng Ninh" },
-                mongcai: { lat: 21.5297, lng: 107.9555, name: "Móng Cái" },
-                tanthanh: { lat: 21.9686, lng: 106.7573, name: "Tân Thanh" },
-                laobao: { lat: 16.6111, lng: 106.5925, name: "Lao Bảo" },
-                poy: { lat: 14.6933, lng: 107.5611, name: "Bờ Y" },
-                mocbai: { lat: 11.0772, lng: 106.1755, name: "Mộc Bài" },
-                // International
-                namninh: { lat: 22.8149, lng: 108.3150, name: "Nam Ninh" },
-                hongkong: { lat: 22.3193, lng: 114.1694, name: "Hong Kong" },
-                savannakhet: { lat: 16.5518, lng: 104.7570, name: "Savanakhet" },
-                bangkok: { lat: 13.7563, lng: 100.5018, name: "Bang Kok" },
-                singapore: { lat: 1.3521, lng: 103.8198, name: "Singapore" },
-                malaysia: { lat: 3.1390, lng: 101.6869, name: "Malaysia" }, // KL
-                cambodia_south: { lat: 10.6253, lng: 103.5234, name: "" }, // Point kết nối ko tên
-                thai_se: { lat: 12.6713, lng: 101.2562, name: "" } // Point kết nối ko tên
+                hanoi: { lat: 21.0285, lng: 105.8542, name: "Hà Nội", labelAngle: 230, labelDistance: 5, nets: ['backbone', 'inland'] },
+                vinh: { lat: 18.6796, lng: 105.6813, name: "Vinh", labelAngle: 90, labelDistance: 10, nets: ['backbone', 'inland'] },
+                danang: { lat: 16.0471, lng: 108.2068, name: "Đà Nẵng", labelAngle: 60, labelDistance: 11, nets: ['backbone', 'inland', 'submarine'] },
+                quynhon: { lat: 13.7829, lng: 109.2196, name: "Quy Nhơn", labelAngle: 90, labelDistance: 15, nets: ['backbone', 'inland', 'submarine'] },
+                hcm: { lat: 10.8231, lng: 106.6297, name: "Hồ Chí Minh", labelAngle: 90, labelDistance: 10, nets: ['backbone', 'inland'] },
+                vungtau: { lat: 10.3459, lng: 107.0842, name: "Vũng Tàu", labelAngle: 180, labelDistance: 10, nets: ['backbone', 'inland', 'submarine'] },
+                quangninh: { lat: 20.9504, lng: 107.0733, name: "Quảng Ninh", labelAngle: 120, labelDistance: 5, nets: ['backbone', 'inland'] },
+                mongcai: { lat: 21.5297, lng: 107.9555, name: "Móng Cái", labelAngle: 90, labelDistance: 10, nets: ['backbone', 'inland'] },
+                tanthanh: { lat: 21.9686, lng: 106.7573, name: "Tân Thanh", labelAngle: 310, labelDistance: 5, nets: ['backbone', 'inland'] },
+                laobao: { lat: 16.6111, lng: 106.5925, name: "Lao Bảo", labelAngle: 180, labelDistance: 10, nets: ['inland'] },
+                poy: { lat: 14.6933, lng: 107.5611, name: "Po Y", labelAngle: 90, labelDistance: 10, nets: ['inland'] },
+                mocbai: { lat: 11.0772, lng: 106.1755, name: "Mộc Bài", labelAngle: 0, labelDistance: 10, nets: ['backbone', 'inland'] },
+                namninh: { lat: 22.8149, lng: 108.3150, name: "Nam Ninh", labelAngle: 10, labelDistance: 10, nets: ['inland'] },
+                hongkong: { lat: 22.3193, lng: 114.1694, name: "Hong Kong", labelAngle: 90, labelDistance: 15, nets: ['inland', 'submarine'] },
+                savannakhet: { lat: 16.5518, lng: 104.7570, name: "Savanakhet", labelAngle: 300, labelDistance: 10, nets: ['inland'] },
+                bangkok: { lat: 13.7563, lng: 100.5018, name: "Bang Kok", labelAngle: 270, labelDistance: 12, nets: ['inland', 'submarine'] },
+                singapore: { lat: 1.3521, lng: 103.8198, name: "Singapore", labelAngle: 180, labelDistance: 10, nets: ['inland', 'submarine'] },
+                malaysia: { lat: 3.1390, lng: 101.6869, name: "Malaysia", labelAngle: 270, labelDistance: 10, nets: ['inland'] },
+                cambodia_south: { lat: 10.6253, lng: 103.5234, name: "Sihanoukville", labelAngle: 0, labelDistance: 10, nets: ['submarine'] }, 
+                thai_se: { lat: 12.6713, lng: 101.2562, name: "Rayong", labelAngle: 100, labelDistance: 12, nets: ['inland', 'submarine'] },
+                malaydummy: { lat: 5.82, lng: 102.55, name: "", isHidden: true, nets: ['submarine'] },
+                dummy_dn: { lat: 16.0, lng: 115.1, name: "", isHidden: true, nets: ['submarine'] },
+                dummy_qn: { lat: 13.2, lng: 114.7, name: "", isHidden: true, nets: ['submarine'] },
+                dummy_vt: { lat: 9.3, lng: 112.0, name: "", isHidden: true, nets: ['submarine'] }
             };
 
-            // 4. ĐỊNH NGHĨA CÁC TUYẾN CÁP (NETWORK ROUTES)
-            const networks = {
-                backbone: {
-                    nodes: [points.hanoi, points.vinh, points.danang, points.quynhon, points.hcm],
-                    lines: [
-                        [points.hanoi, points.vinh],
-                        [points.vinh, points.danang],
-                        [points.danang, points.quynhon],
-                        [points.quynhon, points.hcm]
-                    ]
-                },
-                inland: {
-                    nodes: [points.tanthanh, points.quangninh, points.mongcai, points.namninh, points.hanoi, points.laobao, points.savannakhet, points.bangkok, points.poy, points.mocbai, points.hcm, points.malaysia, points.singapore],
-                    lines: [
-                        [points.hanoi, points.tanthanh], [points.tanthanh, points.namninh],
-                        [points.hanoi, points.quangninh], [points.quangninh, points.mongcai], [points.mongcai, points.namninh],
-                        [points.laobao, points.savannakhet], [points.savannakhet, points.bangkok],
-                        [points.poy, points.bangkok], [points.mocbai, points.bangkok],
-                        [points.hcm, points.mocbai],
-                        [points.bangkok, points.malaysia], [points.malaysia, points.singapore]
-                    ]
-                },
-                submarine: {
-                    nodes: [points.hongkong, points.danang, points.quynhon, points.vungtau, points.cambodia_south, points.thai_se, points.singapore, points.bangkok],
-                    lines: [
-                        [points.hongkong, points.danang],
-                        [points.danang, points.quynhon],
-                        [points.quynhon, points.vungtau],
-                        [points.vungtau, points.singapore],
-                        [points.singapore, points.cambodia_south], [points.cambodia_south, points.thai_se], [points.thai_se, points.bangkok],
-                        [points.hongkong, {lat: 16.0, lng: 115.0}, points.singapore] // Tuyến ngoài khơi
-                    ]
+            const links = [
+                { p1: 'hanoi', p2: 'vinh', bend: -0.1, nets: ['backbone', 'inland'] },
+                { p1: 'vinh', p2: 'danang', bend: 0.1, nets: ['backbone', 'inland'] },
+                { p1: 'danang', p2: 'quynhon', bend: -0.15, nets: ['backbone', 'inland'] },
+                { p1: 'quynhon', p2: 'hcm', bend: -0.15, nets: ['backbone', 'inland'] },
+                { p1: 'hanoi', p2: 'tanthanh', bend: -0.1, nets: ['backbone', 'inland'] },
+                { p1: 'quangninh', p2: 'mongcai', bend: 0.05, nets: ['backbone', 'inland'] },
+                { p1: 'hanoi', p2: 'quangninh', bend: 0.1, nets: ['backbone', 'inland'] },
+                { p1: 'hcm', p2: 'mocbai', bend: -0.1, nets: ['backbone', 'inland'] },
+                { p1: 'hcm', p2: 'vungtau', bend: 0.1, nets: ['backbone', 'inland'] },
+                { p1: 'tanthanh', p2: 'namninh', bend: -0.1, nets: ['inland'] },
+                { p1: 'mongcai', p2: 'namninh', bend: 0.1, nets: ['inland'] },
+                { p1: 'laobao', p2: 'savannakhet', bend: 0.1, nets: ['inland'] },
+                { p1: 'savannakhet', p2: 'bangkok', bend: 0.2, nets: ['inland'] },
+                { p1: 'poy', p2: 'bangkok', bend: -0.1, nets: ['inland'] },
+                { p1: 'mocbai', p2: 'bangkok', bend: 0.1, nets: ['inland'] },
+                { p1: 'bangkok', p2: 'malaysia', bend: -0.1, nets: ['inland'] },
+                { p1: 'malaysia', p2: 'singapore', bend: -0.1, nets: ['inland'] },
+                { p1: 'namninh', p2: 'hongkong', bend: 0.1, nets: ['inland'] },
+                { p1: 'bangkok', p2: 'thai_se', bend: -0.1, nets: ['inland'] },
+                { p1: 'laobao', p2: 'danang', bend: -0.1, nets: ['inland'] },
+                { p1: 'poy', p2: 'quynhon', bend: -0.1, nets: ['inland'] },
+                { p1: 'danang', p2: 'dummy_dn', bend: 0.15, nets: ['submarine'] },
+                { p1: 'quynhon', p2: 'dummy_qn', bend: 0.15, nets: ['submarine'] },
+                { p1: 'vungtau', p2: 'dummy_vt', bend: 0.15, nets: ['submarine'] },
+                { p1: 'hongkong', p2: 'dummy_dn', bend: -0.05, nets: ['submarine'] },
+                { p1: 'dummy_dn', p2: 'dummy_qn', bend: -0.03, nets: ['submarine'] },
+                { p1: 'dummy_qn', p2: 'dummy_vt', bend: -0.03, nets: ['submarine'] },
+                { p1: 'dummy_vt', p2: 'singapore', bend: -0.05, nets: ['submarine'] },
+                { p1: 'thai_se', p2: 'malaydummy', bend: 0.05, nets: ['submarine'] },
+                { p1: 'cambodia_south', p2: 'malaydummy', bend: 0.1, nets: ['submarine'] },
+                { p1: 'malaydummy', p2: 'singapore', bend: 0.1, nets: ['submarine'] }
+            ];
+
+            const allElements = []; 
+
+            function getCurvedPath(p1, p2, bend = 0.1) {
+                if (bend === 0) return [[p1.lat, p1.lng], [p2.lat, p2.lng]]; 
+                let midLat = (p1.lat + p2.lat) / 2;
+                let midLng = (p1.lng + p2.lng) / 2;
+                let dx = p2.lng - p1.lng;
+                let dy = p2.lat - p1.lat;
+                let ctrlLat = midLat - dx * bend;
+                let ctrlLng = midLng + dy * bend;
+                
+                let pointsPath = [];
+                for (let i = 0; i <= 40; i++) {
+                    let t = i / 40;
+                    let lat = Math.pow(1-t, 2)*p1.lat + 2*(1-t)*t*ctrlLat + Math.pow(t, 2)*p2.lat;
+                    let lng = Math.pow(1-t, 2)*p1.lng + 2*(1-t)*t*ctrlLng + Math.pow(t, 2)*p2.lng;
+                    pointsPath.push([lat, lng]);
                 }
-            };
-
-            const allElements = []; // Chứa tất cả các layer để xử lý độ mờ
-
-            // Hàm vẽ tuyến cáp
-            function drawNetwork(networkData, networkId) {
-                // Vẽ đường kết nối
-                networkData.lines.forEach(lineCoords => {
-                    const coords = lineCoords.map(p => [p.lat, p.lng]);
-                    
-                    // Vẽ base line màu xanh dương
-                    const baseLine = L.polyline(coords, {
-                        className: 'cable-line'
-                    }).addTo(map);
-
-                    // Vẽ line trắng đứt đoạn tạo hiệu ứng data chạy
-                    const dataLine = L.polyline(coords, {
-                        className: 'cable-data-flow'
-                    }).addTo(map);
-
-                    allElements.push({ element: baseLine, networkId: networkId, type: 'line' });
-                    allElements.push({ element: dataLine, networkId: networkId, type: 'line' });
-                });
-
-                // Vẽ các điểm (points)
-                networkData.nodes.forEach(node => {
-                    const marker = L.circleMarker([node.lat, node.lng], {
-                        radius: 5,
-                        fillColor: "#ff0000", // Point màu đỏ
-                        color: "#fff",
-                        weight: 1,
-                        fillOpacity: 1
-                    }).addTo(map);
-
-                    if (node.name) {
-                        marker.bindTooltip(node.name, {
-                            permanent: true,
-                            direction: 'right',
-                            className: 'map-label',
-                            offset: [5, 0]
-                        });
-                    }
-
-                    allElements.push({ element: marker, networkId: networkId, type: 'node' });
-                });
+                return pointsPath;
             }
 
-            // Render tất cả các mạng
-            Object.keys(networks).forEach(key => drawNetwork(networks[key], key));
+            links.forEach(link => {
+                const node1 = points[link.p1];
+                const node2 = points[link.p2];
+                if (!node1 || !node2) return;
 
-            // 5. VIEW MẶC ĐỊNH & XỬ LÝ SỰ KIỆN NÚT BẤM
-            // Default View: Bao trọn Đông Nam Á, tập trung Việt Nam và Malaysia
-            const defaultBounds = L.latLngBounds([
-                [23.5, 99.0], // Top Left (Myanmar/China border)
-                [1.0, 115.0]  // Bottom Right (Singapore/Borneo)
-            ]);
-            map.fitBounds(defaultBounds, { padding: [50, 50] });
+                const coords = getCurvedPath(node1, node2, link.bend);
+                const baseLine = L.polyline(coords, { className: 'cable-line' }).addTo(map);
+                const dataLine = L.polyline(coords, { className: 'cable-data-flow' }).addTo(map);
+
+                allElements.push({ element: baseLine, nets: link.nets, type: 'line', isData: false });
+                allElements.push({ element: dataLine, nets: link.nets, type: 'line', isData: true });
+            });
+
+            Object.keys(points).forEach(key => {
+                const node = points[key];
+                if (!node.isHidden) {
+                    let htmlContent = `<div class="custom-red-dot"></div>`;
+
+                    if (node.name) {
+                        let angle = node.labelAngle !== undefined ? node.labelAngle : 90;
+                        let distance = node.labelDistance !== undefined ? node.labelDistance : 5;
+                        
+                        let rad = angle * (Math.PI / 180);
+                        let widthComp = node.name.length * 3.5; 
+                        let heightComp = 8; 
+                        
+                        let dynamicDistance = distance + (widthComp * Math.abs(Math.sin(rad))) + (heightComp * Math.abs(Math.cos(rad)));
+
+                        let offsetX = dynamicDistance * Math.sin(rad);
+                        let offsetY = -dynamicDistance * Math.cos(rad);
+
+                        htmlContent += `<div class="map-label-overlay" style="transform: translate(calc(-50% + ${offsetX}px), calc(-50% + ${offsetY}px));">${node.name}</div>`;
+                    }
+
+                    const customIcon = L.divIcon({
+                        className: 'unified-marker',
+                        html: htmlContent,
+                        iconSize: [0, 0], 
+                        iconAnchor: [0, 0]
+                    });
+
+                    const marker = L.marker([node.lat, node.lng], { icon: customIcon }).addTo(map);
+                    allElements.push({ element: marker, nets: node.nets, type: 'node' });
+                }
+            });
+            
+            map.setView(viewConfigs.default.center, viewConfigs.default.zoom, { animate: false });
 
             const buttons = document.querySelectorAll('.btn-network');
-            
             buttons.forEach(btn => {
                 btn.addEventListener('click', function() {
-                    // Xóa trạng thái active của các nút khác
                     buttons.forEach(b => b.classList.remove('active'));
                     this.classList.add('active');
 
                     const selectedNet = this.getAttribute('data-network');
-                    let bounds = L.latLngBounds([]);
 
-                    // Xử lý làm mờ và tính toán vùng cần zoom
                     allElements.forEach(item => {
-                        if (item.networkId === selectedNet) {
-                            // Giữ nguyên hiển thị
-                            if (item.type === 'line') item.element.setStyle({ opacity: 1, fillOpacity: 1 });
-                            if (item.type === 'node') {
-                                item.element.setStyle({ opacity: 1, fillOpacity: 1 });
-                                item.element.getTooltip()?.setOpacity(1);
-                                bounds.extend(item.element.getLatLng()); // Thêm tọa độ vào box để zoom
-                            }
-                        } else {
-                            // Làm mờ đi 40% (opacity 0.4)
-                            if (item.type === 'line') item.element.setStyle({ opacity: 0.4, fillOpacity: 0.4 });
-                            if (item.type === 'node') {
-                                item.element.setStyle({ opacity: 0.4, fillOpacity: 0.4 });
-                                item.element.getTooltip()?.setOpacity(0.4);
+                        const DOMElement = item.element.getElement();
+                        const isActive = (selectedNet === 'default' || (item.nets && item.nets.includes(selectedNet)));
+
+                        if (DOMElement) {
+                            if (isActive) {
+                                DOMElement.classList.remove('inactive-element');
+                                if (item.isData) DOMElement.style.display = ''; 
+                            } else {
+                                DOMElement.classList.add('inactive-element');
+                                if (item.isData) DOMElement.style.display = 'none'; 
                             }
                         }
                     });
 
-                    // Zoom sát vào tuyến cáp được chọn (Chừa khoảng không phía dưới để không bị button đè lên)
-                    if (bounds.isValid()) {
-                        map.flyToBounds(bounds, {
-                            paddingBottomRight: [0, 100], // Bù trừ không gian cho button ở dưới
-                            paddingTopLeft: [50, 50],
-                            duration: 1.5 // Thời gian animation zoom (giây)
-                        });
+                    const view = viewConfigs[selectedNet];
+                    let targetCenter = L.latLng(view.center[0], view.center[1]);
+                    let targetZoom = view.zoom;
+
+                    if (map.options.maxBounds) {
+                        targetCenter = map._limitCenter(targetCenter, targetZoom, map.options.maxBounds);
                     }
+
+                    map.flyTo(targetCenter, targetZoom, { duration: 1.2 });
                 });
             });
         });
