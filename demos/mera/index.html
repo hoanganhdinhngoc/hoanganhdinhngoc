@@ -4,8 +4,49 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mera AI - We Connect The World</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="icon" href="./images/logo-icon.png">
+    
+    <!-- Đã gỡ bỏ Google Fonts Inter -->
+    
     <style>
+        /* --- KẾT NỐI FONT SVN-GILROY TỪ FOLDER LOCAL --- */
+        @font-face {
+            font-family: 'SVN-Gilroy';
+            src: url('./font/SVN-Gilroy%20Thin.otf') format('opentype');
+            font-weight: 200;
+            font-style: normal;
+        }
+        @font-face {
+            font-family: 'SVN-Gilroy';
+            src: url('./font/SVN-Gilroy%20Light.otf') format('opentype');
+            font-weight: 300;
+            font-style: normal;
+        }
+        @font-face {
+            font-family: 'SVN-Gilroy';
+            src: url('./font/SVN-Gilroy%20Light%20Italic.otf') format('opentype');
+            font-weight: 300;
+            font-style: italic;
+        }
+        @font-face {
+            font-family: 'SVN-Gilroy';
+            src: url('./font/SVN-Gilroy%20Regular.otf') format('opentype');
+            font-weight: 400;
+            font-style: normal;
+        }
+        @font-face {
+            font-family: 'SVN-Gilroy';
+            src: url('./font/SVN-Gilroy%20Medium.otf') format('opentype');
+            font-weight: 500;
+            font-style: normal;
+        }
+        @font-face {
+            font-family: 'SVN-Gilroy';
+            src: url('./font/SVN-Gilroy%20SemiBold.otf') format('opentype');
+            font-weight: 600;
+            font-style: normal;
+        }
+
         :root {
             --bg-dark: #070b14;
             --bg-card: rgba(255, 255, 255, 0.03);
@@ -24,7 +65,7 @@
             margin: 0; padding: 0;
             background-color: var(--bg-dark);
             color: var(--text-light);
-            font-family: 'Inter', sans-serif;
+            font-family: 'SVN-Gilroy', sans-serif; /* Thay đổi thành SVN-Gilroy */
             font-weight: 300; 
             overflow-x: hidden;
             line-height: 1.6;
@@ -35,7 +76,7 @@
         /* --- HEADER --- */
         header {
             display: flex; justify-content: space-between; align-items: center;
-            padding: 20px 5%;
+            padding: 10px 5%;
             background: rgba(7, 11, 20, 0.85);
             backdrop-filter: blur(10px);
             position: fixed; top: 0; width: 90%; z-index: 100;
@@ -43,7 +84,7 @@
         }
 
         .logo-container { display: flex; align-items: center; }
-        .site-logo { height: 35px; width: auto; object-fit: contain; }
+        .site-logo { height: 4em; width: auto; object-fit: contain; }
 
         nav ul { list-style: none; display: flex; gap: 40px; margin: 0; padding: 0; }
         nav a { color: var(--text-light); text-decoration: none; font-size: 0.95rem; font-weight: 400; transition: color 0.3s; }
@@ -64,7 +105,8 @@
         .btn {
             padding: 15px 35px; border-radius: 30px; font-weight: 500;
             text-decoration: none; display: inline-block; cursor: pointer;
-            transition: all 0.3s ease; border: 1px solid transparent; font-family: 'Inter', sans-serif;
+            transition: all 0.3s ease; border: 1px solid transparent; 
+            font-family: 'SVN-Gilroy', sans-serif; /* Cập nhật font cho nút bấm */
         }
         .btn-outline { background: transparent; border-color: var(--text-light); color: var(--text-light); }
         .btn-outline:hover { background: rgba(255,255,255,0.1); }
@@ -82,7 +124,7 @@
         .section-title { 
             font-size: 3.5rem; 
             margin-bottom: 50px; 
-            font-weight: 500; 
+            font-weight: 300;
             text-align: center; 
         }
 
@@ -118,32 +160,30 @@
         .proven-title-box { position: absolute; top: 60px; left: 60px; }
         
         .proven-subtitle-box {
-            position: absolute; top: 60px; right: 129px;
-            width: 250px; 
+            position: absolute; top: 60px; right: 130px;
+            width: 300px; 
             text-align: left;
-            font-size: 1rem; font-weight: 300;
+            font-size: 1.2rem; font-weight: 300;
         }
 
-        /* --- SỬA LẠI CỘT STATS CHO ĐÚNG THIẾT KẾ 2 CỘT --- */
         .proven-stats-box {
-            position: absolute; bottom: 80px; right: 40px;
-            display: flex; flex-direction: column; gap: 60px;
-            width: 560px; /* Tăng chiều rộng để vừa layout 2 cột */
+            position: absolute; bottom: 60px; right: 15px;
+            display: flex; flex-direction: column; gap: 44px;
+            width: 560px;
             text-align: left; 
         }
 
         .stat-item {
             display: flex;
-            align-items: flex-start; /* Căn cho dòng đầu tiên bằng nhau */
+            align-items: flex-start;
             gap: 20px;
         }
 
         .stat-item .stat-number { 
-            font-size: 3.2rem; 
-            font-weight: 500; 
-            line-height: 0.85; /* Giúp đỉnh của số bằng với đỉnh của dòng chữ Title */
+            font-size: 2.3rem; 
+            font-weight: 500; /* Medium cho số */
             color: #ffffff; 
-            width: 200px; /* Cố định width của số để cột chữ luôn thẳng hàng */
+            width: 125px;
             flex-shrink: 1;
         }
         
@@ -153,17 +193,17 @@
         }
 
         .stat-item .stat-title { 
-            font-size: 1.25rem; 
-            font-weight: 600; 
+            font-size: 1.5rem; 
+            font-weight: 600; /* SemiBold cho Title nhỏ */
             margin: 0 0 5px 0; 
         }
         
         .stat-item p { 
             margin: 0; 
-            font-size: 0.95rem; 
+            font-size: 1.2rem; 
             font-weight: 300; 
             opacity: 0.8; 
-            line-height: 1.4;
+            line-height: 1;
         }
 
         /* --- SECTION 5: WHAT CLIENTS SAY --- */
@@ -178,13 +218,13 @@
             pointer-events: none; z-index: 0;
         }
 
-        .clients-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; position: relative; z-index: 1;}
+        .clients-grid { display: grid; grid-template-columns: 1.25fr 0.75fr; gap: 30px; position: relative; z-index: 1;}
         .quote-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 30px; padding: 60px; backdrop-filter: blur(5px);}
         .stars { color: var(--primary-green); font-size: 1.5rem; margin-bottom: 20px; }
         .quote-text { font-size: 1.6rem; line-height: 1.5; font-weight: 300; margin-bottom: 40px; }
         .client-img-card {
             border-radius: 30px; min-height: 500px; position: relative;
-            background: url('https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&q=80') center/cover;
+            background: url('https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&q=80') 50% 10%/100%;
         }
         .client-info-badge {
             position: absolute; bottom: 40px; left: 40px;
@@ -227,7 +267,9 @@
             background: transparent;
             border: 1px solid rgba(255,255,255,0.15);
             border-radius: 8px; padding: 12px 16px;
-            color: white; font-family: 'Inter', sans-serif; font-weight: 300; font-size: 0.95rem;
+            color: white; 
+            font-family: 'SVN-Gilroy', sans-serif; /* Cập nhật font cho ô input */
+            font-weight: 300; font-size: 0.95rem;
             transition: all 0.3s ease;
         }
         .form-input:focus { outline: none; border-color: rgba(255,255,255,0.5); background: rgba(255,255,255,0.05); }
@@ -275,7 +317,7 @@
 
     <header>
         <div class="logo-container">
-            <a href="#"><img src="YOUR_LOGO_URL.png" alt="Mera AI Logo" class="site-logo"></a>
+            <a href="#"><img src="./images/logo.png" alt="Mera AI Logo" class="site-logo"></a>
         </div>
         <nav>
             <ul>
@@ -459,7 +501,7 @@
         <div class="footer-grid">
             <div>
                 <div class="logo-container" style="margin-bottom: 20px;">
-                    <a href="#"><img src="YOUR_LOGO_URL.png" alt="Mera AI Logo" class="site-logo"></a>
+                    <a href="#"><img src="./images/logo.png" alt="Mera AI Logo" class="site-logo"></a>
                 </div>
             </div>
             
@@ -512,7 +554,8 @@
         </div>
     </footer>
 
-<script>
+    <!-- Đảm bảo Sir giữ lại code JavaScript Fetch tới Google Apps Script ở đây nhé -->
+    <script>
         document.getElementById('meraContactForm').addEventListener('submit', function(e) {
             e.preventDefault();
             
@@ -532,7 +575,7 @@
             btn.style.opacity = '0.7';
 
             // DÁN WEB APP URL CỦA GOOGLE MÀ SIR VỪA COPY VÀO ĐÂY
-            const googleScriptUrl = 'https://script.google.com/macros/s/AKfycbxOKURC7m3cP3TtPUicPaGGTwVUiCC9WODgHpSVhze5P6fQBUxsr8WZzv2htGoQDRI/exec';
+            const googleScriptUrl = 'YOUR_GOOGLE_WEB_APP_URL_HERE';
 
             fetch(googleScriptUrl, {
                 method: 'POST',
