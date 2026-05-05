@@ -7,19 +7,83 @@
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
+        * {
+            margin: 0px;
+            padding: 0px;
+        }
+
+        /* Gọi lại Font cho Iframe (Bắt buộc vì Iframe không kế thừa CSS từ trang chủ) */
+        @font-face {
+            font-family: 'SVN-Gilroy';
+            src: url('../font/SVN-Gilroy%20Regular.otf') format('opentype');
+            font-weight: 400;
+            font-style: normal;
+        }
+        @font-face {
+            font-family: 'SVN-Gilroy';
+            src: url('../font/SVN-Gilroy%20SemiBold.otf') format('opentype');
+            font-weight: 600;
+            font-style: normal;
+        }
+
         .leaflet-control-attribution { display: none !important; }
 
-        /* [SỬA Ở ĐÂY 1] Trả lại 100vh để bản đồ lấp đầy tuyệt đối Iframe, không bao giờ bị mảng đen */
         #mera-map-section {
             position: relative;
             width: 100%;
-            height: 100vh; /* Bắt buộc là 100vh */
+            height: 100vh; 
             background-color: #090830;
             font-family: 'SVN-Gilroy', Arial, sans-serif;
             overflow: hidden;
         }
 
         #mera-map { width: 100%; height: 100%; background: transparent; }
+
+        /* ========================================================= */
+        /* [MỚI] BẢNG THÔNG TIN MẠNG LƯỚI BÊN TRÁI                   */
+        /* ========================================================= */
+        .network-info-panel {
+            position: absolute;
+            top: 70px; /* Cách lề trên */
+            left: 50px; /* Cách lề trái */
+            z-index: 1000;
+            pointer-events: none; /* Cho phép click xuyên qua nếu lỡ đè lên map */
+            color: #ffffff;
+            max-width: 350px;
+            text-align: left;
+            /* Đổ bóng chữ hệt như Node name */
+            text-shadow: 2px 2px 4px #000, -2px -2px 4px #000, 2px -2px 4px #000, -2px 2px 4px #000;
+            transition: opacity 0.5s ease, transform 0.5s ease;
+        }
+
+        .network-info-panel.hidden {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+
+        .network-info-panel h3 {
+            font-size: 26px;
+            font-weight: 600; /* Dùng SemiBold */
+            margin-bottom: 12px;
+            line-height: 1.2;
+            color: #ffffff;
+        }
+
+        .network-info-panel .desc-content {
+            font-size: 15px;
+            font-weight: 400; /* Dùng Regular */
+            line-height: 1.6;
+            color: rgba(255, 255, 255, 0.95);
+        }
+
+        .network-info-panel ul {
+            padding-left: 20px;
+            margin-top: 10px;
+        }
+
+        .network-info-panel li {
+            margin-bottom: 6px;
+        }
 
         /* UI STYLE CHO CÁC PHẦN TỬ CỦA MAP */
         .cable-line, .cable-data-flow, .unified-marker { transition: filter 0.4s ease, opacity 0.4s ease !important; }
@@ -67,6 +131,15 @@
 
     <div id="mera-map-section">
         <div id="mera-map"></div>
+        
+        <!-- [MỚI] Khối hiển thị Title và Nội dung -->
+        <div id="network-info-panel" class="network-info-panel">
+            <h3 id="info-title">Mera Global Network</h3>
+            <div id="info-desc" class="desc-content">
+                <p>Khám phá hệ thống hạ tầng kết nối xuyên suốt của Mera, đảm bảo hiệu suất và độ trễ tối ưu nhất.</p>
+            </div>
+        </div>
+
         <div class="map-controls" id="control-panel">
             <button class="btn-network active" data-network="default">Mera network</button>
             <button class="btn-network" data-network="backbone">Vietnam Backbone</button>
@@ -79,19 +152,62 @@
     <script>
         document.addEventListener("DOMContentLoaded", function() {
             
-            // [SỬA Ở ĐÂY 2] Hạ thông số zoom xuống để bản đồ nhìn bao quát hơn khi bị nhúng vào khung nhỏ
+            // [MỚI] Cơ sở dữ liệu Nội dung Text cho từng nút
+            // Sir có thể tha hồ sửa HTML, thêm thẻ <p>, <ul>, <li> ở đây ạ
+            const networkContents = {
+                default: {
+                    title: "Mera Global Network",
+                    desc: `
+                        <p>Hệ thống mạng lưới viễn thông toàn cầu của Mera, mang đến kết nối tốc độ cao và ổn định.</p>
+                        <ul>
+                            <li>Bao phủ đa quốc gia</li>
+                            <li>Độ trễ cực thấp</li>
+                            <li>Bảo mật cấp độ doanh nghiệp</li>
+                        </ul>
+                    `
+                },
+                backbone: {
+                    title: "Vietnam Backbone",
+                    desc: `
+                        <p>Tuyến cáp trục quốc gia nối liền các trung tâm kinh tế trọng điểm của Việt Nam.</p>
+                        <ul>
+                            <li>Dung lượng truyền tải lớn</li>
+                            <li>Dự phòng 1+1 linh hoạt</li>
+                        </ul>
+                    `
+                },
+                inland: {
+                    title: "International Inland Network",
+                    desc: `
+                        <p>Mạng cáp quang đất liền kết nối trực tiếp các quốc gia trong khu vực Đông Nam Á và Châu Á.</p>
+                        <p>Đảm bảo hướng tuyến đất liền an toàn khi có sự cố cáp biển.</p>
+                    `
+                },
+                submarine: {
+                    title: "International Submarine Network",
+                    desc: `
+                        <p>Hệ thống cáp quang biển kết nối quốc tế dung lượng siêu cao.</p>
+                        <ul>
+                            <li>Hướng đi Hong Kong, Singapore</li>
+                            <li>Đa dạng rẽ nhánh</li>
+                        </ul>
+                    `
+                }
+            };
+
             const viewConfigs = {
-                default:   { center: [11.5, 107.0], zoom: 5 }, // Cũ là 5
-                backbone:  { center: [16, 106.5], zoom: 5.8 }, // Cũ là 6
-                inland:    { center: [11.5, 103.5], zoom: 5 }, // Cũ là 5.2
-                submarine: { center: [10.0, 109.0], zoom: 5 }  // Cũ là 5.2
+                default:   { center: [11.5, 107.0], zoom: 5 },
+                backbone:  { center: [16, 106.5], zoom: 5.8 },
+                inland:    { center: [11.5, 103.5], zoom: 5 },
+                submarine: { center: [10.0, 109.0], zoom: 5 }
             };
 
             const map = L.map('mera-map', {
                 zoomSnap: 0, 
                 bounceAtZoomLimits: false, 
                 renderer: L.svg({ padding: 10 }), 
-                zoomControl: false, dragging: true, scrollWheelZoom: false,
+                // Khóa hoàn toàn chuột di chuyển (dragging: false)
+                zoomControl: false, dragging: false, scrollWheelZoom: false,
                 doubleClickZoom: false, boxZoom: false, keyboard: false, touchZoom: false,
                 attributionControl: false
             });
@@ -121,7 +237,6 @@
 
                 map.setMaxBounds(imgBounds);
                 map.options.maxBoundsViscosity = 1.0;
-                // [SỬA Ở ĐÂY 3] Hạ minZoom xuống 3.5 để chống lỗi dội viền khi container quá bé
                 map.options.minZoom = 3.5; 
             };
 
@@ -253,15 +368,33 @@
                 }
             });
             
+            // Set nội dung mặc định khi load
+            document.getElementById('info-title').innerHTML = networkContents.default.title;
+            document.getElementById('info-desc').innerHTML = networkContents.default.desc;
+            
             map.setView(viewConfigs.default.center, viewConfigs.default.zoom, { animate: false });
 
             const buttons = document.querySelectorAll('.btn-network');
+            const infoPanel = document.getElementById('network-info-panel');
+            const infoTitle = document.getElementById('info-title');
+            const infoDesc = document.getElementById('info-desc');
+
             buttons.forEach(btn => {
                 btn.addEventListener('click', function() {
                     buttons.forEach(b => b.classList.remove('active'));
                     this.classList.add('active');
 
                     const selectedNet = this.getAttribute('data-network');
+
+                    // [MỚI] Hiệu ứng mờ dần thay đổi nội dung Panel
+                    infoPanel.classList.add('hidden');
+                    setTimeout(() => {
+                        if(networkContents[selectedNet]) {
+                            infoTitle.innerHTML = networkContents[selectedNet].title;
+                            infoDesc.innerHTML = networkContents[selectedNet].desc;
+                        }
+                        infoPanel.classList.remove('hidden');
+                    }, 400); // 400ms bằng thời gian transition CSS
 
                     allElements.forEach(item => {
                         const DOMElement = item.element.getElement();
