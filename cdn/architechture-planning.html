@@ -1,0 +1,728 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=yes"><title>Architecture Planning for a Tens of Millions-Level Cloud Disk Project</title></head><link rel="stylesheet" type="text/css" href="https://cdn.bootcss.com/KaTeX/0.11.0/katex.min.css"><style type="text/css">body{
+		text-align:justify;font-size:14px;line-height:1.6em;
+		color:#333;background:#fefefe;
+	}
+	html body{
+		padding:40px 20px;margin:30px auto;position: relative;margin:auto;
+		text-rendering: optimizeLegibility;-webkit-font-smoothing: antialiased;font-smoothing: antialiased;
+		font-family:"Helvetica","Lantinghei SC",PingFangSC-light,PingFangTC-light, "PingFang SC",Optima-Regular,"Microsoft Yahei","WenQuanYi Micro Hei","微软雅黑","STXihei","WenQuanYi Micro Hei",Arial,sans-serif;
+	}
+	@media screen and (min-width:1200px) {
+		body {width:1000px;}
+	}
+	
+	body{background: #f6f6f6;}
+	body .content{
+		padding: 20px 30px;background: #fff;word-break: break-all;
+    	border-radius:2px;box-shadow: 0 0 5px rgba(0,0,0,0.05);
+	}
+	body.code-theme-black{background: #222;}
+	body.code-theme-black .content{background:#333;color:#bbb;}
+
+	@media screen and (max-width:1200px){
+		body{background:transparent;margin:0px auto;}
+		body .content{padding:0 10px;border-radius: 0;box-shadow: none;}
+		body.code-theme-black{background:#333;}
+		body .markdown-menu{position: relative;margin: 20px 0 20px 0;top: 0;width: 100%;}
+	}
+	@media screen and (max-width:600px){
+		.print-btn{display: none;}
+	}
+	@media print{
+		body{background:transparent;padding:0 1cm;margin:0 auto 10px auto;font-size:13px;}
+		body .content{padding:0;border-radius: 0;box-shadow: none;}
+		.print-btn{display: none;}
+		body.code-theme-black .content{color:#aaa;}
+	}
+	
+	/* ===================== markdown.less ===================== */
+	article,footer,header,nav{margin:0 auto}
+	article{margin-top:4em;margin-bottom:4em;min-height:400px}
+	footer{margin-bottom:50px}
+	video{margin:2em 0;border:1px solid #ddd}
+	nav{font-size:.9em;font-style:italic;border-bottom:1px solid #ddd;padding:1em 0}
+	nav p{margin:0}
+	details{margin: 15px 0;}
+	summary{cursor:pointer;display: list-item;border-radius: 3px;}
+	summary:hover{background-color:rgba(0,0,0,0.05);}
+	summary:focus{outline: none;box-shadow: 0 0 3px #2196F3;}
+	.h1,h1{font-size:2.0em;}
+	.h2,h2{font-size:1.8em;}
+	.h3,h3{font-size:1.6em;}
+	.h4,h4{font-size:1.3em;}
+	.h5,h5{font-size:1.2em;}
+	.h6,h6{font-size:1.1em;}
+	.h1,.h2,.h3,.h4,.h5,.h6,h1,h2,h3,h4,h5,h6{
+		font-family:inherit;font-weight:500;color: #333;
+		line-height: 1.4em;padding:0;margin:1em 0 0.5em 0;
+	}
+	.h1,h1{letter-spacing: 1px;border-bottom: 1px solid #ddd;}
+	.h2,h2{padding-bottom: 0.15em;}
+	.h1 + hr,h1 + hr{display:none;}
+	
+	p{padding:0;-webkit-hypens:auto;-moz-hypens:auto;hyphens:auto;}
+	p,blockquote,pre code{margin: 0.4em 0;}
+	h1,h2,h3,h4,h5,h6{margin: 0.6em 0;line-height: 1.6em;}
+	ol,ul{padding-left:1.5em;}
+	ol li::marker,ul li::marker{color: #999999b0;}
+	.hljs ul.code-view li::marker{font-size: 0.8em;}
+	hr{margin: 1em 0;}
+	blockquote{
+		border-left:5px solid #99999930;background: #99999915;
+		padding:10px 15px;border-radius: 4px;
+	}
+	p,li,div,ul{word-break: inherit;}
+	blockquote{margin-left:1em;margin:15px 0 10px 0;}
+	blockquote .h1,blockquote .h2,blockquote .h3,blockquote .h4,blockquote .h5,blockquote .h6,
+	blockquote h1,blockquote h2,blockquote h3,blockquote h4,blockquote h5,blockquote h6{margin:0;}
+	
+	b,strong{font-weight:600;}
+	blockquote p{margin:0;font-weight:400;line-height: 1.6em;}
+	code{
+		padding: 2px 4px;color: #c7254e;white-space: inherit;
+		background-color:#f9f2f4;border-radius: 4px;
+	}
+	pre{display:block;padding:0;overflow:auto;margin:0 0 10px;font-size:1em;line-height:1.5;
+		color:#333;background:none;border-radius:4px}
+	code,kbd,pre,samp{
+		font-family:Menlo,Consolas,source-code-pro,Monaco,'Liberation Mono','Ubuntu Mono',monospace,"Helvetica","Microsoft Yahei","微软雅黑","Lantinghei SC","STXihei","WenQuanYi Micro Hei",Arial,sans-serif;
+	}
+	pre code{font-size:1em;background:#f8f8f8;color:#777;white-space:pre-wrap;padding:6px 1em;border:1px solid #eee;display: block;}
+	a{color:#1980e6;text-decoration:none;}
+	a:hover,a:active{text-decoration:underline}
+	a img{border:none}
+	img{max-width: 100%;}
+	h1 a,h1 a:hover,h1 a:active{text-decoration:none}
+	hr{border: 0 none;height: 3px;margin:0.4em 0;
+	    background: rgba(0, 0, 0, 0) url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAYAAAAECAYAAACtBE5DAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAyJpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuMC1jMDYwIDYxLjEzNDc3NywgMjAxMC8wMi8xMi0xNzozMjowMCAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvIiB4bWxuczp4bXBNTT0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL21tLyIgeG1sbnM6c3RSZWY9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9zVHlwZS9SZXNvdXJjZVJlZiMiIHhtcDpDcmVhdG9yVG9vbD0iQWRvYmUgUGhvdG9zaG9wIENTNSBNYWNpbnRvc2giIHhtcE1NOkluc3RhbmNlSUQ9InhtcC5paWQ6OENDRjNBN0E2NTZBMTFFMEI3QjRBODM4NzJDMjlGNDgiIHhtcE1NOkRvY3VtZW50SUQ9InhtcC5kaWQ6OENDRjNBN0I2NTZBMTFFMEI3QjRBODM4NzJDMjlGNDgiPiA8eG1wTU06RGVyaXZlZEZyb20gc3RSZWY6aW5zdGFuY2VJRD0ieG1wLmlpZDo4Q0NGM0E3ODY1NkExMUUwQjdCNEE4Mzg3MkMyOUY0OCIgc3RSZWY6ZG9jdW1lbnRJRD0ieG1wLmRpZDo4Q0NGM0E3OTY1NkExMUUwQjdCNEE4Mzg3MkMyOUY0OCIvPiA8L3JkZjpEZXNjcmlwdGlvbj4gPC9yZGY6UkRGPiA8L3g6eG1wbWV0YT4gPD94cGFja2V0IGVuZD0iciI/PqqezsUAAAAfSURBVHjaYmRABcYwBiM2QSA4y4hNEKYDQxAEAAIMAHNGAzhkPOlYAAAAAElFTkSuQmCC) repeat-x 0 0;
+	}
+	
+	ul,ol{padding:0.2em 0 0.2em 1.5em;}
+	table {border-collapse: collapse;border-spacing: 0;margin-bottom: 20px;}
+	table thead{background: #eee;}
+	table thead th{font-weight: 600;}
+	table tr td{min-width:20px;max-width: 50vw;}
+	table td,table th{padding: .5em;border: 1px solid #ddd;line-height: 1.5;}
+	table tr:nth-child(even) {background: #f9f9f9;}
+	.table-container{max-width: 100%;overflow: auto;}
+	.table-container table{
+		margin-bottom: 0px;width: max-content;max-width: none;
+	}
+	
+	ul.contains-task-list {padding: 0.2em 0 0.2em 0.5em;list-style: none;}
+	ul.contains-task-list input {
+		margin-right: 0.2em;
+		height: 1em;font-size: 14px;
+		vertical-align: text-bottom;
+		position: relative;top: -1px;
+	}
+	ul.contains-task-list label{margin:0;}
+	.footnotes{
+		background: #fafafa;
+		padding: 0 15px 0 0;
+		border-radius: 4px;
+		color: #888;
+	}
+	
+	.markdown-flow{padding:15px 0;max-width:100%;overflow:auto;}
+	.markdown-flow .label{color:#444;}
+	.markdown-flow svg{max-width: 100%;height:auto;}
+	.markdown-flow .flow-toolbar,
+	.markdown-flow .flow-code{display:none !important;}
+	
+	.katex-display {text-align: center;font-size:1.3em;color: #000;margin-bottom: 1.5em;}
+	.latex-inline .katex-display{display:inline-block;font-size: 0.8em;}
+	.katex-display > .katex {white-space: pre-wrap;word-break: break-all;}
+
+	.text-align-center{text-align: center}
+	.markdown-alert {
+		position: relative;overflow: hidden;overflow-x: auto;
+		box-sizing: border-box;width: 100%;line-height: 1.5;
+		padding:8px 15px 8px 40px;margin: 6px 0;
+		border-radius: 4px;background-color: #f6f6f6;border:none;
+	}
+	.markdown-alert p {padding: 0;margin: 0;}
+	.markdown-alert-icon{    
+		font-size: 18px;height: 100%;
+		position: absolute;left: 12px;
+		/* top: 50%;margin-top: -10px; //垂直居中; */
+		top: 0;margin-top: 7.5px;
+	}
+	.markdown-alert-info{border-color:#91d5ff;background-color: #1890ff20;}
+	.markdown-alert-warning{border-color:#ffe58f;background-color: #faad1420;}
+	.markdown-alert-success{border-color:#b7eb8f;background-color: #52c41a20;}
+	.markdown-alert-error{border-color:#f5222d;background-color: #f5222d20;}
+	.markdown-alert-icon-success {color: #52c41a;}
+	.markdown-alert-icon-info {color: #1890ff;}
+	.markdown-alert-icon-warning {color: #faad14;}
+	.markdown-alert-icon-error {color: #f5222d;}
+	
+	.tips-block{
+		padding: 10px 15px;margin: 10px 0 10px 0;background: #f6f6f6;
+		background: rgba(102, 128, 153, 0.05);border-radius:4px;
+	}
+	.tips-block.tips-block-info{background-color: #faad1420;}
+	.tips-block.tips-block-default{background-color: #1890ff20;}
+	.tips-block.tips-block-help{background-color: #52c41a20;}
+	
+	.markdown-tips{
+		border-radius:2px;padding: 1em;position: relative;
+		box-shadow: 0 0 2px rgba(0,0,0,0.1);
+	}
+	.markdown-tips-default{background: rgba(210, 210, 210, 0.1);}
+	.markdown-tips-help{background: rgba(66, 185, 131, 0.1);}
+	.markdown-tips-info{
+		background-color: #f8f8f8;border-left: 4px solid #f66;
+		padding: 12px 24px 12px 30px;
+		border-radius: 0 2px 2px 0;
+	}
+	.markdown-tips-info:before{
+		background-color: #f66;
+		border-radius: 100%;
+		color: #fff;content: "!";
+		font-family: 'Dosis', 'Source Sans Pro', 'Helvetica', Arial, sans-serif;
+		font-size: 14px;font-weight: 600;text-align: center;
+		line-height: 20px;width: 20px;height: 20px;
+		position: absolute;left: -12px;top: 14px;
+	}
+	.code-run{
+		margin: 5px 0 10px 0;padding:10px 15px;
+		background: #99999920;border-radius: 3px;
+	}
+	.code-run button{
+		padding: 0.3em 1.2em;cursor: pointer;
+		color: #fff;background: #1890ff;
+		border-radius: 3px;border: none;margin: 5px 0;
+	}
+	.code-run button:hover{opacity: 0.8;}
+	.ai-c{display: inline-block;font-weight: normal;}
+	
+	/* ===================== markdown.less ===================== */
+	.hljs .code-toolbar{display:none;}
+	div .hljs{color: #666;}
+	.hljs-comment,.hljs-quote{color:#998;font-style:italic}
+	.hljs-keyword,.hljs-selector-tag,.hljs-subst{color:#333;font-weight:700}
+	.hljs-literal,.hljs-number,.hljs-tag .hljs-attr,.hljs-template-variable,.hljs-variable{color:teal}
+	.hljs-doctag,.hljs-string{color:#d14}
+	.hljs-section,.hljs-selector-id,.hljs-title{color:#900;font-weight:700}
+	.hljs-subst{font-weight:400}
+	.hljs-class .hljs-title,.hljs-type{color:#458;font-weight:700}
+	.hljs-attribute,.hljs-name,.hljs-tag{color:navy;font-weight:400}
+	.hljs-meta,.hljs-strong{font-weight:700}
+	.hljs-link,.hljs-regexp{color:#009926}
+	.hljs-bullet,.hljs-symbol{color:#990073}
+	.hljs-built_in,.hljs-builtin-name{color:#0086b3}
+	.hljs-meta{color:#999}
+	.hljs-deletion{background:#fdd}
+	.hljs-addition{background:#dfd}
+	.hljs-emphasis{font-style:italic}
+	
+	.hljs{padding:0 !important;}
+	.hljs ul {
+		list-style: decimal;padding: 0px;
+		position: relative;
+		margin: 0px 0px 0 45px !important;
+		padding: 5px 0;cursor: text;
+		background: #fff;
+	}
+	.hljs ul:before {
+		content: " ";cursor: default;
+		position: absolute;top: -1px;left: -46px;bottom: -1px;width: 45px;
+		background: #fafafa8f;
+		border-radius: 4px 0 0 4px;
+		border-right: 1px solid rgba(0, 0, 0, 0.03);
+	}
+	.hljs ul li{padding:0 10px;}
+	.hljs ul li span{line-height: 18px;padding:0.4em 0 0 0;}
+	.hljs ul li:nth-of-type(even){background: rgba(0,0,0,0.02);}
+	.hljs ul li:hover{background: rgba(0,0,0,0.05);}
+
+
+	/* black theme */
+	body.code-theme-black .h1,body.code-theme-black h1{border-bottom: 1px solid rgba(200,200,200,.2);}
+	body.code-theme-black code,body.code-theme-black pre code{color:#777;border-color:#444;border-color:rgba(0,0,0,.1);background:#444;background:rgba(0,0,0,.1)}
+	body.code-theme-black code{color:#C5AC18;background:#555;background:rgba(255,255,255,0.15);}
+	body.code-theme-black a{color:orange}
+
+	body.code-theme-black .h1,body.code-theme-black h1,
+	body.code-theme-black .h2,body.code-theme-black h2,
+	body.code-theme-black .h3,body.code-theme-black h3,
+	body.code-theme-black .h4,body.code-theme-black h4,
+	body.code-theme-black .h5,body.code-theme-black h5,
+	body.code-theme-black .h6,body.code-theme-black h6{
+		color: #fff;
+	}
+	body.code-theme-black hr{border-bottom:solid 1px #444;border-color:rgba(200,200,200,.1);background-image:none;}
+	body.code-theme-black table thead{background: #3e3e3e;}
+	body.code-theme-black table td,body.code-theme-black table th{border-color:#444;border-color:rgba(200,200,200,.1)}
+	body.code-theme-black .katex-display {color: #fff;}
+	
+	body.code-theme-black .hljs{background:#23241f;color:#f8f8f2}
+	body.code-theme-black .hljs-tag,body.code-theme-black .hljs-subst{color:#f8f8f2}
+	body.code-theme-black .hljs-strong,body.code-theme-black .hljs-emphasis{color:#a8a8a2}
+	body.code-theme-black .hljs-bullet,body.code-theme-black .hljs-quote,body.code-theme-black .hljs-number,body.code-theme-black .hljs-regexp,body.code-theme-black .hljs-literal,body.code-theme-black .hljs-link{color:#ae81ff}
+	body.code-theme-black .hljs-code,body.code-theme-black .hljs-title,body.code-theme-black .hljs-section,body.code-theme-black .hljs-selector-class{color:#a6e22e}
+	body.code-theme-black .hljs-strong{font-weight:bold}
+	body.code-theme-black .hljs-emphasis{font-style:italic}
+	body.code-theme-black .hljs-keyword,body.code-theme-black .hljs-selector-tag,body.code-theme-black .hljs-name,body.code-theme-black .hljs-attr{color:#f92672}
+	body.code-theme-black .hljs-symbol,body.code-theme-black .hljs-attribute{color:#66d9ef}
+	body.code-theme-black .hljs-params,body.code-theme-black .hljs-title.class_,body.code-theme-black .hljs-class body.code-theme-black .hljs-title{color:#f8f8f2}
+	body.code-theme-black .hljs-string,body.code-theme-black .hljs-type,body.code-theme-black .hljs-built_in,body.code-theme-black .hljs-selector-id,body.code-theme-black .hljs-selector-attr,body.code-theme-black .hljs-selector-pseudo,body.code-theme-black .hljs-addition,body.code-theme-black .hljs-variable,body.code-theme-black .hljs-template-variable{color:#e6db74}
+	body.code-theme-black .hljs-comment,body.code-theme-black .hljs-deletion,body.code-theme-black .hljs-meta{color:#75715e}
+	body.code-theme-black .hljs-comment{font-style: normal;}
+	body.code-theme-black .hljs-section, body.code-theme-black .hljs-selector-id, body.code-theme-black .hljs-title{font-weight: normal;}
+	body.code-theme-black .hljs-title.class_ {color: #fc0;font-weight: 600;}
+	body.code-theme-black .hljs-keyword{color:#c678dd;font-weight: 600;}
+	body.code-theme-black .hljs-params,body.code-theme-black .hljs-variable{color:#f80;}
+		
+	body.code-theme-black div .hljs{display:block;background:#23241f}
+	body.code-theme-black .hljs ul {background:inherit;}
+	body.code-theme-black .hljs ul:before {background:rgba(80, 80, 80, 0.7);}
+	body.code-theme-black .hljs ul li:nth-of-type(even){background: rgba(255,255,255,0.02);}
+	body.code-theme-black .hljs ul li:hover{background: rgba(255,255,255,0.05);}
+	
+	body.code-theme-black table tr:nth-child(even) {background: #393939;}	
+	body.code-theme-black .footnotes{background: #444;}
+	body.code-theme-black .markdown-tips-info{background-color: rgba(255,255,255,0.15);}
+	body.code-theme-black .markdown-menu{background: #383e44;}
+	body.code-theme-black .markdown-menu a{color:#fff;}
+	body.code-theme-black .markdown-menu a:hover {background: rgba(221, 238, 255, 0.1);}
+
+	.print-btn{
+		position:fixed;padding:4px 20px;color:#444;font-size:1em;
+		background:#eee;background:rgba(200,200,200,0.2);top:0;right:15px;
+		border-radius: 0 0 3px 4px;opacity: 0.5;
+	}
+	.print-btn:hover{text-decoration: none;background: #14a2ff;color: #fff;opacity: 1;}
+
+	.hidden{display:none !important;}
+	/*markdown 锚点*/
+	.target-menu{
+		position: absolute;margin-left: -1.5em;
+		display: inline-block;text-align: center;width: 2em;
+	}
+	h1:hover .target-menu,h2:hover .target-menu,h3:hover .target-menu,
+	h4:hover .target-menu,h5:hover .target-menu,h6:hover .target-menu{display:block !important;visibility: visible !important;}
+
+	.markdown-menu{
+		position: fixed;z-index: 9999;
+		margin-left: 980px;top: 45px;
+		width: 200px;max-height: 80%;
+		border-radius: 4px;
+		overflow: auto;padding:10px 0 20px 0;
+		box-shadow:0px 0px 1px 0 rgba(0, 0, 0, 0.15), 0px 5px 10px rgba(0, 0, 0, .05);
+		background: linear-gradient(110deg, #fff, #fafdff);
+	}
+	.markdown-menu ul{padding:0;margin:0;list-style: none;}
+	.markdown-menu ul li{list-style: none;}
+	.markdown-menu a{
+		color: #666;font-size:13px;text-decoration: none;display: block;
+		padding:5px 10px 5px 10px;line-height: 1.2em;
+		white-space: nowrap;overflow: hidden;text-overflow: ellipsis;
+		transition: all 0.2s;
+	}
+	
+	.markdown-menu a:hover{background:#def;color:#1890ff;}
+	.markdown-menu .markdown-menu-h1{margin:10px 0 1px 0;}
+	.markdown-menu .markdown-menu-h1 a{
+		background: #1890ff1a;font-weight: 600;font-size: 1.1em;
+    	background: linear-gradient(-150deg, #80808005, #1890ff1a);
+		white-space: initial;word-break: break-all;line-height:1.2em;
+	}
+	.markdown-menu .markdown-menu-h2 a{font-weight:600;}
+	.markdown-menu .markdown-menu-h3 a{padding-left:2em;}
+	.markdown-menu .markdown-menu-h4 a{padding-left:3em;}
+	.markdown-menu .markdown-menu-h5 a{padding-left:4em;}
+	.markdown-menu .markdown-menu-h6 a{padding-left:5em;}
+	iframe{border: 1px solid rgba(0,0,0,0.05);}
+	iframe.embed-show{
+		width: 100%;height: 800px;
+		box-sizing: border-box;
+		border-radius:4px;margin-top: 10px;
+	}</style><body ><div class="content"> <div data-chunk="1"><h1 data-link="#Cloud-Disk-Project-Deployment-Architecture-Planning"><a class="target-menu hidden" href="#Cloud-Disk-Project-Deployment-Architecture-Planning">#</a><a name="Cloud-Disk-Project-Deployment-Architecture-Planning"></a>Cloud Disk Project Deployment Architecture Planning</h1></div><div data-chunk="1"><h2 data-link="#Key-Metrics-&amp;-Overview"><a class="target-menu hidden" href="#Key-Metrics-&amp;-Overview">#</a><a name="Key-Metrics-&amp;-Overview"></a>Key Metrics &amp; Overview</h2></div><div data-chunk="1"><div class="table-container"><table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>Value</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Total Users</td>
+<td><strong>70 million</strong></td>
+<td></td>
+</tr>
+<tr>
+<td>DAU (Daily Active Users)</td>
+<td><strong>7 million</strong></td>
+<td>Estimated at 10% of total users</td>
+</tr>
+<tr>
+<td>Average Daily Requests per User</td>
+<td><strong>50 times</strong></td>
+<td>API call estimation</td>
+</tr>
+<tr>
+<td>Total Daily Requests</td>
+<td><strong>≈350 million</strong></td>
+<td>7 million × 50</td>
+</tr>
+<tr>
+<td>Peak QPS</td>
+<td><strong>≈20,000</strong></td>
+<td>80% of requests concentrated in 20% of time (4-hour peak window)</td>
+</tr>
+<tr>
+<td>Number of SQL Queries per Request</td>
+<td><strong>20</strong></td>
+<td>Current application average (optimizable later to reduce database costs and improve performance)</td>
+</tr>
+<tr>
+<td>Peak SQL QPS</td>
+<td><strong>≈400,000</strong></td>
+<td>20,000 × 20</td>
+</tr>
+<tr>
+<td>SQL Read-Write Ratio</td>
+<td><strong>8:2</strong></td>
+<td>Read: 320,000 QPS / Write: 80,000 QPS</td>
+</tr>
+</tbody>
+</table></div></div><div data-chunk="1"><h2 data-link="#I.-Server-Deployment-Architecture"><a class="target-menu hidden" href="#I.-Server-Deployment-Architecture">#</a><a name="I.-Server-Deployment-Architecture"></a>I. Server Deployment Architecture</h2></div><div data-chunk="1"><p>The entire architecture adopts a <strong>seven-layer hierarchical design</strong>, from outside to inside as follows:</p></div><div data-chunk="1"><div class="table-container"><table>
+<thead>
+<tr>
+<th>Layer</th>
+<th>Core Responsibilities</th>
+<th>Key Technologies</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Access Layer</strong></td>
+<td>Traffic entry, security protection, static resource acceleration</td>
+<td>CDN + WAF + SLB</td>
+</tr>
+<tr>
+<td><strong>Gateway Layer</strong></td>
+<td>Reverse proxy, rate limiting, routing distribution</td>
+<td>Nginx (multi-active deployment)</td>
+</tr>
+<tr>
+<td><strong>Application Layer</strong></td>
+<td>Business logic processing</td>
+<td>PHP8-FPM stateless cluster</td>
+</tr>
+<tr>
+<td><strong>Cache Layer</strong></td>
+<td>Hot data caching, Session storage, distributed locks</td>
+<td>Redis Cluster</td>
+</tr>
+<tr>
+<td><strong>Database Layer</strong></td>
+<td>Persistent storage, read-write separation</td>
+<td>PolarDB MySQL</td>
+</tr>
+<tr>
+<td><strong>Storage Layer</strong></td>
+<td>File/object storage, image processing</td>
+<td>Alibaba Cloud OSS</td>
+</tr>
+<tr>
+<td><strong>Operations Layer</strong></td>
+<td>Log collection, monitoring &amp; alerting, configuration management</td>
+<td>SLS + Cloud Monitor</td>
+</tr>
+</tbody>
+</table></div></div><div data-chunk="1"><p><strong>Core Design Principles</strong>:</p></div><div data-chunk="1"><ul>
+<li><strong>Stateless Application Layer</strong>: All API Servers store no state; Sessions are centrally stored in Redis, supporting horizontal elastic scaling</li>
+<li><strong>Read-Write Separation</strong>: Database writes go to the primary instance, reads to read-only instances; PolarDB provides automatic read-write separation + consistency level control</li>
+<li><strong>Cache Penetration Protection</strong>: Redis Cluster deployed at the front for hot data caching, combined with Bloom Filter to prevent cache penetration (Note: Bloom Filter is mainly used to prevent cache breakdown; empty value caching is commonly used for cache penetration prevention)</li>
+<li><strong>CDN Traffic Offloading</strong>: All static resources (JS/CSS/image thumbnails) are hit by CDN, significantly reducing origin server pressure</li>
+</ul></div><div data-chunk="1"><p>The overview diagram is as follows:</p></div><div data-chunk="1"><div class="markdown-flow mermaid-result" data-mermaid="flow-done" data-view-show="preview">
+			<div class="flow-toolbar">
+				<div class="toolbar-group left">
+					<span class="btn-item ripple-item" data-tool="preview" title="预览">
+						<i class="font-icon ri-eye-line"></i><b>预览</b>
+					</span>
+					<span class="btn-item ripple-item" data-tool="code" title="代码">
+						<i class="font-icon ri-code-s-line"></i><b>代码</b>
+					</span>
+				</div>
+				<div class="toolbar-group right">
+					<span class="btn-item ripple-item" data-tool="copy" title="复制" data-text="已复制成功!">
+						<i class="font-icon ri-file-copy-line"></i><b>复制</b>
+					</span>
+					<span class="btn-item ripple-item" data-tool="download" title="下载">
+						<i class="font-icon ri-download-fill-2"></i><b>下载</b>
+					</span>
+				</div>
+			</div>
+			<div class="flow-preview"><svg id="UUID_5e8fad4_334d086" width="100%" xmlns="http://www.w3.org/2000/svg" class="flowchart" style="max-width: 1685.90625px;" viewBox="0 0 1685.90625 1802.8529052734375" role="graphics-document document" aria-roledescription="flowchart-v2"><style>#UUID_5e8fad4_334d086{font-family:"trebuchet ms",verdana,arial,sans-serif;font-size:16px;fill:#333;}@keyframes edge-animation-frame{from{stroke-dashoffset:0;}}@keyframes dash{to{stroke-dashoffset:0;}}#UUID_5e8fad4_334d086 .edge-animation-slow{stroke-dasharray:9,5!important;stroke-dashoffset:900;animation:dash 50s linear infinite;stroke-linecap:round;}#UUID_5e8fad4_334d086 .edge-animation-fast{stroke-dasharray:9,5!important;stroke-dashoffset:900;animation:dash 20s linear infinite;stroke-linecap:round;}#UUID_5e8fad4_334d086 .error-icon{fill:#552222;}#UUID_5e8fad4_334d086 .error-text{fill:#552222;stroke:#552222;}#UUID_5e8fad4_334d086 .edge-thickness-normal{stroke-width:1px;}#UUID_5e8fad4_334d086 .edge-thickness-thick{stroke-width:3.5px;}#UUID_5e8fad4_334d086 .edge-pattern-solid{stroke-dasharray:0;}#UUID_5e8fad4_334d086 .edge-thickness-invisible{stroke-width:0;fill:none;}#UUID_5e8fad4_334d086 .edge-pattern-dashed{stroke-dasharray:3;}#UUID_5e8fad4_334d086 .edge-pattern-dotted{stroke-dasharray:2;}#UUID_5e8fad4_334d086 .marker{fill:#333333;stroke:#333333;}#UUID_5e8fad4_334d086 .marker.cross{stroke:#333333;}#UUID_5e8fad4_334d086 svg{font-family:"trebuchet ms",verdana,arial,sans-serif;font-size:16px;}#UUID_5e8fad4_334d086 p{margin:0;}#UUID_5e8fad4_334d086 .label{font-family:"trebuchet ms",verdana,arial,sans-serif;color:#333;}#UUID_5e8fad4_334d086 .cluster-label text{fill:#333;}#UUID_5e8fad4_334d086 .cluster-label span{color:#333;}#UUID_5e8fad4_334d086 .cluster-label span p{background-color:transparent;}#UUID_5e8fad4_334d086 .label text,#UUID_5e8fad4_334d086 span{fill:#333;color:#333;}#UUID_5e8fad4_334d086 .node rect,#UUID_5e8fad4_334d086 .node circle,#UUID_5e8fad4_334d086 .node ellipse,#UUID_5e8fad4_334d086 .node polygon,#UUID_5e8fad4_334d086 .node path{fill:#ECECFF;stroke:#9370DB;stroke-width:1px;}#UUID_5e8fad4_334d086 .rough-node .label text,#UUID_5e8fad4_334d086 .node .label text,#UUID_5e8fad4_334d086 .image-shape .label,#UUID_5e8fad4_334d086 .icon-shape .label{text-anchor:middle;}#UUID_5e8fad4_334d086 .node .katex path{fill:#000;stroke:#000;stroke-width:1px;}#UUID_5e8fad4_334d086 .rough-node .label,#UUID_5e8fad4_334d086 .node .label,#UUID_5e8fad4_334d086 .image-shape .label,#UUID_5e8fad4_334d086 .icon-shape .label{text-align:center;}#UUID_5e8fad4_334d086 .node.clickable{cursor:pointer;}#UUID_5e8fad4_334d086 .root .anchor path{fill:#333333!important;stroke-width:0;stroke:#333333;}#UUID_5e8fad4_334d086 .arrowheadPath{fill:#333333;}#UUID_5e8fad4_334d086 .edgePath .path{stroke:#333333;stroke-width:2.0px;}#UUID_5e8fad4_334d086 .flowchart-link{stroke:#333333;fill:none;}#UUID_5e8fad4_334d086 .edgeLabel{background-color:rgba(232,232,232, 0.8);text-align:center;}#UUID_5e8fad4_334d086 .edgeLabel p{background-color:rgba(232,232,232, 0.8);}#UUID_5e8fad4_334d086 .edgeLabel rect{opacity:0.5;background-color:rgba(232,232,232, 0.8);fill:rgba(232,232,232, 0.8);}#UUID_5e8fad4_334d086 .labelBkg{background-color:rgba(232, 232, 232, 0.5);}#UUID_5e8fad4_334d086 .cluster rect{fill:#ffffde;stroke:#aaaa33;stroke-width:1px;}#UUID_5e8fad4_334d086 .cluster text{fill:#333;}#UUID_5e8fad4_334d086 .cluster span{color:#333;}#UUID_5e8fad4_334d086 div.mermaidTooltip{position:absolute;text-align:center;max-width:200px;padding:2px;font-family:"trebuchet ms",verdana,arial,sans-serif;font-size:12px;background:hsl(80, 100%, 96.2745098039%);border:1px solid #aaaa33;border-radius:2px;pointer-events:none;z-index:100;}#UUID_5e8fad4_334d086 .flowchartTitleText{text-anchor:middle;font-size:18px;fill:#333;}#UUID_5e8fad4_334d086 rect.text{fill:none;stroke-width:0;}#UUID_5e8fad4_334d086 .icon-shape,#UUID_5e8fad4_334d086 .image-shape{background-color:rgba(232,232,232, 0.8);text-align:center;}#UUID_5e8fad4_334d086 .icon-shape p,#UUID_5e8fad4_334d086 .image-shape p{background-color:rgba(232,232,232, 0.8);padding:2px;}#UUID_5e8fad4_334d086 .icon-shape .label rect,#UUID_5e8fad4_334d086 .image-shape .label rect{opacity:0.5;background-color:rgba(232,232,232, 0.8);fill:rgba(232,232,232, 0.8);}#UUID_5e8fad4_334d086 .label-icon{display:inline-block;height:1em;overflow:visible;vertical-align:-0.125em;}#UUID_5e8fad4_334d086 .node .label-icon path{fill:currentColor;stroke:revert;stroke-width:revert;}#UUID_5e8fad4_334d086 :root{--mermaid-font-family:"trebuchet ms",verdana,arial,sans-serif;}</style><g><marker id="UUID_5e8fad4_334d086_flowchart-v2-pointEnd" class="marker flowchart-v2" viewBox="0 0 10 10" refX="5" refY="5" markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="8" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" class="arrowMarkerPath" style="stroke-width: 1; stroke-dasharray: 1, 0;"></path></marker><marker id="UUID_5e8fad4_334d086_flowchart-v2-pointStart" class="marker flowchart-v2" viewBox="0 0 10 10" refX="4.5" refY="5" markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="8" orient="auto"><path d="M 0 5 L 10 10 L 10 0 z" class="arrowMarkerPath" style="stroke-width: 1; stroke-dasharray: 1, 0;"></path></marker><marker id="UUID_5e8fad4_334d086_flowchart-v2-circleEnd" class="marker flowchart-v2" viewBox="0 0 10 10" refX="11" refY="5" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto"><circle cx="5" cy="5" r="5" class="arrowMarkerPath" style="stroke-width: 1; stroke-dasharray: 1, 0;"></circle></marker><marker id="UUID_5e8fad4_334d086_flowchart-v2-circleStart" class="marker flowchart-v2" viewBox="0 0 10 10" refX="-1" refY="5" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto"><circle cx="5" cy="5" r="5" class="arrowMarkerPath" style="stroke-width: 1; stroke-dasharray: 1, 0;"></circle></marker><marker id="UUID_5e8fad4_334d086_flowchart-v2-crossEnd" class="marker cross flowchart-v2" viewBox="0 0 11 11" refX="12" refY="5.2" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto"><path d="M 1,1 l 9,9 M 10,1 l -9,9" class="arrowMarkerPath" style="stroke-width: 2; stroke-dasharray: 1, 0;"></path></marker><marker id="UUID_5e8fad4_334d086_flowchart-v2-crossStart" class="marker cross flowchart-v2" viewBox="0 0 11 11" refX="-1" refY="5.2" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto"><path d="M 1,1 l 9,9 M 10,1 l -9,9" class="arrowMarkerPath" style="stroke-width: 2; stroke-dasharray: 1, 0;"></path></marker><g class="root"><g class="clusters"><g class="cluster" id="subGraph8" data-look="classic"><rect style="" x="8" y="1402" width="478.5343761444092" height="392.8529357910156"></rect><g class="cluster-label" transform="translate(185.89843654632568, 1402)"><foreignObject width="122.73750305175781" height="24"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table-cell; white-space: nowrap; line-height: 1.5;"><span class="nodeLabel"><p>Operations Layer</p></span></div></foreignObject></g></g><g class="cluster" id="subGraph7" data-look="classic"><rect style="" x="1159.0187492370605" y="1024" width="413.28124618530273" height="328"></rect><g class="cluster-label" transform="translate(1273.165620803833, 1024)"><foreignObject width="184.9875030517578" height="24"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table-cell; white-space: nowrap; line-height: 1.5;"><span class="nodeLabel"><p>Asynchronous Processing</p></span></div></foreignObject></g></g><g class="cluster" id="subGraph6" data-look="classic"><rect style="" x="688.2249956130981" y="1402" width="498.04375076293945" height="392.8529357910156"></rect><g class="cluster-label" transform="translate(886.9906187057495, 1402)"><foreignObject width="100.51250457763672" height="24"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table-cell; white-space: nowrap; line-height: 1.5;"><span class="nodeLabel"><p>Storage Layer</p></span></div></foreignObject></g></g><g class="cluster" id="subGraph5" data-look="classic"><rect style="" x="1206.2687463760376" y="1402" width="471.6374988555908" height="392.8529357910156"></rect><g class="cluster-label" transform="translate(1385.6062450408936, 1402)"><foreignObject width="112.9625015258789" height="24"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table-cell; white-space: nowrap; line-height: 1.5;"><span class="nodeLabel"><p>Database Layer</p></span></div></foreignObject></g></g><g class="cluster" id="subGraph4" data-look="classic"><rect style="" x="766.1812477111816" y="1024" width="348.75" height="328"></rect><g class="cluster-label" transform="translate(895.1937484741211, 1024)"><foreignObject width="90.7249984741211" height="24"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table-cell; white-space: nowrap; line-height: 1.5;"><span class="nodeLabel"><p>Cache Layer</p></span></div></foreignObject></g></g><g class="cluster" id="subGraph3" data-look="classic"><rect style="" x="47.437503814697266" y="870" width="1486.6781196594238" height="104"></rect><g class="cluster-label" transform="translate(729.4015636444092, 870)"><foreignObject width="122.75" height="24"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table-cell; white-space: nowrap; line-height: 1.5;"><span class="nodeLabel"><p>Application Layer</p></span></div></foreignObject></g></g><g class="cluster" id="subGraph2" data-look="classic"><rect style="" x="428.1187524795532" y="516" width="496.56249237060547" height="304"></rect><g class="cluster-label" transform="translate(622.593747138977, 516)"><foreignObject width="107.61250305175781" height="24"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table-cell; white-space: nowrap; line-height: 1.5;"><span class="nodeLabel"><p>Gateway Layer</p></span></div></foreignObject></g></g><g class="cluster" id="subGraph1" data-look="classic"><rect style="" x="376.39687633514404" y="162" width="597.125" height="304"></rect><g class="cluster-label" transform="translate(626.9343748092651, 162)"><foreignObject width="96.05000305175781" height="24"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table-cell; white-space: nowrap; line-height: 1.5;"><span class="nodeLabel"><p>Access Layer</p></span></div></foreignObject></g></g><g class="cluster" id="subGraph0" data-look="classic"><rect style="" x="417.7343683242798" y="8" width="492.1937561035156" height="104"></rect><g class="cluster-label" transform="translate(625.1437463760376, 8)"><foreignObject width="77.375" height="24"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table-cell; white-space: nowrap; line-height: 1.5;"><span class="nodeLabel"><p>Client Side</p></span></div></foreignObject></g></g></g><g class="edgePaths"><path d="M602.663,87L592.452,91.167C582.241,95.333,561.819,103.667,551.608,112C541.397,120.333,541.397,128.667,541.397,137C541.397,145.333,541.397,153.667,541.397,161.333C541.397,169,541.397,176,541.397,179.5L541.397,183" id="L_U_DNS_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style=";" data-edge="true" data-et="edge" data-id="L_U_DNS_0" data-points="W3sieCI6NjAyLjY2MzQwMDM5MzI2NiwieSI6ODd9LHsieCI6NTQxLjM5Njg3NjMzNTE0NCwieSI6MTEyfSx7IngiOjU0MS4zOTY4NzYzMzUxNDQsInkiOjEzN30seyJ4Ijo1NDEuMzk2ODc2MzM1MTQ0LCJ5IjoxNjJ9LHsieCI6NTQxLjM5Njg3NjMzNTE0NCwieSI6MTg3fV0=" marker-end="url(#UUID_5e8fad4_334d086_flowchart-v2-pointEnd)"></path><path d="M541.397,289L541.397,293.167C541.397,297.333,541.397,305.667,547.811,313.659C554.225,321.65,567.053,329.301,573.467,333.126L579.881,336.951" id="L_DNS_CDN_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style=";" data-edge="true" data-et="edge" data-id="L_DNS_CDN_0" data-points="W3sieCI6NTQxLjM5Njg3NjMzNTE0NCwieSI6Mjg5fSx7IngiOjU0MS4zOTY4NzYzMzUxNDQsInkiOjMxNH0seyJ4Ijo1ODMuMzE2MDc3MDA2NDkwNiwieSI6MzM5fV0=" marker-end="url(#UUID_5e8fad4_334d086_flowchart-v2-pointEnd)"></path><path d="M752.494,87L765.405,91.167C778.316,95.333,804.138,103.667,817.048,112C829.959,120.333,829.959,128.667,829.959,137C829.959,145.333,829.959,153.667,829.959,163.333C829.959,173,829.959,184,829.959,189.5L829.959,195" id="L_U_WAF_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style=";" data-edge="true" data-et="edge" data-id="L_U_WAF_0" data-points="W3sieCI6NzUyLjQ5MzkyOTIzOTQxOTgsInkiOjg3fSx7IngiOjgyOS45NTkzNzYzMzUxNDQsInkiOjExMn0seyJ4Ijo4MjkuOTU5Mzc2MzM1MTQ0LCJ5IjoxMzd9LHsieCI6ODI5Ljk1OTM3NjMzNTE0NCwieSI6MTYyfSx7IngiOjgyOS45NTkzNzYzMzUxNDQsInkiOjE5OX1d" marker-end="url(#UUID_5e8fad4_334d086_flowchart-v2-pointEnd)"></path><path d="M829.959,277L829.959,283.167C829.959,289.333,829.959,301.667,821.729,311.716C813.498,321.765,797.036,329.529,788.805,333.411L780.574,337.294" id="L_WAF_CDN_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style=";" data-edge="true" data-et="edge" data-id="L_WAF_CDN_0" data-points="W3sieCI6ODI5Ljk1OTM3NjMzNTE0NCwieSI6Mjc3fSx7IngiOjgyOS45NTkzNzYzMzUxNDQsInkiOjMxNH0seyJ4Ijo3NzYuOTU2NzAyMDA2NDkwNiwieSI6MzM5fV0=" marker-end="url(#UUID_5e8fad4_334d086_flowchart-v2-pointEnd)"></path><path d="M668.831,441L668.831,445.167C668.831,449.333,668.831,457.667,668.831,466C668.831,474.333,668.831,482.667,668.831,491C668.831,499.333,668.831,507.667,668.831,515.333C668.831,523,668.831,530,668.831,533.5L668.831,537" id="L_CDN_SLB_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style=";" data-edge="true" data-et="edge" data-id="L_CDN_SLB_0" data-points="W3sieCI6NjY4LjgzMTI0NjM3NjAzNzYsInkiOjQ0MX0seyJ4Ijo2NjguODMxMjQ2Mzc2MDM3NiwieSI6NDY2fSx7IngiOjY2OC44MzEyNDYzNzYwMzc2LCJ5Ijo0OTF9LHsieCI6NjY4LjgzMTI0NjM3NjAzNzYsInkiOjUxNn0seyJ4Ijo2NjguODMxMjQ2Mzc2MDM3NiwieSI6NTQxfV0=" marker-end="url(#UUID_5e8fad4_334d086_flowchart-v2-pointEnd)"></path><path d="M668.831,643L668.831,647.167C668.831,651.333,668.831,659.667,668.831,667.333C668.831,675,668.831,682,668.831,685.5L668.831,689" id="L_SLB_NGINX_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style=";" data-edge="true" data-et="edge" data-id="L_SLB_NGINX_0" data-points="W3sieCI6NjY4LjgzMTI0NjM3NjAzNzYsInkiOjY0M30seyJ4Ijo2NjguODMxMjQ2Mzc2MDM3NiwieSI6NjY4fSx7IngiOjY2OC44MzEyNDYzNzYwMzc2LCJ5Ijo2OTN9XQ==" marker-end="url(#UUID_5e8fad4_334d086_flowchart-v2-pointEnd)"></path><path d="M538.831,793.225L527.046,797.687C515.26,802.15,491.69,811.075,479.904,819.704C468.119,828.333,468.119,836.667,468.119,845C468.119,853.333,468.119,861.667,468.119,869.333C468.119,877,468.119,884,468.119,887.5L468.119,891" id="L_NGINX_API1_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style=";" data-edge="true" data-et="edge" data-id="L_NGINX_API1_0" data-points="W3sieCI6NTM4LjgzMTI0NjM3NjAzNzYsInkiOjc5My4yMjQ2Mzg3MjY3NTI3fSx7IngiOjQ2OC4xMTg3NTI0Nzk1NTMyLCJ5Ijo4MjB9LHsieCI6NDY4LjExODc1MjQ3OTU1MzIsInkiOjg0NX0seyJ4Ijo0NjguMTE4NzUyNDc5NTUzMiwieSI6ODcwfSx7IngiOjQ2OC4xMTg3NTI0Nzk1NTMyLCJ5Ijo4OTV9XQ==" marker-end="url(#UUID_5e8fad4_334d086_flowchart-v2-pointEnd)"></path><path d="M668.831,795L668.831,799.167C668.831,803.333,668.831,811.667,668.831,820C668.831,828.333,668.831,836.667,668.831,845C668.831,853.333,668.831,861.667,668.831,869.333C668.831,877,668.831,884,668.831,887.5L668.831,891" id="L_NGINX_API2_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style=";" data-edge="true" data-et="edge" data-id="L_NGINX_API2_0" data-points="W3sieCI6NjY4LjgzMTI0NjM3NjAzNzYsInkiOjc5NX0seyJ4Ijo2NjguODMxMjQ2Mzc2MDM3NiwieSI6ODIwfSx7IngiOjY2OC44MzEyNDYzNzYwMzc2LCJ5Ijo4NDV9LHsieCI6NjY4LjgzMTI0NjM3NjAzNzYsInkiOjg3MH0seyJ4Ijo2NjguODMxMjQ2Mzc2MDM3NiwieSI6ODk1fV0=" marker-end="url(#UUID_5e8fad4_334d086_flowchart-v2-pointEnd)"></path><path d="M798.831,785.891L816.473,791.576C834.115,797.261,869.398,808.63,887.04,818.482C904.681,828.333,904.681,836.667,904.681,845C904.681,853.333,904.681,861.667,904.681,869.333C904.681,877,904.681,884,904.681,887.5L904.681,891" id="L_NGINX_API3_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style=";" data-edge="true" data-et="edge" data-id="L_NGINX_API3_0" data-points="W3sieCI6Nzk4LjgzMTI0NjM3NjAzNzYsInkiOjc4NS44OTEwMzI3MDY4OTI3fSx7IngiOjkwNC42ODEyNDQ4NTAxNTg3LCJ5Ijo4MjB9LHsieCI6OTA0LjY4MTI0NDg1MDE1ODcsInkiOjg0NX0seyJ4Ijo5MDQuNjgxMjQ0ODUwMTU4NywieSI6ODcwfSx7IngiOjkwNC42ODEyNDQ4NTAxNTg3LCJ5Ijo4OTV9XQ==" marker-end="url(#UUID_5e8fad4_334d086_flowchart-v2-pointEnd)"></path><path d="M543.475,932.033L596.009,939.028C648.544,946.022,753.612,960.011,806.147,971.172C858.681,982.333,858.681,990.667,858.681,999C858.681,1007.333,858.681,1015.667,863.172,1023.573C867.662,1031.48,876.643,1038.96,881.134,1042.7L885.624,1046.44" id="L_API1_BLOOM_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style=";" data-edge="true" data-et="edge" data-id="L_API1_BLOOM_0" data-points="W3sieCI6NTQzLjQ3NDk5OTQyNzc5NTQsInkiOjkzMi4wMzMwMjkwMDA4NjM2fSx7IngiOjg1OC42ODEyNDc3MTExODE2LCJ5Ijo5NzR9LHsieCI6ODU4LjY4MTI0NzcxMTE4MTYsInkiOjk5OX0seyJ4Ijo4NTguNjgxMjQ3NzExMTgxNiwieSI6MTAyNH0seyJ4Ijo4ODguNjk3Njk1MDc5NjAyNywieSI6MTA0OX1d" marker-end="url(#UUID_5e8fad4_334d086_flowchart-v2-pointEnd)"></path><path d="M744.187,935.94L778.478,942.283C812.769,948.627,881.35,961.313,915.641,971.823C949.931,982.333,949.931,990.667,949.931,999C949.931,1007.333,949.931,1015.667,949.931,1023.333C949.931,1031,949.931,1038,949.931,1041.5L949.931,1045" id="L_API2_BLOOM_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style=";" data-edge="true" data-et="edge" data-id="L_API2_BLOOM_0" data-points="W3sieCI6NzQ0LjE4NzQ5MzMyNDI3OTgsInkiOjkzNS45Mzk5NjczNTIxNzYyfSx7IngiOjk0OS45MzEyNDc3MTExODE2LCJ5Ijo5NzR9LHsieCI6OTQ5LjkzMTI0NzcxMTE4MTYsInkiOjk5OX0seyJ4Ijo5NDkuOTMxMjQ3NzExMTgxNiwieSI6MTAyNH0seyJ4Ijo5NDkuOTMxMjQ3NzExMTgxNiwieSI6MTA0OX1d" marker-end="url(#UUID_5e8fad4_334d086_flowchart-v2-pointEnd)"></path><path d="M971.013,949L981.249,953.167C991.486,957.333,1011.958,965.667,1022.195,974C1032.431,982.333,1032.431,990.667,1032.431,999C1032.431,1007.333,1032.431,1015.667,1028.399,1023.548C1024.366,1031.43,1016.3,1038.86,1012.268,1042.575L1008.235,1046.29" id="L_API3_BLOOM_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style=";" data-edge="true" data-et="edge" data-id="L_API3_BLOOM_0" data-points="W3sieCI6OTcxLjAxMjk3NzEwNDkyMDcsInkiOjk0OX0seyJ4IjoxMDMyLjQzMTI0NzcxMTE4MTYsInkiOjk3NH0seyJ4IjoxMDMyLjQzMTI0NzcxMTE4MTYsInkiOjk5OX0seyJ4IjoxMDMyLjQzMTI0NzcxMTE4MTYsInkiOjEwMjR9LHsieCI6MTAwNS4yOTMwODk4MTY0NDQ4LCJ5IjoxMDQ5fV0=" marker-end="url(#UUID_5e8fad4_334d086_flowchart-v2-pointEnd)"></path><path d="M949.931,1151L949.931,1157.167C949.931,1163.333,949.931,1175.667,949.931,1187.333C949.931,1199,949.931,1210,949.931,1215.5L949.931,1221" id="L_BLOOM_REDIS_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style=";" data-edge="true" data-et="edge" data-id="L_BLOOM_REDIS_0" data-points="W3sieCI6OTQ5LjkzMTI0NzcxMTE4MTYsInkiOjExNTF9LHsieCI6OTQ5LjkzMTI0NzcxMTE4MTYsInkiOjExODh9LHsieCI6OTQ5LjkzMTI0NzcxMTE4MTYsInkiOjEyMjV9XQ==" marker-end="url(#UUID_5e8fad4_334d086_flowchart-v2-pointEnd)"></path><path d="M944.06,1327L943.58,1331.167C943.1,1335.333,942.141,1343.667,1009.592,1352C1077.044,1360.333,1212.906,1368.667,1280.837,1377C1348.769,1385.333,1348.769,1393.667,1348.769,1401.333C1348.769,1409,1348.769,1416,1348.769,1419.5L1348.769,1423" id="L_REDIS_POLARDB_RW_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style=";" data-edge="true" data-et="edge" data-id="L_REDIS_POLARDB_RW_0" data-points="W3sieCI6OTQ0LjA1OTUzNzE4NDg2NTgsInkiOjEzMjd9LHsieCI6OTQxLjE4MTI0NzcxMTE4MTYsInkiOjEzNTJ9LHsieCI6MTM0OC43Njg3NDYzNzYwMzc2LCJ5IjoxMzc3fSx7IngiOjEzNDguNzY4NzQ2Mzc2MDM3NiwieSI6MTQwMn0seyJ4IjoxMzQ4Ljc2ODc0NjM3NjAzNzYsInkiOjE0Mjd9XQ==" marker-end="url(#UUID_5e8fad4_334d086_flowchart-v2-pointEnd)"></path><path d="M998.583,1327L1002.557,1331.167C1006.532,1335.333,1014.482,1343.667,1096.596,1352C1178.71,1360.333,1334.99,1368.667,1413.129,1377C1491.269,1385.333,1491.269,1393.667,1491.269,1413.202C1491.269,1432.738,1491.269,1463.475,1491.269,1496.213C1491.269,1528.951,1491.269,1563.689,1493.316,1586.669C1495.364,1609.649,1499.459,1620.872,1501.506,1626.484L1503.553,1632.095" id="L_REDIS_POLARDB_RO_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style=";" data-edge="true" data-et="edge" data-id="L_REDIS_POLARDB_RO_0" data-points="W3sieCI6OTk4LjU4MjU2MzUwMDY1NTMsInkiOjEzMjd9LHsieCI6MTAyMi40MzEyNDc3MTExODE2LCJ5IjoxMzUyfSx7IngiOjE0OTEuMjY4NzQ2Mzc2MDM3NiwieSI6MTM3N30seyJ4IjoxNDkxLjI2ODc0NjM3NjAzNzYsInkiOjE0MDJ9LHsieCI6MTQ5MS4yNjg3NDYzNzYwMzc2LCJ5IjoxNDk0LjIxMzIzMzk0Nzc1NH0seyJ4IjoxNDkxLjI2ODc0NjM3NjAzNzYsInkiOjE1OTguNDI2NDY3ODk1NTA3OH0seyJ4IjoxNTA0LjkyNDUyMTQ4MjI4ODQsInkiOjE2MzUuODUzMTM3ODMwNjAwNn1d" marker-end="url(#UUID_5e8fad4_334d086_flowchart-v2-pointEnd)"></path><path d="M1459.882,1546.985L1477.934,1555.559C1495.986,1564.132,1532.09,1581.279,1548.094,1595.464C1564.099,1609.649,1560.004,1620.872,1557.956,1626.484L1555.909,1632.095" id="L_POLARDB_RW_POLARDB_RO_0" class="edge-thickness-normal edge-pattern-dotted edge-thickness-normal edge-pattern-solid flowchart-link" style=";" data-edge="true" data-et="edge" data-id="L_POLARDB_RW_POLARDB_RO_0" data-points="W3sieCI6MTQ1Ni4yNjg3NDYzNzYwMzc2LCJ5IjoxNTQ1LjI2OTA1MTE0NDIyNjh9LHsieCI6MTU2OC4xOTM3NDU2MTMwOTgxLCJ5IjoxNTk4LjQyNjQ2Nzg5NTUwNzh9LHsieCI6MTU1NC41Mzc5NzA1MDY4NDc0LCJ5IjoxNjM1Ljg1MzEzNzgzMDYwMDZ9XQ==" marker-start="url(#UUID_5e8fad4_334d086_flowchart-v2-pointStart)" marker-end="url(#UUID_5e8fad4_334d086_flowchart-v2-pointEnd)"></path><path d="M493.462,949L497.373,953.167C501.284,957.333,509.106,965.667,513.017,974C516.928,982.333,516.928,990.667,516.928,999C516.928,1007.333,516.928,1015.667,516.928,1032.5C516.928,1049.333,516.928,1074.667,516.928,1102C516.928,1129.333,516.928,1158.667,516.928,1188C516.928,1217.333,516.928,1246.667,516.928,1274C516.928,1301.333,516.928,1326.667,563.242,1343.5C609.556,1360.333,702.184,1368.667,748.498,1377C794.812,1385.333,794.812,1393.667,799.382,1404.162C803.952,1414.657,813.092,1427.314,817.661,1433.642L822.231,1439.97" id="L_API1_OSS_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style=";" data-edge="true" data-et="edge" data-id="L_API1_OSS_0" data-points="W3sieCI6NDkzLjQ2MjA3OTIzMTU1NTY2LCJ5Ijo5NDl9LHsieCI6NTE2LjkyODEyMjUyMDQ0NjgsInkiOjk3NH0seyJ4Ijo1MTYuOTI4MTIyNTIwNDQ2OCwieSI6OTk5fSx7IngiOjUxNi45MjgxMjI1MjA0NDY4LCJ5IjoxMDI0fSx7IngiOjUxNi45MjgxMjI1MjA0NDY4LCJ5IjoxMTAwfSx7IngiOjUxNi45MjgxMjI1MjA0NDY4LCJ5IjoxMTg4fSx7IngiOjUxNi45MjgxMjI1MjA0NDY4LCJ5IjoxMjc2fSx7IngiOjUxNi45MjgxMjI1MjA0NDY4LCJ5IjoxMzUyfSx7IngiOjc5NC44MTI0OTcxMzg5NzcsInkiOjEzNzd9LHsieCI6Nzk0LjgxMjQ5NzEzODk3NywieSI6MTQwMn0seyJ4Ijo4MjQuNTcyNzE4NzU2ODEyNSwieSI6MTQ0My4yMTMyMzM5NDc3NTR9XQ==" marker-end="url(#UUID_5e8fad4_334d086_flowchart-v2-pointEnd)"></path><path d="M608.042,949L598.661,953.167C589.28,957.333,570.518,965.667,561.137,974C551.756,982.333,551.756,990.667,551.756,999C551.756,1007.333,551.756,1015.667,551.756,1032.5C551.756,1049.333,551.756,1074.667,551.756,1102C551.756,1129.333,551.756,1158.667,551.756,1188C551.756,1217.333,551.756,1246.667,551.756,1274C551.756,1301.333,551.756,1326.667,610.658,1343.5C669.56,1360.333,787.365,1368.667,846.267,1377C905.169,1385.333,905.169,1393.667,902.194,1404.1C899.22,1414.533,893.271,1427.066,890.297,1433.333L887.322,1439.6" id="L_API2_OSS_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style=";" data-edge="true" data-et="edge" data-id="L_API2_OSS_0" data-points="W3sieCI6NjA4LjA0MjMwMzE3NzAyNjYsInkiOjk0OX0seyJ4Ijo1NTEuNzU2MjQ0NjU5NDIzOCwieSI6OTc0fSx7IngiOjU1MS43NTYyNDQ2NTk0MjM4LCJ5Ijo5OTl9LHsieCI6NTUxLjc1NjI0NDY1OTQyMzgsInkiOjEwMjR9LHsieCI6NTUxLjc1NjI0NDY1OTQyMzgsInkiOjExMDB9LHsieCI6NTUxLjc1NjI0NDY1OTQyMzgsInkiOjExODh9LHsieCI6NTUxLjc1NjI0NDY1OTQyMzgsInkiOjEyNzZ9LHsieCI6NTUxLjc1NjI0NDY1OTQyMzgsInkiOjEzNTJ9LHsieCI6OTA1LjE2ODc0NDA4NzIxOTIsInkiOjEzNzd9LHsieCI6OTA1LjE2ODc0NDA4NzIxOTIsInkiOjE0MDJ9LHsieCI6ODg1LjYwNzAwMTUxMDA3OTMsInkiOjE0NDMuMjEzMjMzOTQ3NzU0fV0=" marker-end="url(#UUID_5e8fad4_334d086_flowchart-v2-pointEnd)"></path><path d="M794.187,942.066L764.88,947.388C735.573,952.711,676.958,963.355,647.651,972.844C618.344,982.333,618.344,990.667,618.344,999C618.344,1007.333,618.344,1015.667,618.344,1032.5C618.344,1049.333,618.344,1074.667,618.344,1102C618.344,1129.333,618.344,1158.667,618.344,1188C618.344,1217.333,618.344,1246.667,618.344,1274C618.344,1301.333,618.344,1326.667,687.469,1343.5C756.594,1360.333,894.844,1368.667,963.969,1377C1033.094,1385.333,1033.094,1393.667,1020.892,1404.387C1008.69,1415.107,984.286,1428.214,972.084,1434.767L959.882,1441.321" id="L_API3_OSS_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style=";" data-edge="true" data-et="edge" data-id="L_API3_OSS_0" data-points="W3sieCI6Nzk0LjE4NzQ5MzMyNDI3OTgsInkiOjk0Mi4wNjYwOTM3MDQ1ODU4fSx7IngiOjYxOC4zNDM3NDYxODUzMDI3LCJ5Ijo5NzR9LHsieCI6NjE4LjM0Mzc0NjE4NTMwMjcsInkiOjk5OX0seyJ4Ijo2MTguMzQzNzQ2MTg1MzAyNywieSI6MTAyNH0seyJ4Ijo2MTguMzQzNzQ2MTg1MzAyNywieSI6MTEwMH0seyJ4Ijo2MTguMzQzNzQ2MTg1MzAyNywieSI6MTE4OH0seyJ4Ijo2MTguMzQzNzQ2MTg1MzAyNywieSI6MTI3Nn0seyJ4Ijo2MTguMzQzNzQ2MTg1MzAyNywieSI6MTM1Mn0seyJ4IjoxMDMzLjA5Mzc0MzMyNDI3OTgsInkiOjEzNzd9LHsieCI6MTAzMy4wOTM3NDMzMjQyNzk4LCJ5IjoxNDAyfSx7IngiOjk1Ni4zNTc5NjI5Njk1NDM1LCJ5IjoxNDQzLjIxMzIzMzk0Nzc1NH1d" marker-end="url(#UUID_5e8fad4_334d086_flowchart-v2-pointEnd)"></path><path d="M861.4,1545.213L861.4,1554.082C861.4,1562.951,861.4,1580.689,861.4,1597.76C861.4,1614.831,861.4,1631.235,861.4,1639.437L861.4,1647.64" id="L_OSS_IMG_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style=";" data-edge="true" data-et="edge" data-id="L_OSS_IMG_0" data-points="W3sieCI6ODYxLjM5OTk5ODY2NDg1NiwieSI6MTU0NS4yMTMyMzM5NDc3NTR9LHsieCI6ODYxLjM5OTk5ODY2NDg1NiwieSI6MTU5OC40MjY0Njc4OTU1MDc4fSx7IngiOjg2MS4zOTk5OTg2NjQ4NTYsInkiOjE2NTEuNjM5NzAxODQzMjYxN31d" marker-end="url(#UUID_5e8fad4_334d086_flowchart-v2-pointEnd)"></path><path d="M543.475,927.002L661.482,934.835C779.49,942.668,1015.504,958.334,1133.511,970.334C1251.519,982.333,1251.519,990.667,1251.519,999C1251.519,1007.333,1251.519,1015.667,1259.924,1025.622C1268.329,1035.577,1285.14,1047.154,1293.545,1052.943L1301.95,1058.731" id="L_API1_ROCKET_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style=";" data-edge="true" data-et="edge" data-id="L_API1_ROCKET_0" data-points="W3sieCI6NTQzLjQ3NDk5OTQyNzc5NTQsInkiOjkyNy4wMDE5NDY0NjA5NzQ0fSx7IngiOjEyNTEuNTE4NzQ5MjM3MDYwNSwieSI6OTc0fSx7IngiOjEyNTEuNTE4NzQ5MjM3MDYwNSwieSI6OTk5fSx7IngiOjEyNTEuNTE4NzQ5MjM3MDYwNSwieSI6MTAyNH0seyJ4IjoxMzA1LjI0NDgxNjgzMDI4MzgsInkiOjEwNjF9XQ==" marker-end="url(#UUID_5e8fad4_334d086_flowchart-v2-pointEnd)"></path><path d="M744.187,927.654L847.135,935.378C950.083,943.103,1155.979,958.551,1258.927,970.442C1361.875,982.333,1361.875,990.667,1361.875,999C1361.875,1007.333,1361.875,1015.667,1361.875,1025.333C1361.875,1035,1361.875,1046,1361.875,1051.5L1361.875,1057" id="L_API2_ROCKET_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style=";" data-edge="true" data-et="edge" data-id="L_API2_ROCKET_0" data-points="W3sieCI6NzQ0LjE4NzQ5MzMyNDI3OTgsInkiOjkyNy42NTQwODAwNTI1MDMyfSx7IngiOjEzNjEuODc0OTk2MTg1MzAyNywieSI6OTc0fSx7IngiOjEzNjEuODc0OTk2MTg1MzAyNywieSI6OTk5fSx7IngiOjEzNjEuODc0OTk2MTg1MzAyNywieSI6MTAyNH0seyJ4IjoxMzYxLjg3NDk5NjE4NTMwMjcsInkiOjEwNjF9XQ==" marker-end="url(#UUID_5e8fad4_334d086_flowchart-v2-pointEnd)"></path><path d="M1015.175,931.82L1094.279,938.85C1173.383,945.88,1331.592,959.94,1410.696,971.137C1489.8,982.333,1489.8,990.667,1489.8,999C1489.8,1007.333,1489.8,1015.667,1479.993,1025.659C1470.187,1035.652,1450.573,1047.305,1440.766,1053.131L1430.96,1058.957" id="L_API3_ROCKET_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style=";" data-edge="true" data-et="edge" data-id="L_API3_ROCKET_0" data-points="W3sieCI6MTAxNS4xNzQ5OTYzNzYwMzc2LCJ5Ijo5MzEuODE5NjczNDgyOTA3Mn0seyJ4IjoxNDg5Ljc5OTk5NTQyMjM2MzMsInkiOjk3NH0seyJ4IjoxNDg5Ljc5OTk5NTQyMjM2MzMsInkiOjk5OX0seyJ4IjoxNDg5Ljc5OTk5NTQyMjM2MzMsInkiOjEwMjR9LHsieCI6MTQyNy41MjA3MTk0NzgwMDQ4LCJ5IjoxMDYxfV0=" marker-end="url(#UUID_5e8fad4_334d086_flowchart-v2-pointEnd)"></path><path d="M1361.875,1139L1361.875,1147.167C1361.875,1155.333,1361.875,1171.667,1361.875,1185.333C1361.875,1199,1361.875,1210,1361.875,1215.5L1361.875,1221" id="L_ROCKET_WORKER_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style=";" data-edge="true" data-et="edge" data-id="L_ROCKET_WORKER_0" data-points="W3sieCI6MTM2MS44NzQ5OTYxODUzMDI3LCJ5IjoxMTM5fSx7IngiOjEzNjEuODc0OTk2MTg1MzAyNywieSI6MTE4OH0seyJ4IjoxMzYxLjg3NDk5NjE4NTMwMjcsInkiOjEyMjV9XQ==" marker-end="url(#UUID_5e8fad4_334d086_flowchart-v2-pointEnd)"></path><path d="M1361.875,1327L1361.875,1331.167C1361.875,1335.333,1361.875,1343.667,1316.509,1352C1271.144,1360.333,1180.412,1368.667,1135.047,1377C1089.681,1385.333,1089.681,1393.667,1073.295,1404.453C1056.909,1415.238,1024.136,1428.477,1007.75,1435.096L991.363,1441.715" id="L_WORKER_OSS_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style=";" data-edge="true" data-et="edge" data-id="L_WORKER_OSS_0" data-points="W3sieCI6MTM2MS44NzQ5OTYxODUzMDI3LCJ5IjoxMzI3fSx7IngiOjEzNjEuODc0OTk2MTg1MzAyNywieSI6MTM1Mn0seyJ4IjoxMDg5LjY4MTI0NDg1MDE1ODcsInkiOjEzNzd9LHsieCI6MTA4OS42ODEyNDQ4NTAxNTg3LCJ5IjoxNDAyfSx7IngiOjk4Ny42NTQ1ODMzNTk3ODk3LCJ5IjoxNDQzLjIxMzIzMzk0Nzc1NH1d" marker-end="url(#UUID_5e8fad4_334d086_flowchart-v2-pointEnd)"></path><path d="M392.763,933.202L347.019,940.001C301.275,946.801,209.788,960.401,164.044,971.367C118.3,982.333,118.3,990.667,118.3,999C118.3,1007.333,118.3,1015.667,118.3,1032.5C118.3,1049.333,118.3,1074.667,118.3,1102C118.3,1129.333,118.3,1158.667,118.3,1188C118.3,1217.333,118.3,1246.667,118.3,1274C118.3,1301.333,118.3,1326.667,118.3,1343.5C118.3,1360.333,118.3,1368.667,118.3,1377C118.3,1385.333,118.3,1393.667,122.034,1404.129C125.769,1414.591,133.238,1427.182,136.972,1433.477L140.707,1439.773" id="L_API1_SLS_0" class="edge-thickness-normal edge-pattern-dotted edge-thickness-normal edge-pattern-solid flowchart-link" style=";" data-edge="true" data-et="edge" data-id="L_API1_SLS_0" data-points="W3sieCI6MzkyLjc2MjUwNTUzMTMxMTA0LCJ5Ijo5MzMuMjAxNTg1OTc4NDE3NX0seyJ4IjoxMTguMjk5OTk5MjM3MDYwNTUsInkiOjk3NH0seyJ4IjoxMTguMjk5OTk5MjM3MDYwNTUsInkiOjk5OX0seyJ4IjoxMTguMjk5OTk5MjM3MDYwNTUsInkiOjEwMjR9LHsieCI6MTE4LjI5OTk5OTIzNzA2MDU1LCJ5IjoxMTAwfSx7IngiOjExOC4yOTk5OTkyMzcwNjA1NSwieSI6MTE4OH0seyJ4IjoxMTguMjk5OTk5MjM3MDYwNTUsInkiOjEyNzZ9LHsieCI6MTE4LjI5OTk5OTIzNzA2MDU1LCJ5IjoxMzUyfSx7IngiOjExOC4yOTk5OTkyMzcwNjA1NSwieSI6MTM3N30seyJ4IjoxMTguMjk5OTk5MjM3MDYwNTUsInkiOjE0MDJ9LHsieCI6MTQyLjc0NzI5MjAxNTY5Mzc3LCJ5IjoxNDQzLjIxMzIzMzk0Nzc1NH1d" marker-end="url(#UUID_5e8fad4_334d086_flowchart-v2-pointEnd)"></path><path d="M593.475,930.531L529.476,937.775C465.476,945.02,337.477,959.51,273.478,970.922C209.478,982.333,209.478,990.667,209.478,999C209.478,1007.333,209.478,1015.667,209.478,1032.5C209.478,1049.333,209.478,1074.667,209.478,1102C209.478,1129.333,209.478,1158.667,209.478,1188C209.478,1217.333,209.478,1246.667,209.478,1274C209.478,1301.333,209.478,1326.667,209.478,1343.5C209.478,1360.333,209.478,1368.667,209.478,1377C209.478,1385.333,209.478,1393.667,207.006,1404.082C204.534,1414.498,199.59,1426.996,197.118,1433.245L194.646,1439.494" id="L_API2_SLS_0" class="edge-thickness-normal edge-pattern-dotted edge-thickness-normal edge-pattern-solid flowchart-link" style=";" data-edge="true" data-et="edge" data-id="L_API2_SLS_0" data-points="W3sieCI6NTkzLjQ3NDk5OTQyNzc5NTQsInkiOjkzMC41MzA1MjgzNzkzNzg3fSx7IngiOjIwOS40NzgxMjQ2MTg1MzAyNywieSI6OTc0fSx7IngiOjIwOS40NzgxMjQ2MTg1MzAyNywieSI6OTk5fSx7IngiOjIwOS40NzgxMjQ2MTg1MzAyNywieSI6MTAyNH0seyJ4IjoyMDkuNDc4MTI0NjE4NTMwMjcsInkiOjExMDB9LHsieCI6MjA5LjQ3ODEyNDYxODUzMDI3LCJ5IjoxMTg4fSx7IngiOjIwOS40NzgxMjQ2MTg1MzAyNywieSI6MTI3Nn0seyJ4IjoyMDkuNDc4MTI0NjE4NTMwMjcsInkiOjEzNTJ9LHsieCI6MjA5LjQ3ODEyNDYxODUzMDI3LCJ5IjoxMzc3fSx7IngiOjIwOS40NzgxMjQ2MTg1MzAyNywieSI6MTQwMn0seyJ4IjoxOTMuMTc0ODA4NzExMjg2NSwieSI6MTQ0My4yMTMyMzM5NDc3NTR9XQ==" marker-end="url(#UUID_5e8fad4_334d086_flowchart-v2-pointEnd)"></path><path d="M794.187,930.971L705.853,938.142C617.518,945.314,440.848,959.657,352.513,970.995C264.178,982.333,264.178,990.667,264.178,999C264.178,1007.333,264.178,1015.667,264.178,1032.5C264.178,1049.333,264.178,1074.667,264.178,1102C264.178,1129.333,264.178,1158.667,264.178,1188C264.178,1217.333,264.178,1246.667,264.178,1274C264.178,1301.333,264.178,1326.667,264.178,1343.5C264.178,1360.333,264.178,1368.667,264.178,1377C264.178,1385.333,264.178,1393.667,257.855,1404.228C251.532,1414.79,238.886,1427.579,232.563,1433.974L226.24,1440.369" id="L_API3_SLS_0" class="edge-thickness-normal edge-pattern-dotted edge-thickness-normal edge-pattern-solid flowchart-link" style=";" data-edge="true" data-et="edge" data-id="L_API3_SLS_0" data-points="W3sieCI6Nzk0LjE4NzQ5MzMyNDI3OTgsInkiOjkzMC45NzA1NjUzMzMyNTIyfSx7IngiOjI2NC4xNzgxMjUzODE0Njk3LCJ5Ijo5NzR9LHsieCI6MjY0LjE3ODEyNTM4MTQ2OTcsInkiOjk5OX0seyJ4IjoyNjQuMTc4MTI1MzgxNDY5NywieSI6MTAyNH0seyJ4IjoyNjQuMTc4MTI1MzgxNDY5NywieSI6MTEwMH0seyJ4IjoyNjQuMTc4MTI1MzgxNDY5NywieSI6MTE4OH0seyJ4IjoyNjQuMTc4MTI1MzgxNDY5NywieSI6MTI3Nn0seyJ4IjoyNjQuMTc4MTI1MzgxNDY5NywieSI6MTM1Mn0seyJ4IjoyNjQuMTc4MTI1MzgxNDY5NywieSI6MTM3N30seyJ4IjoyNjQuMTc4MTI1MzgxNDY5NywieSI6MTQwMn0seyJ4IjoyMjMuNDI3NTE2Njk1NTkyNzEsInkiOjE0NDMuMjEzMjMzOTQ3NzU0fV0=" marker-end="url(#UUID_5e8fad4_334d086_flowchart-v2-pointEnd)"></path><path d="M173,1545.213L173,1554.082C173,1562.951,173,1580.689,181.146,1597.948C189.292,1615.208,205.585,1631.989,213.731,1640.379L221.877,1648.77" id="L_SLS_MONITOR_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style=";" data-edge="true" data-et="edge" data-id="L_SLS_MONITOR_0" data-points="W3sieCI6MTczLCJ5IjoxNTQ1LjIxMzIzMzk0Nzc1NH0seyJ4IjoxNzMsInkiOjE1OTguNDI2NDY3ODk1NTA3OH0seyJ4IjoyMjQuNjYzNDUwNTI3MDA4MywieSI6MTY1MS42Mzk3MDE4NDMyNjE3fV0=" marker-end="url(#UUID_5e8fad4_334d086_flowchart-v2-pointEnd)"></path><path d="M895.408,1327L890.954,1331.167C886.499,1335.333,877.59,1343.667,790.915,1352C704.24,1360.333,539.798,1368.667,457.577,1377C375.356,1385.333,375.356,1393.667,375.356,1413.202C375.356,1432.738,375.356,1463.475,375.356,1496.213C375.356,1528.951,375.356,1563.689,367.21,1589.448C359.064,1615.208,342.772,1631.989,334.625,1640.379L326.479,1648.77" id="L_REDIS_MONITOR_0" class="edge-thickness-normal edge-pattern-dotted edge-thickness-normal edge-pattern-solid flowchart-link" style=";" data-edge="true" data-et="edge" data-id="L_REDIS_MONITOR_0" data-points="W3sieCI6ODk1LjQwODIyMTM5NTM5MjIsInkiOjEzMjd9LHsieCI6ODY4LjY4MTI0NzcxMTE4MTYsInkiOjEzNTJ9LHsieCI6Mzc1LjM1NjI1MDc2MjkzOTQ1LCJ5IjoxMzc3fSx7IngiOjM3NS4zNTYyNTA3NjI5Mzk0NSwieSI6MTQwMn0seyJ4IjozNzUuMzU2MjUwNzYyOTM5NDUsInkiOjE0OTQuMjEzMjMzOTQ3NzU0fSx7IngiOjM3NS4zNTYyNTA3NjI5Mzk0NSwieSI6MTU5OC40MjY0Njc4OTU1MDc4fSx7IngiOjMyMy42OTI4MDAyMzU5MzExNCwieSI6MTY1MS42Mzk3MDE4NDMyNjE3fV0=" marker-end="url(#UUID_5e8fad4_334d086_flowchart-v2-pointEnd)"></path><path d="M1348.769,1561.426L1348.769,1567.593C1348.769,1573.76,1348.769,1586.093,1192.001,1607.463C1035.232,1628.833,721.696,1659.24,564.928,1674.443L408.159,1689.646" id="L_POLARDB_RW_MONITOR_0" class="edge-thickness-normal edge-pattern-dotted edge-thickness-normal edge-pattern-solid flowchart-link" style=";" data-edge="true" data-et="edge" data-id="L_POLARDB_RW_MONITOR_0" data-points="W3sieCI6MTM0OC43Njg3NDYzNzYwMzc2LCJ5IjoxNTYxLjQyNjQ2Nzg5NTUwNzh9LHsieCI6MTM0OC43Njg3NDYzNzYwMzc2LCJ5IjoxNTk4LjQyNjQ2Nzg5NTUwNzh9LHsieCI6NDA0LjE3ODEyNTM4MTQ2OTcsInkiOjE2OTAuMDMyMzcwMTMxNTE3Mn1d" marker-end="url(#UUID_5e8fad4_334d086_flowchart-v2-pointEnd)"></path></g><g class="edgeLabels"><g class="edgeLabel"><g class="label" data-id="L_U_DNS_0" transform="translate(0, 0)"><foreignObject width="0" height="0"><div xmlns="http://www.w3.org/1999/xhtml" class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="edgeLabel"></span></div></foreignObject></g></g><g class="edgeLabel"><g class="label" data-id="L_DNS_CDN_0" transform="translate(0, 0)"><foreignObject width="0" height="0"><div xmlns="http://www.w3.org/1999/xhtml" class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="edgeLabel"></span></div></foreignObject></g></g><g class="edgeLabel"><g class="label" data-id="L_U_WAF_0" transform="translate(0, 0)"><foreignObject width="0" height="0"><div xmlns="http://www.w3.org/1999/xhtml" class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="edgeLabel"></span></div></foreignObject></g></g><g class="edgeLabel"><g class="label" data-id="L_WAF_CDN_0" transform="translate(0, 0)"><foreignObject width="0" height="0"><div xmlns="http://www.w3.org/1999/xhtml" class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="edgeLabel"></span></div></foreignObject></g></g><g class="edgeLabel"><g class="label" data-id="L_CDN_SLB_0" transform="translate(0, 0)"><foreignObject width="0" height="0"><div xmlns="http://www.w3.org/1999/xhtml" class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="edgeLabel"></span></div></foreignObject></g></g><g class="edgeLabel"><g class="label" data-id="L_SLB_NGINX_0" transform="translate(0, 0)"><foreignObject width="0" height="0"><div xmlns="http://www.w3.org/1999/xhtml" class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="edgeLabel"></span></div></foreignObject></g></g><g class="edgeLabel"><g class="label" data-id="L_NGINX_API1_0" transform="translate(0, 0)"><foreignObject width="0" height="0"><div xmlns="http://www.w3.org/1999/xhtml" class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="edgeLabel"></span></div></foreignObject></g></g><g class="edgeLabel"><g class="label" data-id="L_NGINX_API2_0" transform="translate(0, 0)"><foreignObject width="0" height="0"><div xmlns="http://www.w3.org/1999/xhtml" class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="edgeLabel"></span></div></foreignObject></g></g><g class="edgeLabel"><g class="label" data-id="L_NGINX_API3_0" transform="translate(0, 0)"><foreignObject width="0" height="0"><div xmlns="http://www.w3.org/1999/xhtml" class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="edgeLabel"></span></div></foreignObject></g></g><g class="edgeLabel"><g class="label" data-id="L_API1_BLOOM_0" transform="translate(0, 0)"><foreignObject width="0" height="0"><div xmlns="http://www.w3.org/1999/xhtml" class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="edgeLabel"></span></div></foreignObject></g></g><g class="edgeLabel"><g class="label" data-id="L_API2_BLOOM_0" transform="translate(0, 0)"><foreignObject width="0" height="0"><div xmlns="http://www.w3.org/1999/xhtml" class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="edgeLabel"></span></div></foreignObject></g></g><g class="edgeLabel"><g class="label" data-id="L_API3_BLOOM_0" transform="translate(0, 0)"><foreignObject width="0" height="0"><div xmlns="http://www.w3.org/1999/xhtml" class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="edgeLabel"></span></div></foreignObject></g></g><g class="edgeLabel"><g class="label" data-id="L_BLOOM_REDIS_0" transform="translate(0, 0)"><foreignObject width="0" height="0"><div xmlns="http://www.w3.org/1999/xhtml" class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="edgeLabel"></span></div></foreignObject></g></g><g class="edgeLabel"><g class="label" data-id="L_REDIS_POLARDB_RW_0" transform="translate(0, 0)"><foreignObject width="0" height="0"><div xmlns="http://www.w3.org/1999/xhtml" class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="edgeLabel"></span></div></foreignObject></g></g><g class="edgeLabel"><g class="label" data-id="L_REDIS_POLARDB_RO_0" transform="translate(0, 0)"><foreignObject width="0" height="0"><div xmlns="http://www.w3.org/1999/xhtml" class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="edgeLabel"></span></div></foreignObject></g></g><g class="edgeLabel" transform="translate(1530.22503, 1580.39369)"><g class="label" data-id="L_POLARDB_RW_POLARDB_RO_0" transform="translate(-56.92499923706055, -12)"><foreignObject width="113.8499984741211" height="24"><div xmlns="http://www.w3.org/1999/xhtml" class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="edgeLabel"><p>Synchronization</p></span></div></foreignObject></g></g><g class="edgeLabel"><g class="label" data-id="L_API1_OSS_0" transform="translate(0, 0)"><foreignObject width="0" height="0"><div xmlns="http://www.w3.org/1999/xhtml" class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="edgeLabel"></span></div></foreignObject></g></g><g class="edgeLabel"><g class="label" data-id="L_API2_OSS_0" transform="translate(0, 0)"><foreignObject width="0" height="0"><div xmlns="http://www.w3.org/1999/xhtml" class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="edgeLabel"></span></div></foreignObject></g></g><g class="edgeLabel"><g class="label" data-id="L_API3_OSS_0" transform="translate(0, 0)"><foreignObject width="0" height="0"><div xmlns="http://www.w3.org/1999/xhtml" class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="edgeLabel"></span></div></foreignObject></g></g><g class="edgeLabel"><g class="label" data-id="L_OSS_IMG_0" transform="translate(0, 0)"><foreignObject width="0" height="0"><div xmlns="http://www.w3.org/1999/xhtml" class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="edgeLabel"></span></div></foreignObject></g></g><g class="edgeLabel"><g class="label" data-id="L_API1_ROCKET_0" transform="translate(0, 0)"><foreignObject width="0" height="0"><div xmlns="http://www.w3.org/1999/xhtml" class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="edgeLabel"></span></div></foreignObject></g></g><g class="edgeLabel"><g class="label" data-id="L_API2_ROCKET_0" transform="translate(0, 0)"><foreignObject width="0" height="0"><div xmlns="http://www.w3.org/1999/xhtml" class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="edgeLabel"></span></div></foreignObject></g></g><g class="edgeLabel"><g class="label" data-id="L_API3_ROCKET_0" transform="translate(0, 0)"><foreignObject width="0" height="0"><div xmlns="http://www.w3.org/1999/xhtml" class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="edgeLabel"></span></div></foreignObject></g></g><g class="edgeLabel"><g class="label" data-id="L_ROCKET_WORKER_0" transform="translate(0, 0)"><foreignObject width="0" height="0"><div xmlns="http://www.w3.org/1999/xhtml" class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="edgeLabel"></span></div></foreignObject></g></g><g class="edgeLabel"><g class="label" data-id="L_WORKER_OSS_0" transform="translate(0, 0)"><foreignObject width="0" height="0"><div xmlns="http://www.w3.org/1999/xhtml" class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="edgeLabel"></span></div></foreignObject></g></g><g class="edgeLabel" transform="translate(118.29999923706055, 1188)"><g class="label" data-id="L_API1_SLS_0" transform="translate(-17.350000381469727, -12)"><foreignObject width="34.70000076293945" height="24"><div xmlns="http://www.w3.org/1999/xhtml" class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="edgeLabel"><p>Logs</p></span></div></foreignObject></g></g><g class="edgeLabel" transform="translate(209.47812461853027, 1188)"><g class="label" data-id="L_API2_SLS_0" transform="translate(-17.350000381469727, -12)"><foreignObject width="34.70000076293945" height="24"><div xmlns="http://www.w3.org/1999/xhtml" class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="edgeLabel"><p>Logs</p></span></div></foreignObject></g></g><g class="edgeLabel" transform="translate(264.1781253814697, 1188)"><g class="label" data-id="L_API3_SLS_0" transform="translate(-17.350000381469727, -12)"><foreignObject width="34.70000076293945" height="24"><div xmlns="http://www.w3.org/1999/xhtml" class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="edgeLabel"><p>Logs</p></span></div></foreignObject></g></g><g class="edgeLabel"><g class="label" data-id="L_SLS_MONITOR_0" transform="translate(0, 0)"><foreignObject width="0" height="0"><div xmlns="http://www.w3.org/1999/xhtml" class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="edgeLabel"></span></div></foreignObject></g></g><g class="edgeLabel" transform="translate(375.35625076293945, 1494.213233947754)"><g class="label" data-id="L_REDIS_MONITOR_0" transform="translate(-37.35625076293945, -12)"><foreignObject width="74.7125015258789" height="24"><div xmlns="http://www.w3.org/1999/xhtml" class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="edgeLabel"><p>Monitoring</p></span></div></foreignObject></g></g><g class="edgeLabel" transform="translate(1348.7687463760376, 1598.4264678955078)"><g class="label" data-id="L_POLARDB_RW_MONITOR_0" transform="translate(-37.35625076293945, -12)"><foreignObject width="74.7125015258789" height="24"><div xmlns="http://www.w3.org/1999/xhtml" class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="edgeLabel"><p>Monitoring</p></span></div></foreignObject></g></g></g><g class="nodes"><g class="node default" id="flowchart-U-0" transform="translate(668.8312463760376, 60)"><rect class="basic label-container" style="fill:#e1f5fe !important" x="-138.6312484741211" y="-27" width="277.2624969482422" height="54"></rect><g class="label" style="" transform="translate(-108.6312484741211, -12)"><rect></rect><foreignObject width="217.2624969482422" height="24"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table; white-space: break-spaces; line-height: 1.5; max-width: 200px; text-align: center; width: 200px;"><span class="nodeLabel"><p>Browser/APP/Clients/WebDAV</p></span></div></foreignObject></g></g><g class="node default" id="flowchart-DNS-1" transform="translate(541.396876335144, 238)"><rect class="basic label-container" style="fill:#fff9c4 !important" x="-130" y="-51" width="260" height="102"></rect><g class="label" style="" transform="translate(-100, -36)"><rect></rect><foreignObject width="200" height="72"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table; white-space: break-spaces; line-height: 1.5; max-width: 200px; text-align: center; width: 200px;"><span class="nodeLabel"><p>Cloud DNS Resolution<br>Intelligent Resolution/Health Check</p></span></div></foreignObject></g></g><g class="node default" id="flowchart-WAF-2" transform="translate(829.959376335144, 238)"><rect class="basic label-container" style="fill:#fff9c4 !important" x="-108.5625" y="-39" width="217.125" height="78"></rect><g class="label" style="" transform="translate(-78.5625, -24)"><rect></rect><foreignObject width="157.125" height="48"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="nodeLabel"><p>WAF 3.0<br>Web Attack Protection</p></span></div></foreignObject></g></g><g class="node default" id="flowchart-CDN-3" transform="translate(668.8312463760376, 390)"><rect class="basic label-container" style="fill:#fff9c4 !important" x="-130" y="-51" width="260" height="102"></rect><g class="label" style="" transform="translate(-100, -36)"><rect></rect><foreignObject width="200" height="72"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table; white-space: break-spaces; line-height: 1.5; max-width: 200px; text-align: center; width: 200px;"><span class="nodeLabel"><p>DCDN Full-site Acceleration<br>Static Resource/API Acceleration</p></span></div></foreignObject></g></g><g class="node default" id="flowchart-SLB-4" transform="translate(668.8312463760376, 592)"><rect class="basic label-container" style="fill:#ffecb3 !important" x="-130" y="-51" width="260" height="102"></rect><g class="label" style="" transform="translate(-100, -36)"><rect></rect><foreignObject width="200" height="72"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table; white-space: break-spaces; line-height: 1.5; max-width: 200px; text-align: center; width: 200px;"><span class="nodeLabel"><p>SLB/ALB<br>Load Balancing/Rate Limiting</p></span></div></foreignObject></g></g><g class="node default" id="flowchart-NGINX-5" transform="translate(668.8312463760376, 744)"><rect class="basic label-container" style="fill:#ffecb3 !important" x="-130" y="-51" width="260" height="102"></rect><g class="label" style="" transform="translate(-100, -36)"><rect></rect><foreignObject width="200" height="72"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table; white-space: break-spaces; line-height: 1.5; max-width: 200px; text-align: center; width: 200px;"><span class="nodeLabel"><p>Nginx Multi-active<br>Reverse Proxy/Routing Distribution</p></span></div></foreignObject></g></g><g class="node default" id="flowchart-API1-6" transform="translate(468.1187524795532, 922)"><rect class="basic label-container" style="fill:#c8e6c9 !important" x="-75.35625076293945" y="-27" width="150.7125015258789" height="54"></rect><g class="label" style="" transform="translate(-45.35625076293945, -12)"><rect></rect><foreignObject width="90.7125015258789" height="24"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="nodeLabel"><p>API Server 1</p></span></div></foreignObject></g></g><g class="node default" id="flowchart-API2-7" transform="translate(668.8312463760376, 922)"><rect class="basic label-container" style="fill:#c8e6c9 !important" x="-75.35625076293945" y="-27" width="150.7125015258789" height="54"></rect><g class="label" style="" transform="translate(-45.35625076293945, -12)"><rect></rect><foreignObject width="90.7125015258789" height="24"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="nodeLabel"><p>API Server 2</p></span></div></foreignObject></g></g><g class="node default" id="flowchart-API3-8" transform="translate(904.6812448501587, 922)"><rect class="basic label-container" style="fill:#c8e6c9 !important" x="-110.4937515258789" y="-27" width="220.9875030517578" height="54"></rect><g class="label" style="" transform="translate(-80.4937515258789, -12)"><rect></rect><foreignObject width="160.9875030517578" height="24"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="nodeLabel"><p>API Server ...50 nodes</p></span></div></foreignObject></g></g><g class="node default" id="flowchart-REDIS-9" transform="translate(949.9312477111816, 1276)"><rect class="basic label-container" style="fill:#ffccbc !important" x="-130" y="-51" width="260" height="102"></rect><g class="label" style="" transform="translate(-100, -36)"><rect></rect><foreignObject width="200" height="72"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table; white-space: break-spaces; line-height: 1.5; max-width: 200px; text-align: center; width: 200px;"><span class="nodeLabel"><p>Redis Cluster<br>4 nodes / 8-core 32G per node</p></span></div></foreignObject></g></g><g class="node default" id="flowchart-BLOOM-10" transform="translate(949.9312477111816, 1100)"><rect class="basic label-container" style="fill:#ffccbc !important" x="-130" y="-51" width="260" height="102"></rect><g class="label" style="" transform="translate(-100, -36)"><rect></rect><foreignObject width="200" height="72"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table; white-space: break-spaces; line-height: 1.5; max-width: 200px; text-align: center; width: 200px;"><span class="nodeLabel"><p>Bloom Filter<br>Anti-penetration/Anti-breakdown</p></span></div></foreignObject></g></g><g class="node default" id="flowchart-POLARDB_RW-11" transform="translate(1348.7687463760376, 1494.213233947754)"><path d="M0,15.808823529411764 a107.5,15.808823529411764 0,0,0 215,0 a107.5,15.808823529411764 0,0,0 -215,0 l0,102.80882352941177 a107.5,15.808823529411764 0,0,0 215,0 l0,-102.80882352941177" class="basic label-container" style="fill:#d1c4e9 !important" transform="translate(-107.5, -67.21323529411765)"></path><g class="label" style="" transform="translate(-100, -26)"><rect></rect><foreignObject width="200" height="72"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table; white-space: break-spaces; line-height: 1.5; max-width: 200px; text-align: center; width: 200px;"><span class="nodeLabel"><p>PolarDB Read-Write Instance<br>8 nodes</p></span></div></foreignObject></g></g><g class="node default" id="flowchart-POLARDB_RO-12" transform="translate(1529.7312459945679, 1702.6397018432617)"><path d="M0,15.808823529411764 a107.5,15.808823529411764 0,0,0 215,0 a107.5,15.808823529411764 0,0,0 -215,0 l0,102.80882352941177 a107.5,15.808823529411764 0,0,0 215,0 l0,-102.80882352941177" class="basic label-container" style="fill:#d1c4e9 !important" transform="translate(-107.5, -67.21323529411765)"></path><g class="label" style="" transform="translate(-100, -26)"><rect></rect><foreignObject width="200" height="72"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table; white-space: break-spaces; line-height: 1.5; max-width: 200px; text-align: center; width: 200px;"><span class="nodeLabel"><p>PolarDB Read-Only Instance<br>16 nodes</p></span></div></foreignObject></g></g><g class="node default" id="flowchart-OSS-13" transform="translate(861.399998664856, 1494.213233947754)"><rect class="basic label-container" style="fill:#b3e5fc !important" x="-130" y="-51" width="260" height="102"></rect><g class="label" style="" transform="translate(-100, -36)"><rect></rect><foreignObject width="200" height="72"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table; white-space: break-spaces; line-height: 1.5; max-width: 200px; text-align: center; width: 200px;"><span class="nodeLabel"><p>Object Storage OSS<br>Standard/Infrequent Access/Archive</p></span></div></foreignObject></g></g><g class="node default" id="flowchart-IMG-14" transform="translate(861.399998664856, 1702.6397018432617)"><rect class="basic label-container" style="fill:#b3e5fc !important" x="-138.1750030517578" y="-51" width="276.3500061035156" height="102"></rect><g class="label" style="" transform="translate(-108.17500305175781, -36)"><rect></rect><foreignObject width="216.35000610351562" height="72"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table; white-space: break-spaces; line-height: 1.5; max-width: 200px; text-align: center; width: 200px;"><span class="nodeLabel"><p>OSS Image Processing IMG<br>Thumbnail/Watermark/Format Conversion</p></span></div></foreignObject></g></g><g class="node default" id="flowchart-ROCKET-15" transform="translate(1361.8749961853027, 1100)"><rect class="basic label-container" style="fill:#f8bbd0 !important" x="-125.46875" y="-39" width="250.9375" height="78"></rect><g class="label" style="" transform="translate(-95.46875, -24)"><rect></rect><foreignObject width="190.9375" height="48"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="nodeLabel"><p>RocketMQ<br>Asynchronous Task Queue</p></span></div></foreignObject></g></g><g class="node default" id="flowchart-WORKER-16" transform="translate(1361.8749961853027, 1276)"><rect class="basic label-container" style="fill:#f8bbd0 !important" x="-130" y="-51" width="260" height="102"></rect><g class="label" style="" transform="translate(-100, -36)"><rect></rect><foreignObject width="200" height="72"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table; white-space: break-spaces; line-height: 1.5; max-width: 200px; text-align: center; width: 200px;"><span class="nodeLabel"><p>Asynchronous Worker<br>Large File Processing/Virus Scanning</p></span></div></foreignObject></g></g><g class="node default" id="flowchart-SLS-17" transform="translate(173, 1494.213233947754)"><rect class="basic label-container" style="fill:#d7ccc8 !important" x="-130" y="-51" width="260" height="102"></rect><g class="label" style="" transform="translate(-100, -36)"><rect></rect><foreignObject width="200" height="72"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table; white-space: break-spaces; line-height: 1.5; max-width: 200px; text-align: center; width: 200px;"><span class="nodeLabel"><p>SLS Log Service<br>Centralized Collection/Analysis</p></span></div></foreignObject></g></g><g class="node default" id="flowchart-MONITOR-18" transform="translate(274.1781253814697, 1702.6397018432617)"><rect class="basic label-container" style="fill:#d7ccc8 !important" x="-130" y="-51" width="260" height="102"></rect><g class="label" style="" transform="translate(-100, -36)"><rect></rect><foreignObject width="200" height="72"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table; white-space: break-spaces; line-height: 1.5; max-width: 200px; text-align: center; width: 200px;"><span class="nodeLabel"><p>Cloud Monitor + ARMS<br>Full-link Monitoring &amp; Alerting</p></span></div></foreignObject></g></g></g></g></g></svg></div>
+			<div class="flow-code"><pre class="hljs-code lang-mermaid"><code class="hljs"><div class="code-toolbar" data-lang="mermaid"><i></i><i></i><span class="code-lang">mermaid</span><div class="code-toolbar-right"><span class="code-wrap ripple-item"><i class="font-icon ri-text-wrap"></i><b></b></span><span class="code-run ripple-item"><i class="font-icon ri-play-fill"></i><b>运行</b></span><span class="code-copy ripple-item" data-text="已复制成功!"><i class="font-icon ri-file-copy-line"></i><b>复制</b></span></div></div><ul class="code-view"><li><span><span class="hljs-keyword">graph</span> <span class="hljs-attribute">TB</span>
+</span></li><li><span>    <span class="hljs-keyword">subgraph</span> <span class="hljs-variable">Client</span> <span class="hljs-variable">Side</span>
+</span></li><li><span>        <span class="hljs-variable">U</span><span class="hljs-string">[Browser/APP/Clients/WebDAV]</span>
+</span></li><li><span>    <span class="hljs-keyword">end</span>
+</span></li><li><span>
+</span></li><li><span>    <span class="hljs-keyword">subgraph</span> <span class="hljs-variable">Access</span> <span class="hljs-variable">Layer</span>
+</span></li><li><span>        <span class="hljs-variable">DNS</span><span class="hljs-string">[Cloud DNS Resolution&lt;br/&gt;Intelligent Resolution/Health Check]</span>
+</span></li><li><span>        <span class="hljs-variable">WAF</span><span class="hljs-string">[WAF 3.0&lt;br/&gt;Web Attack Protection]</span>
+</span></li><li><span>        <span class="hljs-variable">CDN</span><span class="hljs-string">[DCDN Full-site Acceleration&lt;br/&gt;Static Resource/API Acceleration]</span>
+</span></li><li><span>    <span class="hljs-keyword">end</span>
+</span></li><li><span>
+</span></li><li><span>    <span class="hljs-keyword">subgraph</span> <span class="hljs-variable">Gateway</span> <span class="hljs-variable">Layer</span>
+</span></li><li><span>        <span class="hljs-variable">SLB</span><span class="hljs-string">[SLB/ALB&lt;br/&gt;Load Balancing/Rate Limiting]</span>
+</span></li><li><span>        <span class="hljs-variable">NGINX</span><span class="hljs-string">[Nginx Multi-active&lt;br/&gt;Reverse Proxy/Routing Distribution]</span>
+</span></li><li><span>    <span class="hljs-keyword">end</span>
+</span></li><li><span>
+</span></li><li><span>    <span class="hljs-keyword">subgraph</span> <span class="hljs-variable">Application</span> <span class="hljs-variable">Layer</span>
+</span></li><li><span>        <span class="hljs-variable">API1</span><span class="hljs-string">[API Server 1]</span>
+</span></li><li><span>        <span class="hljs-variable">API2</span><span class="hljs-string">[API Server 2]</span>
+</span></li><li><span>        <span class="hljs-variable">API3</span><span class="hljs-string">[API Server ...50 nodes ]</span>
+</span></li><li><span>    <span class="hljs-keyword">end</span>
+</span></li><li><span>
+</span></li><li><span>    <span class="hljs-keyword">subgraph</span> <span class="hljs-variable">Cache</span> <span class="hljs-variable">Layer</span>
+</span></li><li><span>        <span class="hljs-variable">REDIS</span><span class="hljs-string">[Redis Cluster&lt;br/&gt;4 nodes / 8-core 32G per node]</span>
+</span></li><li><span>        <span class="hljs-variable">BLOOM</span><span class="hljs-string">[Bloom Filter&lt;br/&gt;Anti-penetration/Anti-breakdown]</span>
+</span></li><li><span>    <span class="hljs-keyword">end</span>
+</span></li><li><span>
+</span></li><li><span>    <span class="hljs-keyword">subgraph</span> <span class="hljs-variable">Database</span> <span class="hljs-variable">Layer</span>
+</span></li><li><span>        <span class="hljs-variable">POLARDB_RW</span><span class="hljs-string">[(PolarDB Read-Write Instance&lt;br/&gt;8 nodes)]</span>
+</span></li><li><span>        <span class="hljs-variable">POLARDB_RO</span><span class="hljs-string">[(PolarDB Read-Only Instance&lt;br/&gt;16 nodes)]</span>
+</span></li><li><span>    <span class="hljs-keyword">end</span>
+</span></li><li><span>
+</span></li><li><span>    <span class="hljs-keyword">subgraph</span> <span class="hljs-variable">Storage</span> <span class="hljs-variable">Layer</span>
+</span></li><li><span>        <span class="hljs-variable">OSS</span><span class="hljs-string">[Object Storage OSS&lt;br/&gt;Standard/Infrequent Access/Archive]</span>
+</span></li><li><span>        <span class="hljs-variable">IMG</span><span class="hljs-string">[OSS Image Processing IMG&lt;br/&gt;Thumbnail/Watermark/Format Conversion]</span>
+</span></li><li><span>    <span class="hljs-keyword">end</span>
+</span></li><li><span>
+</span></li><li><span>    <span class="hljs-keyword">subgraph</span> <span class="hljs-variable">Asynchronous</span> <span class="hljs-variable">Processing</span>
+</span></li><li><span>        <span class="hljs-variable">ROCKET</span><span class="hljs-string">[RocketMQ&lt;br/&gt;Asynchronous Task Queue]</span>
+</span></li><li><span>        <span class="hljs-variable">WORKER</span><span class="hljs-string">[Asynchronous Worker&lt;br/&gt;Large File Processing/Virus Scanning]</span>
+</span></li><li><span>    <span class="hljs-keyword">end</span>
+</span></li><li><span>
+</span></li><li><span>    <span class="hljs-keyword">subgraph</span> <span class="hljs-variable">Operations</span> <span class="hljs-variable">Layer</span>
+</span></li><li><span>        <span class="hljs-variable">SLS</span><span class="hljs-string">[SLS Log Service&lt;br/&gt;Centralized Collection/Analysis]</span>
+</span></li><li><span>        <span class="hljs-variable">MONITOR</span><span class="hljs-string">[Cloud Monitor + ARMS&lt;br/&gt;Full-link Monitoring &amp; Alerting]</span>
+</span></li><li><span>    <span class="hljs-keyword">end</span>
+</span></li><li><span>
+</span></li><li><span>    <span class="hljs-comment">%% Connection Relationships</span>
+</span></li><li><span>    <span class="hljs-variable">U</span> <span class="hljs-title">--&gt;</span> <span class="hljs-variable">DNS</span>
+</span></li><li><span>    <span class="hljs-variable">DNS</span> <span class="hljs-title">--&gt;</span> <span class="hljs-variable">CDN</span>
+</span></li><li><span>    <span class="hljs-variable">U</span> <span class="hljs-title">--&gt;</span> <span class="hljs-variable">WAF</span>
+</span></li><li><span>    <span class="hljs-variable">WAF</span> <span class="hljs-title">--&gt;</span> <span class="hljs-variable">CDN</span>
+</span></li><li><span>    <span class="hljs-variable">CDN</span> <span class="hljs-title">--&gt;</span> <span class="hljs-variable">SLB</span>
+</span></li><li><span>    <span class="hljs-variable">SLB</span> <span class="hljs-title">--&gt;</span> <span class="hljs-variable">NGINX</span>
+</span></li><li><span>    <span class="hljs-variable">NGINX</span> <span class="hljs-title">--&gt;</span> <span class="hljs-variable">API1</span>
+</span></li><li><span>    <span class="hljs-variable">NGINX</span> <span class="hljs-title">--&gt;</span> <span class="hljs-variable">API2</span>
+</span></li><li><span>    <span class="hljs-variable">NGINX</span> <span class="hljs-title">--&gt;</span> <span class="hljs-variable">API3</span>
+</span></li><li><span>
+</span></li><li><span>    <span class="hljs-variable">API1</span> &amp; <span class="hljs-variable">API2</span> &amp; <span class="hljs-variable">API3</span> <span class="hljs-title">--&gt;</span> <span class="hljs-variable">BLOOM</span>
+</span></li><li><span>    <span class="hljs-variable">BLOOM</span> <span class="hljs-title">--&gt;</span> <span class="hljs-variable">REDIS</span>
+</span></li><li><span>    <span class="hljs-variable">REDIS</span> <span class="hljs-title">--&gt;</span> <span class="hljs-variable">POLARDB_RW</span>
+</span></li><li><span>    <span class="hljs-variable">REDIS</span> <span class="hljs-title">--&gt;</span> <span class="hljs-variable">POLARDB_RO</span>
+</span></li><li><span>    <span class="hljs-variable">POLARDB_RW</span> &lt;<span class="hljs-title">-</span>.<span class="hljs-variable">Synchronization</span><span class="hljs-title">.-</span>&gt; <span class="hljs-variable">POLARDB_RO</span>
+</span></li><li><span>
+</span></li><li><span>    <span class="hljs-variable">API1</span> &amp; <span class="hljs-variable">API2</span> &amp; <span class="hljs-variable">API3</span> <span class="hljs-title">--&gt;</span> <span class="hljs-variable">OSS</span>
+</span></li><li><span>    <span class="hljs-variable">OSS</span> <span class="hljs-title">--&gt;</span> <span class="hljs-variable">IMG</span>
+</span></li><li><span>    <span class="hljs-variable">API1</span> &amp; <span class="hljs-variable">API2</span> &amp; <span class="hljs-variable">API3</span> <span class="hljs-title">--&gt;</span> <span class="hljs-variable">ROCKET</span>
+</span></li><li><span>    <span class="hljs-variable">ROCKET</span> <span class="hljs-title">--&gt;</span> <span class="hljs-variable">WORKER</span>
+</span></li><li><span>    <span class="hljs-variable">WORKER</span> <span class="hljs-title">--&gt;</span> <span class="hljs-variable">OSS</span>
+</span></li><li><span>
+</span></li><li><span>    <span class="hljs-variable">API1</span> &amp; <span class="hljs-variable">API2</span> &amp; <span class="hljs-variable">API3</span> <span class="hljs-title">-</span>.<span class="hljs-variable">Logs</span><span class="hljs-title">.-</span>&gt; <span class="hljs-variable">SLS</span>
+</span></li><li><span>    <span class="hljs-variable">SLS</span> <span class="hljs-title">--&gt;</span> <span class="hljs-variable">MONITOR</span>
+</span></li><li><span>    <span class="hljs-variable">REDIS</span> <span class="hljs-title">-</span>.<span class="hljs-variable">Monitoring</span><span class="hljs-title">.-</span>&gt; <span class="hljs-variable">MONITOR</span>
+</span></li><li><span>    <span class="hljs-variable">POLARDB_RW</span> <span class="hljs-title">-</span>.<span class="hljs-variable">Monitoring</span><span class="hljs-title">.-</span>&gt; <span class="hljs-variable">MONITOR</span>
+</span></li><li><span>
+</span></li><li><span>    <span class="hljs-variable">style</span> <span class="hljs-variable">U</span> <span class="hljs-variable">fill</span>:#<span class="hljs-variable">e1f5fe</span>
+</span></li><li><span>    <span class="hljs-variable">style</span> <span class="hljs-variable">DNS</span> <span class="hljs-variable">fill</span>:#<span class="hljs-variable">fff9c4</span>
+</span></li><li><span>    <span class="hljs-variable">style</span> <span class="hljs-variable">WAF</span> <span class="hljs-variable">fill</span>:#<span class="hljs-variable">fff9c4</span>
+</span></li><li><span>    <span class="hljs-variable">style</span> <span class="hljs-variable">CDN</span> <span class="hljs-variable">fill</span>:#<span class="hljs-variable">fff9c4</span>
+</span></li><li><span>    <span class="hljs-variable">style</span> <span class="hljs-variable">SLB</span> <span class="hljs-variable">fill</span>:#<span class="hljs-variable">ffecb3</span>
+</span></li><li><span>    <span class="hljs-variable">style</span> <span class="hljs-variable">NGINX</span> <span class="hljs-variable">fill</span>:#<span class="hljs-variable">ffecb3</span>
+</span></li><li><span>    <span class="hljs-variable">style</span> <span class="hljs-variable">API1</span> <span class="hljs-variable">fill</span>:#<span class="hljs-variable">c8e6c9</span>
+</span></li><li><span>    <span class="hljs-variable">style</span> <span class="hljs-variable">API2</span> <span class="hljs-variable">fill</span>:#<span class="hljs-variable">c8e6c9</span>
+</span></li><li><span>    <span class="hljs-variable">style</span> <span class="hljs-variable">API3</span> <span class="hljs-variable">fill</span>:#<span class="hljs-variable">c8e6c9</span>
+</span></li><li><span>    <span class="hljs-variable">style</span> <span class="hljs-variable">REDIS</span> <span class="hljs-variable">fill</span>:#<span class="hljs-variable">ffccbc</span>
+</span></li><li><span>    <span class="hljs-variable">style</span> <span class="hljs-variable">BLOOM</span> <span class="hljs-variable">fill</span>:#<span class="hljs-variable">ffccbc</span>
+</span></li><li><span>    <span class="hljs-variable">style</span> <span class="hljs-variable">POLARDB_RW</span> <span class="hljs-variable">fill</span>:#<span class="hljs-variable">d1c4e9</span>
+</span></li><li><span>    <span class="hljs-variable">style</span> <span class="hljs-variable">POLARDB_RO</span> <span class="hljs-variable">fill</span>:#<span class="hljs-variable">d1c4e9</span>
+</span></li><li><span>    <span class="hljs-variable">style</span> <span class="hljs-variable">OSS</span> <span class="hljs-variable">fill</span>:#<span class="hljs-variable">b3e5fc</span>
+</span></li><li><span>    <span class="hljs-variable">style</span> <span class="hljs-variable">IMG</span> <span class="hljs-variable">fill</span>:#<span class="hljs-variable">b3e5fc</span>
+</span></li><li><span>    <span class="hljs-variable">style</span> <span class="hljs-variable">ROCKET</span> <span class="hljs-variable">fill</span>:#<span class="hljs-variable">f8bbd0</span>
+</span></li><li><span>    <span class="hljs-variable">style</span> <span class="hljs-variable">WORKER</span> <span class="hljs-variable">fill</span>:#<span class="hljs-variable">f8bbd0</span>
+</span></li><li><span>    <span class="hljs-variable">style</span> <span class="hljs-variable">SLS</span> <span class="hljs-variable">fill</span>:#<span class="hljs-variable">d7ccc8</span>
+</span></li><li><span>    <span class="hljs-variable">style</span> <span class="hljs-variable">MONITOR</span> <span class="hljs-variable">fill</span>:#<span class="hljs-variable">d7ccc8</span>
+</span></li></ul></code></pre></div>
+		</div></div><div data-chunk="1"><h2 data-link="#II.-Functionality-&amp;-Cloud-Service-Support"><a class="target-menu hidden" href="#II.-Functionality-&amp;-Cloud-Service-Support">#</a><a name="II.-Functionality-&amp;-Cloud-Service-Support"></a>II. Functionality &amp; Cloud Service Support</h2></div><div data-chunk="1"><div class="table-container"><table>
+<thead>
+<tr>
+<th>Function Module</th>
+<th>Specific Service</th>
+<th>Function Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Computing</strong></td>
+<td>ECS Elastic Compute Service</td>
+<td>Compute-optimized instances with high network bandwidth</td>
+</tr>
+<tr>
+<td><strong>Load Balancing</strong></td>
+<td>SLB (ALB)</td>
+<td>Application Load Balancer supporting HTTP/HTTPS Layer 7 forwarding, WebSocket and gRPC protocols</td>
+</tr>
+<tr>
+<td><strong>Static Acceleration</strong></td>
+<td>CDN (DCDN Full-site Acceleration)</td>
+<td>Accelerates both static resources and dynamic APIs, improving access speed via edge node near-user response</td>
+</tr>
+<tr>
+<td><strong>Web Security</strong></td>
+<td>WAF 3.0</td>
+<td>Provides protection against common Web threats such as SQL injection, XSS, CC attacks</td>
+</tr>
+<tr>
+<td><strong>Database</strong></td>
+<td>PolarDB MySQL</td>
+<td>100% MySQL compatible, up to 1 million QPS, supports automatic read-write separation</td>
+</tr>
+<tr>
+<td><strong>Caching</strong></td>
+<td>Redis (Cluster Edition)</td>
+<td>Hybrid memory and SSD storage, balancing high performance and data persistence with high-availability architecture</td>
+</tr>
+<tr>
+<td><strong>Object Storage</strong></td>
+<td>OSS</td>
+<td>Supports tiered storage strategies (Standard, Infrequent Access, Archive) to effectively reduce cold data storage costs</td>
+</tr>
+<tr>
+<td><strong>Image Processing</strong></td>
+<td>OSS Image Processing (IMG)</td>
+<td>Implements thumbnails, watermarks, and format conversion using built-in OSS capabilities without additional computing resources</td>
+</tr>
+<tr>
+<td><strong>Log Service</strong></td>
+<td>SLS Log Service</td>
+<td>Centralizes management of all server logs, supporting real-time collection, analysis, and alerting</td>
+</tr>
+<tr>
+<td><strong>Monitoring &amp; Alerting</strong></td>
+<td>Cloud Monitor + ARMS</td>
+<td>Full-link monitoring covering infrastructure and application layers for real-time early warning</td>
+</tr>
+<tr>
+<td><strong>Message Queue</strong></td>
+<td>RocketMQ</td>
+<td>Used for asynchronous task processing, implementing peak shaving/valley filling and system decoupling for time-consuming operations</td>
+</tr>
+<tr>
+<td><strong>Container Orchestration</strong></td>
+<td>ACK</td>
+<td>Smooth migration to Kubernetes containerized deployment as server scale expands in the future</td>
+</tr>
+</tbody>
+</table></div></div><div data-chunk="1"><h2 data-link="#III.-Resource-Strategy-&amp;-Architectural-Approach"><a class="target-menu hidden" href="#III.-Resource-Strategy-&amp;-Architectural-Approach">#</a><a name="III.-Resource-Strategy-&amp;-Architectural-Approach"></a>III. Resource Strategy &amp; Architectural Approach</h2></div><div data-chunk="1"><h3 data-link="#3.1-Concurrency-vs.-Resource-Relationship"><a class="target-menu hidden" href="#3.1-Concurrency-vs.-Resource-Relationship">#</a><a name="3.1-Concurrency-vs.-Resource-Relationship"></a>3.1 Concurrency vs. Resource Relationship</h3>
+<pre><code>Baseline Application Server: 8-core 16G ≈ 400 QPS/node
+Peak QPS Calculation:
+  Total Daily Requests = 7 million DAU × 50 times/user = 350 million
+  Requests in Peak Window (4h) = 350 million × 80% = 280 million
+  Peak QPS = 280 million / (4×3600) ≈ 19,445 ≈ 20,000
+
+Number of API Servers: 20,000 / 400 ≈ 50 nodes
+</code></pre></div><div data-chunk="1"><h3 data-link="#3.2-Database-Capacity-Planning"><a class="target-menu hidden" href="#3.2-Database-Capacity-Planning">#</a><a name="3.2-Database-Capacity-Planning"></a>3.2 Database Capacity Planning</h3></div><div data-chunk="1"><p>PolarDB MySQL is adopted with built-in read-write separation (this QPS is based on the current cloud disk scenario with large SQL queries, lower than the benchmarked QPS)</p>
+<pre><code>Standard Instance: 16-core 32G + 100GB SSD
+Peak SQL QPS = 20,000 × 20 = 400,000 QPS (Read: 320,000 / Write: 80,000)
+PolarDB Read-Only Instance ≈ 20,000 QPS; Read-Write Instance ≈ 10,000 QPS
+  Required Read-Only Instances: 320,000 / 20,000 ≈ 16 nodes
+  Required Read-Write Instances: 80,000 / 10,000 ≈ 8 nodes
+</code></pre></div><div data-chunk="1"><h3 data-link="#3.3-Redis-Capacity-Planning"><a class="target-menu hidden" href="#3.3-Redis-Capacity-Planning">#</a><a name="3.3-Redis-Capacity-Planning"></a>3.3 Redis Capacity Planning</h3>
+<pre><code>Session Storage: 7 million DAU × 5KB ≈ 35GB
+Other Cache Acceleration: 7 million DAU × 10KB ≈ 70GB
+
+Configuration: 4 nodes, 8 vCPU / 32GB memory per node
+Combined with LRU eviction policy + TTL expiration
+</code></pre></div><div data-chunk="1"><h3 data-link="#3.4-Core-Architecture"><a class="target-menu hidden" href="#3.4-Core-Architecture">#</a><a name="3.4-Core-Architecture"></a>3.4 Core Architecture</h3></div><div data-chunk="1"><div class="markdown-flow mermaid-result" data-mermaid="flow-done" data-view-show="preview">
+			<div class="flow-toolbar">
+				<div class="toolbar-group left">
+					<span class="btn-item ripple-item" data-tool="preview" title="预览">
+						<i class="font-icon ri-eye-line"></i><b>预览</b>
+					</span>
+					<span class="btn-item ripple-item" data-tool="code" title="代码">
+						<i class="font-icon ri-code-s-line"></i><b>代码</b>
+					</span>
+				</div>
+				<div class="toolbar-group right">
+					<span class="btn-item ripple-item" data-tool="copy" title="复制" data-text="已复制成功!">
+						<i class="font-icon ri-file-copy-line"></i><b>复制</b>
+					</span>
+					<span class="btn-item ripple-item" data-tool="download" title="下载">
+						<i class="font-icon ri-download-fill-2"></i><b>下载</b>
+					</span>
+				</div>
+			</div>
+			<div class="flow-preview"><svg id="UUID_2fc2e74_4b4cc47" width="100%" xmlns="http://www.w3.org/2000/svg" class="flowchart" style="max-width: 1540.75px;" viewBox="0 0 1540.75 241" role="graphics-document document" aria-roledescription="flowchart-v2"><style>#UUID_2fc2e74_4b4cc47{font-family:"trebuchet ms",verdana,arial,sans-serif;font-size:16px;fill:#333;}@keyframes edge-animation-frame{from{stroke-dashoffset:0;}}@keyframes dash{to{stroke-dashoffset:0;}}#UUID_2fc2e74_4b4cc47 .edge-animation-slow{stroke-dasharray:9,5!important;stroke-dashoffset:900;animation:dash 50s linear infinite;stroke-linecap:round;}#UUID_2fc2e74_4b4cc47 .edge-animation-fast{stroke-dasharray:9,5!important;stroke-dashoffset:900;animation:dash 20s linear infinite;stroke-linecap:round;}#UUID_2fc2e74_4b4cc47 .error-icon{fill:#552222;}#UUID_2fc2e74_4b4cc47 .error-text{fill:#552222;stroke:#552222;}#UUID_2fc2e74_4b4cc47 .edge-thickness-normal{stroke-width:1px;}#UUID_2fc2e74_4b4cc47 .edge-thickness-thick{stroke-width:3.5px;}#UUID_2fc2e74_4b4cc47 .edge-pattern-solid{stroke-dasharray:0;}#UUID_2fc2e74_4b4cc47 .edge-thickness-invisible{stroke-width:0;fill:none;}#UUID_2fc2e74_4b4cc47 .edge-pattern-dashed{stroke-dasharray:3;}#UUID_2fc2e74_4b4cc47 .edge-pattern-dotted{stroke-dasharray:2;}#UUID_2fc2e74_4b4cc47 .marker{fill:#333333;stroke:#333333;}#UUID_2fc2e74_4b4cc47 .marker.cross{stroke:#333333;}#UUID_2fc2e74_4b4cc47 svg{font-family:"trebuchet ms",verdana,arial,sans-serif;font-size:16px;}#UUID_2fc2e74_4b4cc47 p{margin:0;}#UUID_2fc2e74_4b4cc47 .label{font-family:"trebuchet ms",verdana,arial,sans-serif;color:#333;}#UUID_2fc2e74_4b4cc47 .cluster-label text{fill:#333;}#UUID_2fc2e74_4b4cc47 .cluster-label span{color:#333;}#UUID_2fc2e74_4b4cc47 .cluster-label span p{background-color:transparent;}#UUID_2fc2e74_4b4cc47 .label text,#UUID_2fc2e74_4b4cc47 span{fill:#333;color:#333;}#UUID_2fc2e74_4b4cc47 .node rect,#UUID_2fc2e74_4b4cc47 .node circle,#UUID_2fc2e74_4b4cc47 .node ellipse,#UUID_2fc2e74_4b4cc47 .node polygon,#UUID_2fc2e74_4b4cc47 .node path{fill:#ECECFF;stroke:#9370DB;stroke-width:1px;}#UUID_2fc2e74_4b4cc47 .rough-node .label text,#UUID_2fc2e74_4b4cc47 .node .label text,#UUID_2fc2e74_4b4cc47 .image-shape .label,#UUID_2fc2e74_4b4cc47 .icon-shape .label{text-anchor:middle;}#UUID_2fc2e74_4b4cc47 .node .katex path{fill:#000;stroke:#000;stroke-width:1px;}#UUID_2fc2e74_4b4cc47 .rough-node .label,#UUID_2fc2e74_4b4cc47 .node .label,#UUID_2fc2e74_4b4cc47 .image-shape .label,#UUID_2fc2e74_4b4cc47 .icon-shape .label{text-align:center;}#UUID_2fc2e74_4b4cc47 .node.clickable{cursor:pointer;}#UUID_2fc2e74_4b4cc47 .root .anchor path{fill:#333333!important;stroke-width:0;stroke:#333333;}#UUID_2fc2e74_4b4cc47 .arrowheadPath{fill:#333333;}#UUID_2fc2e74_4b4cc47 .edgePath .path{stroke:#333333;stroke-width:2.0px;}#UUID_2fc2e74_4b4cc47 .flowchart-link{stroke:#333333;fill:none;}#UUID_2fc2e74_4b4cc47 .edgeLabel{background-color:rgba(232,232,232, 0.8);text-align:center;}#UUID_2fc2e74_4b4cc47 .edgeLabel p{background-color:rgba(232,232,232, 0.8);}#UUID_2fc2e74_4b4cc47 .edgeLabel rect{opacity:0.5;background-color:rgba(232,232,232, 0.8);fill:rgba(232,232,232, 0.8);}#UUID_2fc2e74_4b4cc47 .labelBkg{background-color:rgba(232, 232, 232, 0.5);}#UUID_2fc2e74_4b4cc47 .cluster rect{fill:#ffffde;stroke:#aaaa33;stroke-width:1px;}#UUID_2fc2e74_4b4cc47 .cluster text{fill:#333;}#UUID_2fc2e74_4b4cc47 .cluster span{color:#333;}#UUID_2fc2e74_4b4cc47 div.mermaidTooltip{position:absolute;text-align:center;max-width:200px;padding:2px;font-family:"trebuchet ms",verdana,arial,sans-serif;font-size:12px;background:hsl(80, 100%, 96.2745098039%);border:1px solid #aaaa33;border-radius:2px;pointer-events:none;z-index:100;}#UUID_2fc2e74_4b4cc47 .flowchartTitleText{text-anchor:middle;font-size:18px;fill:#333;}#UUID_2fc2e74_4b4cc47 rect.text{fill:none;stroke-width:0;}#UUID_2fc2e74_4b4cc47 .icon-shape,#UUID_2fc2e74_4b4cc47 .image-shape{background-color:rgba(232,232,232, 0.8);text-align:center;}#UUID_2fc2e74_4b4cc47 .icon-shape p,#UUID_2fc2e74_4b4cc47 .image-shape p{background-color:rgba(232,232,232, 0.8);padding:2px;}#UUID_2fc2e74_4b4cc47 .icon-shape .label rect,#UUID_2fc2e74_4b4cc47 .image-shape .label rect{opacity:0.5;background-color:rgba(232,232,232, 0.8);fill:rgba(232,232,232, 0.8);}#UUID_2fc2e74_4b4cc47 .label-icon{display:inline-block;height:1em;overflow:visible;vertical-align:-0.125em;}#UUID_2fc2e74_4b4cc47 .node .label-icon path{fill:currentColor;stroke:revert;stroke-width:revert;}#UUID_2fc2e74_4b4cc47 :root{--mermaid-font-family:"trebuchet ms",verdana,arial,sans-serif;}</style><g><marker id="UUID_2fc2e74_4b4cc47_flowchart-v2-pointEnd" class="marker flowchart-v2" viewBox="0 0 10 10" refX="5" refY="5" markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="8" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" class="arrowMarkerPath" style="stroke-width: 1; stroke-dasharray: 1, 0;"></path></marker><marker id="UUID_2fc2e74_4b4cc47_flowchart-v2-pointStart" class="marker flowchart-v2" viewBox="0 0 10 10" refX="4.5" refY="5" markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="8" orient="auto"><path d="M 0 5 L 10 10 L 10 0 z" class="arrowMarkerPath" style="stroke-width: 1; stroke-dasharray: 1, 0;"></path></marker><marker id="UUID_2fc2e74_4b4cc47_flowchart-v2-circleEnd" class="marker flowchart-v2" viewBox="0 0 10 10" refX="11" refY="5" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto"><circle cx="5" cy="5" r="5" class="arrowMarkerPath" style="stroke-width: 1; stroke-dasharray: 1, 0;"></circle></marker><marker id="UUID_2fc2e74_4b4cc47_flowchart-v2-circleStart" class="marker flowchart-v2" viewBox="0 0 10 10" refX="-1" refY="5" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto"><circle cx="5" cy="5" r="5" class="arrowMarkerPath" style="stroke-width: 1; stroke-dasharray: 1, 0;"></circle></marker><marker id="UUID_2fc2e74_4b4cc47_flowchart-v2-crossEnd" class="marker cross flowchart-v2" viewBox="0 0 11 11" refX="12" refY="5.2" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto"><path d="M 1,1 l 9,9 M 10,1 l -9,9" class="arrowMarkerPath" style="stroke-width: 2; stroke-dasharray: 1, 0;"></path></marker><marker id="UUID_2fc2e74_4b4cc47_flowchart-v2-crossStart" class="marker cross flowchart-v2" viewBox="0 0 11 11" refX="-1" refY="5.2" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto"><path d="M 1,1 l 9,9 M 10,1 l -9,9" class="arrowMarkerPath" style="stroke-width: 2; stroke-dasharray: 1, 0;"></path></marker><g class="root"><g class="clusters"></g><g class="edgePaths"></g><g class="edgeLabels"></g><g class="nodes"><g class="root" transform="translate(0, 0)"><g class="clusters"><g class="cluster" id="Strategy" data-look="classic"><rect style="" x="8" y="8" width="1524.75" height="225"></rect><g class="cluster-label" transform="translate(714.7874984741211, 8)"><foreignObject width="111.17500305175781" height="24"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table-cell; white-space: nowrap; line-height: 1.5;"><span class="nodeLabel"><p>Core Strategies</p></span></div></foreignObject></g></g></g><g class="edgePaths"></g><g class="edgeLabels"></g><g class="nodes"><g class="node default" id="flowchart-A-0" transform="translate(173, 120.5)"><rect class="basic label-container" style="" x="-130" y="-63" width="260" height="126"></rect><g class="label" style="" transform="translate(-100, -48)"><rect></rect><foreignObject width="200" height="96"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table; white-space: break-spaces; line-height: 1.5; max-width: 200px; text-align: center; width: 200px;"><span class="nodeLabel"><p>1. Statelessness<br>Sessions centralized in Redis<br>Unlimited horizontal scaling</p></span></div></foreignObject></g></g><g class="node default" id="flowchart-B-1" transform="translate(483, 120.5)"><rect class="basic label-container" style="" x="-130" y="-75" width="260" height="150"></rect><g class="label" style="" transform="translate(-100, -60)"><rect></rect><foreignObject width="200" height="120"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table; white-space: break-spaces; line-height: 1.5; max-width: 200px; text-align: center; width: 200px;"><span class="nodeLabel"><p>2. Read-Write Separation<br>PolarDB automatic traffic splitting<br>Optimal for read-heavy scenarios</p></span></div></foreignObject></g></g><g class="node default" id="flowchart-C-2" transform="translate(793, 120.5)"><rect class="basic label-container" style="" x="-130" y="-63" width="260" height="126"></rect><g class="label" style="" transform="translate(-100, -48)"><rect></rect><foreignObject width="200" height="96"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table; white-space: break-spaces; line-height: 1.5; max-width: 200px; text-align: center; width: 200px;"><span class="nodeLabel"><p>3. Multi-level Caching<br>CDN→Redis→DB<br>Layered penetration protection</p></span></div></foreignObject></g></g><g class="node default" id="flowchart-D-3" transform="translate(1103, 120.5)"><rect class="basic label-container" style="" x="-130" y="-75" width="260" height="150"></rect><g class="label" style="" transform="translate(-100, -60)"><rect></rect><foreignObject width="200" height="120"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table; white-space: break-spaces; line-height: 1.5; max-width: 200px; text-align: center; width: 200px;"><span class="nodeLabel"><p>4. Asynchronous Decoupling<br>Time-consuming operations to queue<br>Peak shaving &amp; valley filling</p></span></div></foreignObject></g></g><g class="node default" id="flowchart-E-4" transform="translate(1390.375, 120.5)"><rect class="basic label-container" style="" x="-107.375" y="-51" width="214.75" height="102"></rect><g class="label" style="" transform="translate(-77.375, -36)"><rect></rect><foreignObject width="154.75" height="72"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="nodeLabel"><p>5. Hot/Cold Tiering<br>OSS lifecycle policies<br>Reduce storage costs</p></span></div></foreignObject></g></g></g></g></g></g></g></svg></div>
+			<div class="flow-code"><pre class="hljs-code lang-mermaid"><code class="hljs"><div class="code-toolbar" data-lang="mermaid"><i></i><i></i><span class="code-lang">mermaid</span><div class="code-toolbar-right"><span class="code-wrap ripple-item"><i class="font-icon ri-text-wrap"></i><b></b></span><span class="code-run ripple-item"><i class="font-icon ri-play-fill"></i><b>运行</b></span><span class="code-copy ripple-item" data-text="已复制成功!"><i class="font-icon ri-file-copy-line"></i><b>复制</b></span></div></div><ul class="code-view"><li><span><span class="hljs-keyword">flowchart</span> <span class="hljs-attribute">LR</span>
+</span></li><li><span>    <span class="hljs-keyword">subgraph</span> <span class="hljs-variable">Strategy</span><span class="hljs-string">["Core Strategies"]</span>
+</span></li><li><span>        <span class="hljs-variable">A</span><span class="hljs-string">["1. Statelessness&lt;br/&gt;Sessions centralized in Redis&lt;br/&gt;Unlimited horizontal scaling"]</span>
+</span></li><li><span>        <span class="hljs-variable">B</span><span class="hljs-string">["2. Read-Write Separation&lt;br/&gt;PolarDB automatic traffic splitting&lt;br/&gt;Optimal for read-heavy scenarios"]</span>
+</span></li><li><span>        <span class="hljs-variable">C</span><span class="hljs-string">["3. Multi-level Caching&lt;br/&gt;CDN→Redis→DB&lt;br/&gt;Layered penetration protection"]</span>
+</span></li><li><span>        <span class="hljs-variable">D</span><span class="hljs-string">["4. Asynchronous Decoupling&lt;br/&gt;Time-consuming operations to queue&lt;br/&gt;Peak shaving &amp; valley filling"]</span>
+</span></li><li><span>        <span class="hljs-variable">E</span><span class="hljs-string">["5. Hot/Cold Tiering&lt;br/&gt;OSS lifecycle policies&lt;br/&gt;Reduce storage costs"]</span>
+</span></li><li><span>    <span class="hljs-keyword">end</span>
+</span></li></ul></code></pre></div>
+		</div></div><div data-chunk="1"><div class="table-container"><table>
+<thead>
+<tr>
+<th>Strategy</th>
+<th>Implementation Method</th>
+<th>Benefits</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Statelessness</strong></td>
+<td>Sessions, caching, etc. centrally stored in Redis; no local state on API Servers</td>
+<td>Arbitrary scaling, automatic failure removal</td>
+</tr>
+<tr>
+<td><strong>Read-Write Separation</strong></td>
+<td>PolarDB automatic read-write separation + linear scaling of read-only instances</td>
+<td>Horizontal scaling of read capacity; write bottlenecks resolved via instance upgrade</td>
+</tr>
+<tr>
+<td><strong>Multi-level Caching</strong></td>
+<td>CDN (Edge) → Redis (Cluster) → DB, with Bloom Filter for anti-penetration</td>
+<td>Gradually reduce backend pressure, 99% of requests hit cache</td>
+</tr>
+<tr>
+<td><strong>Asynchronous Decoupling</strong></td>
+<td>Large file upload/transcoding/virus scanning → RocketMQ → Asynchronous Worker</td>
+<td>Avoid long connections occupying API resources</td>
+</tr>
+<tr>
+<td><strong>Hot/Cold Tiering</strong></td>
+<td>OSS Standard→Infrequent Access→Archive, automatic sinking based on access frequency</td>
+<td>Reduced storage costs</td>
+</tr>
+</tbody>
+</table></div></div><div data-chunk="1"><h2 data-link="#Others"><a class="target-menu hidden" href="#Others">#</a><a name="Others"></a>Others</h2></div><div data-chunk="1"><blockquote>
+<p>Notes</p>
+<ol>
+<li>Storage and bandwidth are not considered in the above architecture (object storage is used; uploads/downloads are directly transmitted without passing through the application layer)</li>
+<li>Subsequent development will focus on <strong>SQL optimization</strong> (reducing the number of SQL queries per API call, which can reduce database scale; adding thread pools can improve concurrency)</li>
+<li>Gray-scale launch, dynamically adjust resource configuration based on actual DAU and QPS data</li>
+<li>PolarDB natively supports automatic read-write separation without additional middleware</li>
+<li>Cost estimation order: Storage Cost &gt; Traffic Cost &gt; Database &gt; Application Servers &gt; Others</li>
+</ol>
+</blockquote></div><div data-chunk="1"><h3 data-link="#Translation-Notes:"><a class="target-menu hidden" href="#Translation-Notes:">#</a><a name="Translation-Notes:"></a>Translation Notes:</h3>
+<ol>
+<li>Technical terms are translated with industry-standard English equivalents (e.g., QPS, DAU, SLB, OSS remain as acronyms with explanations where necessary)</li>
+<li>Chinese-specific cloud service names use official Alibaba Cloud English denominations (e.g., PolarDB, SLS, ARMS, ACK)</li>
+<li>Hierarchical/layered terminology is consistently translated (e.g., 接入层 = Access Layer, 网关层 = Gateway Layer)</li>
+<li>Cultural/contextual adjustments made for readability (e.g., "削峰填谷" = "peak shaving and valley filling", a common engineering term)</li>
+<li>Maintained original markdown structure (tables, code blocks, flowcharts) for seamless compatibility</li>
+<li>Unit consistency preserved (GB, QPS, core, GB SSD) with metric system conventions</li>
+</ol></div> </div></body><html></html></html>
