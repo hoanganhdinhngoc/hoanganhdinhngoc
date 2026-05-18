@@ -6,12 +6,8 @@
     <title>Mera Network Map</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        * {
-            margin: 0px;
-            padding: 0px;
-        }
+        * { margin: 0px; padding: 0px; }
 
-        /* Gọi lại Font cho Iframe */
         @font-face {
             font-family: 'SVN-Gilroy';
             src: url('../font/SVN-Gilroy%20Regular.otf') format('opentype');
@@ -41,24 +37,21 @@
         /* BẢNG THÔNG TIN MẠNG LƯỚI BÊN TRÁI */
         .network-info-panel {
             position: absolute;
-            top: 70px; 
-            left: 50px; 
+            top: 8%; 
+            left: 5%; 
             z-index: 1000;
             pointer-events: none; 
             color: #ffffff;
-            max-width: 350px;
+            max-width: 230px;
             text-align: left;
             text-shadow: 2px 2px 4px #000, -2px -2px 4px #000, 2px -2px 4px #000, -2px 2px 4px #000;
             transition: opacity 0.5s ease, transform 0.5s ease;
         }
 
-        .network-info-panel.hidden {
-            opacity: 0;
-            transform: translateY(-10px);
-        }
+        .network-info-panel.hidden { opacity: 0; transform: translateY(-10px); }
 
         .network-info-panel h3 {
-            font-size: 26px;
+            font-size: 21px;
             font-weight: 600; 
             margin-bottom: 12px;
             line-height: 1.2;
@@ -66,55 +59,54 @@
         }
 
         .network-info-panel .desc-content {
-            font-size: 15px;
+            font-size: 13px;
             font-weight: 400; 
             line-height: 1.6;
             color: rgba(255, 255, 255, 0.95);
         }
 
-        .network-info-panel ul {
-            padding-left: 20px;
-            margin-top: 10px;
-        }
-
-        .network-info-panel li {
-            margin-bottom: 6px;
-        }
+        .network-info-panel ul { padding-left: 20px; margin-top: 10px; }
+        .network-info-panel li { margin-bottom: 6px; }
 
         /* UI STYLE CHO CÁC PHẦN TỬ CỦA MAP */
         .cable-line, .cable-data-flow, .unified-marker { transition: filter 0.4s ease, opacity 0.4s ease !important; }
-        .cable-line { stroke: #6bd5ff; stroke-width: 3; vector-effect: non-scaling-stroke; }
+        
+        .cable-line { 
+            stroke: #6bd5ff; stroke-width: 3; vector-effect: non-scaling-stroke; 
+            will-change: opacity, filter; transform: translateZ(0); 
+        }
+        
         .cable-data-flow {
             stroke: #ffffff; stroke-width: 4; stroke-linecap: round; stroke-dasharray: 4, 26; 
             animation: flowData 2s linear infinite; 
-            filter: drop-shadow(0px 0px 3px #ffffff) drop-shadow(0px 0px 8px #ffffff) drop-shadow(0px 0px 15px #22c0ff);
+            filter: drop-shadow(0px 0px 6px #22c0ff);
             vector-effect: non-scaling-stroke; 
+            will-change: stroke-dashoffset, opacity, filter; transform: translateZ(0); 
         }
 
-        @keyframes flowData {
-            0% { stroke-dashoffset: 30; } 
-            100% { stroke-dashoffset: 0; }
-        }
+        @keyframes flowData { 0% { stroke-dashoffset: 30; } 100% { stroke-dashoffset: 0; } }
 
         .inactive-element { filter: grayscale(100%) !important; opacity: 0.25 !important; }
+        .unified-marker { position: absolute; pointer-events: none; transition: filter 0.4s ease, opacity 0.4s ease !important; will-change: opacity, transform;}
 
-        .unified-marker { position: absolute; pointer-events: none; transition: filter 0.4s ease, opacity 0.4s ease !important; }
         .custom-red-dot {
-            position: absolute; width: 8px; height: 8px; background-color: #9b0101;
-            border: 1px solid #fff; border-radius: 50%; transform: translate(-50%, -50%); box-shadow: 0 0 5px rgba(0,0,0,0.8);
+            position: absolute; width: clamp(5px, 0.7vw, 8px); height: clamp(5px, 0.7vw, 8px); 
+            background-color: #9b0101; border: 1px solid #fff; border-radius: 50%; 
+            transform: translate(-50%, -50%); box-shadow: 0 0 5px rgba(0,0,0,0.8);
         }
 
         .map-label-overlay {
-            position: absolute; color: #ffffff; font-weight: bold; font-size: 13px;
-            text-shadow: 2px 2px 4px #000, -2px -2px 4px #000, 2px -2px 4px #000, -2px 2px 4px #000; white-space: nowrap;
+            position: absolute; color: #ffffff; font-weight: bold; font-size: clamp(8px, 1.1vw, 13px); 
+            text-shadow: 2px 2px 3px #000, -2px -2px 3px #000, 2px -2px 3px #000, -2px 2px 3px #000; white-space: nowrap;
         }
 
-        /* [MỚI] STYLE CHO TÊN CÁP BIỂN (Bám sát đường) */
         .cable-label-overlay {
-            position: absolute; color: #ffffff; font-weight: 500; font-size: 9px; /* Bằng 2/3 so với 13px */
+            position: absolute; color: #ffffff; font-weight: 500; font-size: clamp(6px, 0.8vw, 9px); 
             text-shadow: 1.5px 1.5px 2px #000, -1.5px -1.5px 2px #000, 1.5px -1.5px 2px #000, -1.5px 1.5px 2px #000; white-space: nowrap;
+            opacity: 0; transition: opacity 0.4s ease;
         }
 
+        /* UI CONTROLS */
         .map-controls {
             position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
             z-index: 1000; display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; pointer-events: auto; width: 95%; 
@@ -127,6 +119,35 @@
         }
         .btn-network:hover { background: rgba(255, 255, 255, 0.1); }
         .btn-network.active { background: #22c55e; color: #ffffff; border-color: #22c55e; box-shadow: 0 5px 15px rgba(34, 197, 94, 0.3); }
+
+        /* ========================================================= */
+        /* GIAO DIỆN ĐIỆN THOẠI & TABLET CHUYÊN BIỆT                 */
+        /* ========================================================= */
+        @media (max-width: 768px) {
+            .network-info-panel {
+                top: 15px;
+                left: 15px;
+                max-width: 50%;
+            }
+            .network-info-panel h3 { font-size: 15px; margin-bottom: 6px; }
+            .network-info-panel .desc-content { font-size: 10px; line-height: 1.4; }
+            .network-info-panel ul { padding-left: 15px; margin-top: 5px; }
+            .network-info-panel li { margin-bottom: 3px; }
+
+            .map-controls {
+                bottom: 15px;
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 8px;
+                width: 90%;
+            }
+            .btn-network {
+                padding: 8px 5px; 
+                font-size: 10px;  
+                white-space: normal; 
+                line-height: 1.2;
+            }
+        }
     </style>
 </head>
 <body>
@@ -135,10 +156,8 @@
         <div id="mera-map"></div>
         
         <div id="network-info-panel" class="network-info-panel">
-            <h3 id="info-title">Mera Global Network</h3>
-            <div id="info-desc" class="desc-content">
-                <p>Khám phá hệ thống hạ tầng kết nối xuyên suốt của Mera, đảm bảo hiệu suất và độ trễ tối ưu nhất.</p>
-            </div>
+            <h3 id="info-title"></h3>
+            <div id="info-desc" class="desc-content"></div>
         </div>
 
         <div class="map-controls" id="control-panel">
@@ -156,88 +175,73 @@
             const networkContents = {
                 default: {
                     title: "Mera Global Network",
-                    desc: `
-                        <p>Hệ thống mạng lưới viễn thông toàn cầu của Mera, mang đến kết nối tốc độ cao và ổn định.</p>
-                        <ul>
-                            <li>Bao phủ đa quốc gia</li>
-                            <li>Độ trễ cực thấp</li>
-                            <li>Bảo mật cấp độ doanh nghiệp</li>
-                        </ul>
-                    `
+                    desc: `<p>Hệ thống mạng lưới viễn thông toàn cầu của Mera, mang đến kết nối tốc độ cao và ổn định.</p><ul><li>Bao phủ đa quốc gia</li><li>Độ trễ cực thấp</li><li>Bảo mật cấp độ doanh nghiệp</li></ul>`
                 },
                 backbone: {
                     title: "Vietnam Backbone",
-                    desc: `
-                        <p>Tuyến cáp trục quốc gia nối liền các trung tâm kinh tế trọng điểm của Việt Nam.</p>
-                        <ul>
-                            <li>Dung lượng truyền tải lớn</li>
-                            <li>Dự phòng 1+1 linh hoạt</li>
-                        </ul>
-                    `
+                    desc: `<p>Tuyến cáp trục quốc gia nối liền các trung tâm kinh tế trọng điểm của Việt Nam.</p><ul><li>Dung lượng truyền tải lớn</li><li>Dự phòng 1+1 linh hoạt</li></ul>`
                 },
                 inland: {
                     title: "International Inland Network",
-                    desc: `
-                        <p>Mạng cáp quang đất liền kết nối trực tiếp các quốc gia trong khu vực Đông Nam Á và Châu Á.</p>
-                        <p>Đảm bảo hướng tuyến đất liền an toàn khi có sự cố cáp biển.</p>
-                    `
+                    desc: `<p>Mạng cáp quang đất liền kết nối trực tiếp các quốc gia trong khu vực Đông Nam Á và Châu Á.</p><p>Đảm bảo hướng tuyến đất liền an toàn khi có sự cố cáp biển.</p>`
                 },
                 submarine: {
                     title: "International Submarine Network",
-                    desc: `
-                        <p>Hệ thống cáp quang biển kết nối quốc tế dung lượng siêu cao.</p>
-                        <ul>
-                            <li>Hướng đi Hong Kong, Singapore</li>
-                            <li>Đa dạng rẽ nhánh</li>
-                        </ul>
-                    `
+                    desc: `<p>Hệ thống cáp quang biển kết nối quốc tế dung lượng siêu cao.</p><ul><li>Hướng đi Hong Kong, Singapore</li><li>Đa dạng rẽ nhánh</li></ul>`
                 }
             };
 
+            // ========================================================
+            // CẤU HÌNH TỌA ĐỘ VÀ ZOOM CHO 3 MÔI TRƯỜNG
+            // Đã cập nhật Desktop khớp với thông số bản cũ của Sir
+            // ========================================================
             const viewConfigs = {
-                default:   { center: [11.5, 107.0], zoom: 5.2 },
-                backbone:  { center: [15.8, 106.5], zoom: 5.9 },
-                inland:    { center: [11.5, 103.5], zoom: 5.25 },
-                submarine: { center: [10.8, 109.0], zoom: 5.3 }
+                desktop: { 
+                    default:   { center: [10.7, 107.0], zoom: 4.7 },
+                    backbone:  { center: [15.8, 106.5], zoom: 5.4 },
+                    inland:    { center: [10.9, 103.5], zoom: 4.7 },
+                    submarine: { center: [10.6, 109.0], zoom: 4.8 }
+                },
+                tablet: { 
+                    default:   { center: [10.2, 107.0], zoom: 4.2 },
+                    backbone:  { center: [15.2, 106.5], zoom: 5.0 },
+                    inland:    { center: [10.5, 103.5], zoom: 4.2 },
+                    submarine: { center: [10.3, 104.0], zoom: 4.2 }
+                },
+                mobile: { 
+                    default:   { center: [13.0, 107.0], zoom: 4.2 }, 
+                    backbone:  { center: [15.7, 106.5], zoom: 5.1 },
+                    inland:    { center: [13.0, 106.2], zoom: 4.3 },
+                    submarine: { center: [12.0, 107.0], zoom: 4.3 }
+                }
             };
 
+            function getDeviceType() {
+                const width = window.innerWidth;
+                if (width <= 768) return 'mobile';
+                if (width <= 1024) return 'tablet';
+                return 'desktop';
+            }
+
+            let currentDevice = getDeviceType();
+            let currentActiveNet = 'default';
+
             const map = L.map('mera-map', {
-                zoomSnap: 0, 
-                bounceAtZoomLimits: false, 
-                renderer: L.svg({ padding: 10 }), 
-                zoomControl: false, dragging: false, scrollWheelZoom: false, // <-- [Đã khóa tính năng bám chuột dragging]
+                zoomSnap: 0, bounceAtZoomLimits: false, renderer: L.svg({ padding: 10 }), 
+                zoomControl: false, dragging: false, scrollWheelZoom: false, 
                 doubleClickZoom: false, boxZoom: false, keyboard: false, touchZoom: false,
                 attributionControl: false
             });
 
+            let initConfig = viewConfigs[currentDevice].default;
+            map.setView(initConfig.center, initConfig.zoom, { animate: false });
+
             map.createPane('baseMapPane');
             map.getPane('baseMapPane').style.zIndex = 100;
             
-            const imageUrl = '../images/mera-base-map-highres.png'; 
-            const topLeftCoord = [35.0, 67.9]; 
-            const mapWidthDegrees = 84.3; 
-            
-            const img = new Image();
-            img.src = imageUrl;
-            img.onload = function() {
-                const nw = L.latLng(topLeftCoord[0], topLeftCoord[1]);
-                const ne = L.latLng(nw.lat, nw.lng + mapWidthDegrees);
-                
-                const nwPoint = map.project(nw, 10); 
-                const nePoint = map.project(ne, 10);
-                
-                const scale = (nePoint.x - nwPoint.x) / img.width;
-                const sePoint = L.point(nePoint.x, nwPoint.y + (img.height * scale));
-                const se = map.unproject(sePoint, 10);
-                
-                const imgBounds = L.latLngBounds(nw, se);
-                L.imageOverlay(imageUrl, imgBounds, { pane: 'baseMapPane' }).addTo(map);
-
-                map.setMaxBounds(imgBounds);
-                map.options.maxBoundsViscosity = 1.0;
-                map.options.minZoom = 3.5; 
-            };
-
+            // ========================================================
+            // BỘ DATA POINTS VÀ LINKS CẬP NHẬT TỪ BẢN CŨ CỦA SIR
+            // ========================================================
             const points = {
                 hanoi: { lat: 21.0285, lng: 105.8542, name: "Hà Nội", labelAngle: 230, labelDistance: 5, nets: ['backbone', 'inland'] },
                 vinh: { lat: 18.8796, lng: 105.6813, name: "Vinh", labelAngle: 90, labelDistance: 10, nets: ['backbone', 'inland'] },
@@ -303,7 +307,6 @@
                 { p1: 'laobao', p2: 'danang', bend: -0.1, nets: ['inland'] },
                 { p1: 'poy', p2: 'quynhon', bend: -0.1, nets: ['inland'] },
                 
-                // [MỚI] Khai báo tên cho các nhánh cáp biển
                 { p1: 'danang', p2: 'dummy_dn', bend: 0.15, nets: ['submarine'], name: 'ALC' },
                 { p1: 'danang', p2: 'dummy_dn2', bend: 0.15, nets: ['submarine'], name: 'APG' },
                 { p1: 'quynhon', p2: 'dummy_qn', bend: 0.15, nets: ['submarine'] },
@@ -350,33 +353,20 @@
                 allElements.push({ element: baseLine, nets: link.nets, type: 'line', isData: false });
                 allElements.push({ element: dataLine, nets: link.nets, type: 'line', isData: true });
 
-                // [MỚI] THUẬT TOÁN TÍNH ĐẠO HÀM GÓC ĐỂ GẮN CHỮ DỌC THEO CÁP
                 if (link.name) {
-                    let midIndex = 20; // Lấy chính giữa cung bẻ cong (40/2)
+                    let midIndex = 20; 
                     let midPoint = coords[midIndex];
-                    
-                    // Đo chênh lệch tọa độ với 2 điểm lân cận để tính góc tiếp tuyến
                     let dy = coords[midIndex + 1][0] - coords[midIndex - 1][0];
                     let dx = coords[midIndex + 1][1] - coords[midIndex - 1][1];
-                    let angle = Math.atan2(-dy, dx) * (180 / Math.PI); // Web Mercator có chiều Y ngược lại
+                    let angle = Math.atan2(-dy, dx) * (180 / Math.PI); 
                     
-                    // Đảm bảo chữ luôn thuận mắt (không bị lộn ngược trái phải)
-                    if (dx < 0) {
-                        angle += 180;
-                    }
+                    if (dx < 0) angle += 180;
 
-                    // Tịnh tiến dịch lên một chút (-8px) để không che lấp điểm sáng li ti chạy ở dưới
                     let htmlContent = `<div class="cable-label-overlay" style="transform: translate(-50%, -50%) rotate(${angle}deg) translateY(-8px);">${link.name}</div>`;
                     
-                    const labelIcon = L.divIcon({
-                        className: 'unified-marker',
-                        html: htmlContent,
-                        iconSize: [0, 0], 
-                        iconAnchor: [0, 0]
-                    });
-
+                    const labelIcon = L.divIcon({ className: 'unified-marker', html: htmlContent, iconSize: [0, 0], iconAnchor: [0, 0] });
                     const labelMarker = L.marker(midPoint, { icon: labelIcon }).addTo(map);
-                    // Gắn cờ isLabel để xử lý logic ẩn hiện riêng biệt
+                    
                     allElements.push({ element: labelMarker, nets: link.nets, type: 'label', isLabel: true });
                 }
             });
@@ -389,11 +379,9 @@
                     if (node.name) {
                         let angle = node.labelAngle !== undefined ? node.labelAngle : 90;
                         let distance = node.labelDistance !== undefined ? node.labelDistance : 5;
-                        
                         let rad = angle * (Math.PI / 180);
                         let widthComp = node.name.length * 3.5; 
                         let heightComp = 8; 
-                        
                         let dynamicDistance = distance + (widthComp * Math.abs(Math.sin(rad))) + (heightComp * Math.abs(Math.cos(rad)));
 
                         let offsetX = dynamicDistance * Math.sin(rad);
@@ -402,28 +390,27 @@
                         htmlContent += `<div class="map-label-overlay" style="transform: translate(calc(-50% + ${offsetX}px), calc(-50% + ${offsetY}px));">${node.name}</div>`;
                     }
 
-                    const customIcon = L.divIcon({
-                        className: 'unified-marker',
-                        html: htmlContent,
-                        iconSize: [0, 0], 
-                        iconAnchor: [0, 0]
-                    });
-
+                    const customIcon = L.divIcon({ className: 'unified-marker', html: htmlContent, iconSize: [0, 0], iconAnchor: [0, 0] });
                     const marker = L.marker([node.lat, node.lng], { icon: customIcon }).addTo(map);
                     allElements.push({ element: marker, nets: node.nets, type: 'node' });
                 }
             });
-            
-            // Set nội dung mặc định khi load
-            document.getElementById('info-title').innerHTML = networkContents.default.title;
-            document.getElementById('info-desc').innerHTML = networkContents.default.desc;
-            
-            map.setView(viewConfigs.default.center, viewConfigs.default.zoom, { animate: false });
 
             const buttons = document.querySelectorAll('.btn-network');
             const infoPanel = document.getElementById('network-info-panel');
             const infoTitle = document.getElementById('info-title');
             const infoDesc = document.getElementById('info-desc');
+
+            function updateMapView(network) {
+                const view = viewConfigs[currentDevice][network];
+                let targetCenter = L.latLng(view.center[0], view.center[1]);
+                let targetZoom = view.zoom; 
+
+                if (map.options.maxBounds) {
+                    targetCenter = map._limitCenter(targetCenter, targetZoom, map.options.maxBounds);
+                }
+                map.flyTo(targetCenter, targetZoom, { duration: 1.2 });
+            }
 
             buttons.forEach(btn => {
                 btn.addEventListener('click', function() {
@@ -431,6 +418,7 @@
                     this.classList.add('active');
 
                     const selectedNet = this.getAttribute('data-network');
+                    currentActiveNet = selectedNet;
 
                     infoPanel.classList.add('hidden');
                     setTimeout(() => {
@@ -444,10 +432,8 @@
                     allElements.forEach(item => {
                         const DOMElement = item.element.getElement();
                         
-                        // [MỚI] LOGIC KIỂM SOÁT ẨN/HIỆN THÔNG MINH
                         let isActive = false;
                         if (item.isLabel) {
-                            // Label CHỈ HIỆN KHI ẤN VÀO ĐÚNG TAB SUBMARINE, ẩn luôn ở tab mặc định (default)
                             isActive = (selectedNet === 'submarine'); 
                         } else {
                             isActive = (selectedNet === 'default' || (item.nets && item.nets.includes(selectedNet)));
@@ -456,30 +442,67 @@
                         if (DOMElement) {
                             if (isActive) {
                                 DOMElement.classList.remove('inactive-element');
-                                if (item.isLabel) DOMElement.style.opacity = '1'; 
+                                
+                                // [ĐÃ SỬA] Tìm đúng dòng chữ bên trong để hiện lên
+                                if (item.isLabel) {
+                                    let textNode = DOMElement.querySelector('.cable-label-overlay');
+                                    if (textNode) textNode.style.opacity = '1';
+                                }
+                                
                                 if (item.isData) DOMElement.style.display = ''; 
                             } else {
+                                
+                                // [ĐÃ SỬA] Tìm đúng dòng chữ bên trong để ẩn đi
                                 if (item.isLabel) {
-                                    DOMElement.style.opacity = '0'; // Ẩn tàng hình nhãn mác
+                                    let textNode = DOMElement.querySelector('.cable-label-overlay');
+                                    if (textNode) textNode.style.opacity = '0';
                                 } else {
                                     DOMElement.classList.add('inactive-element');
                                 }
+                                
                                 if (item.isData) DOMElement.style.display = 'none'; 
                             }
                         }
                     });
 
-                    const view = viewConfigs[selectedNet];
-                    let targetCenter = L.latLng(view.center[0], view.center[1]);
-                    let targetZoom = view.zoom;
-
-                    if (map.options.maxBounds) {
-                        targetCenter = map._limitCenter(targetCenter, targetZoom, map.options.maxBounds);
-                    }
-
-                    map.flyTo(targetCenter, targetZoom, { duration: 1.2 });
+                    updateMapView(selectedNet);
                 });
             });
+
+            window.addEventListener('resize', function() {
+                const newDevice = getDeviceType();
+                if (newDevice !== currentDevice) {
+                    currentDevice = newDevice;
+                    map.options.minZoom = viewConfigs[currentDevice].default.zoom - 1.5;
+                    updateMapView(currentActiveNet);
+                }
+            });
+
+            const imageUrl = '../images/mera-base-map-highres.png'; 
+            const img = new Image();
+            img.onload = function() {
+                const topLeftCoord = [35.0, 67.9]; 
+                const mapWidthDegrees = 84.3; 
+                const nw = L.latLng(topLeftCoord[0], topLeftCoord[1]);
+                const ne = L.latLng(nw.lat, nw.lng + mapWidthDegrees);
+                
+                const nwPoint = map.project(nw, 10); 
+                const nePoint = map.project(ne, 10);
+                const scale = (nePoint.x - nwPoint.x) / img.width;
+                const sePoint = L.point(nePoint.x, nwPoint.y + (img.height * scale));
+                const se = map.unproject(sePoint, 10);
+                
+                const imgBounds = L.latLngBounds(nw, se);
+                L.imageOverlay(imageUrl, imgBounds, { pane: 'baseMapPane' }).addTo(map);
+
+                map.setMaxBounds(imgBounds);
+                map.options.maxBoundsViscosity = 1.0;
+                map.options.minZoom = viewConfigs[currentDevice].default.zoom - 1.5; 
+
+                if(buttons.length > 0) buttons[0].click();
+            };
+            img.src = imageUrl;
+            
         });
     </script>
 </body>

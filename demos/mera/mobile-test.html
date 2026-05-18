@@ -25,15 +25,15 @@
             --primary-blue: #2563eb;
         }
 
-        html { scroll-behavior: smooth; }
+        html { scroll-behavior: smooth; overflow-x: hidden; width: 100%; }
 
         body {
-            margin: 0; padding: 0;
+            margin: 0; padding: 0; width: 100%;
             background-color: var(--bg-dark);
             color: var(--text-light);
             font-family: 'SVN-Gilroy', sans-serif; 
             font-weight: 300; 
-            overflow-x: hidden;
+            overflow-x: hidden; /* Cấm tuyệt đối scroll ngang */
             line-height: 1.6;
         }
 
@@ -45,9 +45,9 @@
             padding: 10px 5%;
             background: rgba(7, 11, 20, 0.85);
             backdrop-filter: blur(10px);
-            position: fixed; top: 0; width: 90%; z-index: 100;
+            position: fixed; top: 0; left: 0; right: 0; z-index: 100; /* Thay đổi width thành left/right 0 */
             border-bottom: 1px solid var(--border-color);
-            transition: all 0.3s;
+            box-sizing: border-box; /* Sửa dứt điểm lỗi bung layout header */
         }
 
         .logo-container { display: flex; align-items: center; }
@@ -62,9 +62,10 @@
         .hero {
             height: 100vh; min-height: 600px; display: flex; flex-direction: column;
             justify-content: center; align-items: center; text-align: center;
-            padding: 0 20px;
+            padding: 0 20px; box-sizing: border-box;
             background: radial-gradient(circle at 50% 100%, rgba(34, 197, 94, 0.15), rgba(37, 99, 235, 0.1) 40%, transparent 70%);
         }
+
         .hero h1 { font-size: 4.5rem; margin-bottom: 20px; letter-spacing: -1px; font-weight: 600; line-height: 1.1;}
         .hero p { font-size: 1.2rem; color: var(--text-muted); max-width: 600px; margin-bottom: 40px; }
 
@@ -73,14 +74,15 @@
             text-decoration: none; display: inline-block; cursor: pointer;
             transition: all 0.3s ease; border: 1px solid transparent; 
             font-family: 'SVN-Gilroy', sans-serif; font-size: 1rem;
+            white-space: nowrap; /* BẮT BUỘC NÚT KHÔNG XUỐNG DÒNG */
         }
         .btn-outline { background: transparent; border-color: var(--text-light); color: var(--text-light); }
         .btn-outline:hover { background: rgba(255,255,255,0.1); }
         .btn-green { background: var(--primary-green); color: #ffffff; }
         .btn-green:hover { filter: brightness(1.1); box-shadow: 0 5px 15px rgba(34, 197, 94, 0.3); }
 
-        /* --- CÁC SECTION CHUNG --- */
-        .section-container { padding: 100px 8%; max-width: 1400px; margin: 0 auto; position: relative; }
+        /* --- CHUẨN HÓA KHOẢNG CÁCH (SPACING) --- */
+        .section-container { padding: 100px 8%; max-width: 1400px; margin: 0 auto; position: relative; box-sizing: border-box; }
         .section-title { font-size: 3.5rem; margin-bottom: 50px; font-weight: 300; text-align: center; line-height: 1.2;}
 
         /* --- SECTION 2: INFRASTRUCTURE --- */
@@ -88,7 +90,7 @@
         .card {
             background: var(--bg-card); border: 1px solid var(--border-color);
             border-radius: 30px; padding: 50px; position: relative; overflow: hidden;
-            display: flex; flex-direction: column; justify-content: flex-end; min-height: 450px;
+            display: flex; flex-direction: column; justify-content: flex-end; min-height: 450px; box-sizing: border-box;
         }
         .card-left { background: linear-gradient(to top, rgba(0,0,0,0.8), transparent), url('./images/pexels-hanako-2148376889-30090282.jpg') center/cover; }
         .card-right { background: linear-gradient(to top, rgba(0,0,0,0.9), rgba(0,0,0,0.2)), url('./images/city-connect.jpg') center/cover; }
@@ -97,7 +99,7 @@
         .network-section { background: linear-gradient(to bottom, transparent, rgba(37, 99, 235, 0.05), transparent); text-align: center;}
         .iframe-container {
             position: relative; width: 100%; aspect-ratio: 16 / 8;
-            min-height: 450px; max-height: 80vh; border-radius: 30px; 
+            max-height: 80vh; border-radius: 30px; 
             overflow: hidden; border: 1px solid var(--border-color); 
             background: #090830; box-shadow: 0 10px 30px rgba(0,0,0,0.3);
         }
@@ -127,32 +129,23 @@
         .testimonial-track { display: flex; width: 100%; will-change: transform; }
         .slide-item { flex: 0 0 100%; width: 100%; padding-bottom: 20px; box-sizing: border-box; }
 
-        /* Chỉnh Grid cho Client: 1fr cho Quote, 280px cho Ảnh (Tạo hình chữ nhật thanh thoát) */
         .clients-grid { 
-            display: grid; 
-            grid-template-columns: 1fr 280px; 
-            gap: 30px; position: relative; z-index: 1;
-            align-items: stretch; /* Ép 2 khối bằng chiều cao nhau */
+            display: grid; grid-template-columns: 1fr 280px; gap: 30px; position: relative; z-index: 1;
+            align-items: stretch;
         }
         
-        /* Đã cập nhật theo ý Sir: min-height 320px */
         .quote-card { 
-            background: var(--bg-card); 
-            border: 1px solid var(--border-color); 
-            border-radius: 30px; 
-            padding: 50px 60px; 
-            backdrop-filter: blur(5px);
+            background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 30px; 
+            padding: 50px 60px; backdrop-filter: blur(5px);
             display: flex; flex-direction: column; justify-content: center;
-            min-height: 320px; 
+            min-height: 320px; box-sizing: border-box;
         }
 
         .stars { color: var(--primary-green); font-size: 1.5rem; margin-bottom: 20px; }
         .quote-text { font-size: 1.6rem; line-height: 1.5; font-weight: 300; margin: 0; }
         
         .client-img-card {
-            border-radius: 30px; width: 100%; 
-            position: relative; background-size: cover; background-position: center;
-            /* Đã xóa aspect-ratio để ảnh linh hoạt tạo thành hình chữ nhật theo chiều cao cột bên cạnh */
+            border-radius: 30px; width: 100%; position: relative; background-size: cover; background-position: center;
         }
         
         .client-info-badge {
@@ -171,7 +164,7 @@
         .contact-icon { width: 24px; height: 24px; color: var(--text-light); font-size: 1.2rem;}
 
         /* Form */
-        .custom-form { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; background: rgba(255, 255, 255, 0.02); padding: 40px; border-radius: 20px; border: 1px solid var(--border-color); margin: 0; }
+        .custom-form { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; background: rgba(255, 255, 255, 0.02); padding: 40px; border-radius: 20px; border: 1px solid var(--border-color); margin: 0; box-sizing: border-box;}
         .form-group { position: relative; }
         .form-group.full-width { grid-column: 1 / -1; }
         .form-label { display: block; margin-bottom: 8px; font-size: 0.85rem; color: var(--text-muted); font-weight: 300;}
@@ -183,7 +176,7 @@
         .success-msg { color: white; font-style: italic; font-size: 0.9rem; font-weight: 300; display: none; }
 
         /* --- FOOTER --- */
-        .site-footer { position: relative; overflow: hidden; background-color: var(--bg-dark); padding: 80px 8% 40px; border-top: 1px solid var(--border-color); font-size: 0.9rem; }
+        .site-footer { position: relative; overflow: hidden; background-color: var(--bg-dark); padding: 80px 8% 40px; border-top: 1px solid var(--border-color); font-size: 0.9rem; box-sizing: border-box; }
         .site-footer::before { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: radial-gradient(circle at 50% 100%, rgba(34, 197, 94, 0.15), rgba(37, 99, 235, 0.1) 40%, transparent 70%); pointer-events: none; z-index: 0; }
         .footer-grid, .footer-bottom { position: relative; z-index: 1; }
         .footer-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1.5fr; gap: 40px; margin-bottom: 60px; }
@@ -196,18 +189,19 @@
         .social-btn { width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--border-color); display: flex; justify-content: center; align-items: center; color: var(--text-light); text-decoration: none; transition: all 0.3s; }
         .social-btn:hover { background: var(--text-light); color: var(--bg-dark); }
 
+
         /* ==========================================================================
-           HỆ THỐNG RESPONSIVE (TỐI ƯU HÓA 3 GIAO DIỆN)
+           HỆ THỐNG RESPONSIVE CHUẨN TỪNG PX
         ========================================================================== */
 
-        /* 1. GIAO DIỆN TABLET (Dưới 992px) */
+        /* 1. GIAO DIỆN TABLET (Giữ nguyên 2 cột cho các thẻ card) */
         @media (max-width: 992px) {
             .section-container { padding: 70px 5%; }
             .section-title { font-size: 2.8rem; margin-bottom: 40px; }
             
             /* Responsive Header & Menu Hamburger */
             .mobile-menu-btn { display: block !important; }
-            .contact-info { display: none; } /* Ẩn sdt trên header cho gọn */
+            .contact-info { display: none; }
             .main-nav { 
                 display: none; position: absolute; top: 100%; left: 0; 
                 width: 100%; background: rgba(7, 11, 20, 0.98); 
@@ -219,11 +213,7 @@
             .hero h1 { font-size: 3.5rem; }
             .hero p { font-size: 1.1rem; }
 
-            /* Scale Grid: Từ 2 cột thành 1 cột */
-            .scale-grid { grid-template-columns: 1fr; }
-            .card { min-height: 350px; }
-
-            /* Proven Section: Chuyển đổi Absolute thành luồng tự nhiên */
+            /* Khối Proven (Sửa lại chống đè chữ nhưng vẫn giữ style cũ) */
             .proven-grid { 
                 display: flex; flex-direction: column; align-items: flex-start;
                 padding: 50px 40px; gap: 40px; min-height: auto;
@@ -234,37 +224,43 @@
             .proven-subtitle-box { text-align: left; }
             .proven-stats-box { gap: 30px; }
 
-            /* Clients Slider */
-            .clients-grid { grid-template-columns: 1fr; }
-            .client-img-card { min-height: 400px; } /* Cấp chiều cao cố định để ảnh hiển thị đẹp khi rớt xuống dưới */
+            /* Giữ nguyên Grid 2 cột cho Scale và Client nhưng giảm padding khối con */
+            .quote-card { padding: 40px 30px; }
 
-            /* Connect */
             .connect-grid { grid-template-columns: 1fr; gap: 40px; }
             .connect-left .section-title { font-size: 3rem; }
-
-            /* Footer */
             .footer-grid { grid-template-columns: 1fr 1fr; gap: 40px; }
         }
 
-        /* 2. GIAO DIỆN MOBILE (Dưới 768px) */
+        /* 2. GIAO DIỆN MOBILE (Phá Layout về 1 cột dọc) */
         @media (max-width: 768px) {
             .section-container { padding: 50px 5%; }
             .section-title { font-size: 2.2rem; margin-bottom: 30px; }
             
             .hero h1 { font-size: 2.5rem; }
             
-            .iframe-container { min-height: 300px; aspect-ratio: 4/3; }
+            /* MAP: Cấp cứng tỷ lệ 16/8 giống y hệt PC */
+            .iframe-container { min-height: unset; aspect-ratio: 16/8; height: auto;}
+
+            /* NÚT BẤM BÉ LẠI NHƯNG KHÔNG XUỐNG DÒNG */
+            .btn { padding: 12px 25px; font-size: 0.9rem; }
+
+            /* BẺ GRID SCALE VỀ 1 CỘT TRÊN MOBILE */
+            .scale-grid { grid-template-columns: 1fr; }
+            .card { min-height: 300px; padding: 30px; }
 
             .proven-grid { padding: 40px 20px; }
             .proven-title-box h3 { font-size: 2.5rem !important; }
-            .stat-item { flex-direction: column; gap: 5px; } /* Số nằm trên chữ */
+            .stat-item { flex-direction: column; gap: 5px; }
             .stat-item .stat-number { font-size: 2rem; width: 100%; }
             .stat-item .stat-title { font-size: 1.3rem; }
 
-            .quote-card { padding: 40px 30px; }
+            /* BẺ GRID QUOTE VÀ IMG VỀ 1 CỘT TRÊN MOBILE */
+            .clients-grid { grid-template-columns: 1fr; align-items: stretch;}
+            .client-img-card { min-height: 320px; }
             .quote-text { font-size: 1.3rem; }
             
-            .custom-form { grid-template-columns: 1fr; padding: 25px; } /* Form về 1 cột */
+            .custom-form { grid-template-columns: 1fr; padding: 25px; }
             .connect-left .section-title { font-size: 2.5rem; }
 
             .footer-grid { grid-template-columns: 1fr; gap: 40px; text-align: center; }
@@ -281,16 +277,14 @@
             <a href="#"><img src="./images/logo.png" alt="Mera AI Logo" class="site-logo"></a>
         </div>
         
-        <!-- Nút Menu Mobile (CSS Hack, không cần JS) -->
         <input type="checkbox" id="menu-toggle" hidden>
         <label for="menu-toggle" class="mobile-menu-btn" style="color: white; font-size: 1.8rem; cursor: pointer; display: none;">☰</label>
 
         <nav class="main-nav">
             <ul>
-                <li><a href="#">Home</a></li>
-                <li><a href="#">About Us</a></li>
-                <li><a href="#">Services</a></li>
-                <li><a href="#">Contact</a></li>
+                <li><a href="../mera/about-us">About Us</a></li>
+                <li><a href="../mera/services">Services</a></li>
+                <li><a href="#connect-section">Contact</a></li>
             </ul>
         </nav>
         <div class="contact-info">
@@ -314,8 +308,8 @@
                 <div style="position: relative; z-index: 2;">
                     <p style="color: #e2e8f0; margin-bottom: 30px; max-width: 80%;">From fiber networks to cloud connectivity, we handle the backbone of modern business. Our infrastructure reaches across continents and connects what matters most.</p>
                     <div style="display: flex; gap: 15px;">
-                        <a href="#" class="btn btn-green">Explore &rarr;</a>
-                        <a href="#" class="btn btn-outline">Contact &rarr;</a>
+                        <a href="../mera/services" class="btn btn-green">Explore &rarr;</a>
+                        <a href="#connect-section" class="btn btn-outline">Contact &rarr;</a>
                     </div>
                 </div>
             </div>
@@ -335,16 +329,13 @@
 
     <section class="section-container">
         <h2 class="section-title">Proven</h2>
-        
         <div class="proven-grid">
             <div class="proven-title-box">
                 <h3 style="font-size: 3rem; margin: 0; line-height: 1.1; font-weight: 400;">Numbers That<br>Speak</h3>
             </div>
-            
             <div class="proven-subtitle-box">
                 We've been doing this for years.<br>The results show it.
             </div>
-            
             <div class="proven-stats-box">
                 <div class="stat-item">
                     <div class="stat-number">99.99%</div>
@@ -380,11 +371,8 @@
             <h2 class="section-title" style="margin: 0;">What Clients Say</h2>
         </div>
         
-        <!-- WRAPPER CHO SLIDER -->
         <div class="testimonial-slider-wrapper" id="sliderWrapper">
             <div class="testimonial-track" id="testimonialTrack">
-                
-                <!-- KHÁCH HÀNG 1 -->
                 <div class="slide-item">
                     <div class="clients-grid">
                         <div class="quote-card">
@@ -392,9 +380,7 @@
                                 <h3 style="color: var(--primary-blue); font-size: 2rem; margin: 0;">Digiflex</h3>
                                 <div class="stars">★★★★★</div>
                             </div>
-                            <div class="quote-text">
-                                "They Delivered What They Promised. No Excuses, No Delays. That's Rare."
-                            </div>
+                            <div class="quote-text">"They Delivered What They Promised. No Excuses, No Delays. That's Rare."</div>
                         </div>
                         <div class="client-img-card" style="background-image: url('https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&q=80')">
                             <div class="client-info-badge">
@@ -404,8 +390,6 @@
                         </div>
                     </div>
                 </div>
-
-                <!-- KHÁCH HÀNG 2 -->
                 <div class="slide-item">
                     <div class="clients-grid">
                         <div class="quote-card">
@@ -413,9 +397,7 @@
                                 <h3 style="color: var(--primary-green); font-size: 2rem; margin: 0;">Apex Systems</h3>
                                 <div class="stars">★★★★★</div>
                             </div>
-                            <div class="quote-text">
-                                "Our global operations rely on their seamless infrastructure. Absolute game changers."
-                            </div>
+                            <div class="quote-text">"Our global operations rely on their seamless infrastructure. Absolute game changers."</div>
                         </div>
                         <div class="client-img-card" style="background-image: url('https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80')">
                             <div class="client-info-badge">
@@ -425,8 +407,6 @@
                         </div>
                     </div>
                 </div>
-
-                <!-- KHÁCH HÀNG 3 -->
                 <div class="slide-item">
                     <div class="clients-grid">
                         <div class="quote-card">
@@ -434,9 +414,7 @@
                                 <h3 style="color: #ffffff; font-size: 2rem; margin: 0;">Nova Core</h3>
                                 <div class="stars">★★★★★</div>
                             </div>
-                            <div class="quote-text">
-                                "Unmatched reliability. Their network uptime is exactly what they promised: 99.99%."
-                            </div>
+                            <div class="quote-text">"Unmatched reliability. Their network uptime is exactly what they promised: 99.99%."</div>
                         </div>
                         <div class="client-img-card" style="background-image: url('https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&q=80')">
                             <div class="client-info-badge">
@@ -446,12 +424,11 @@
                         </div>
                     </div>
                 </div>
-
             </div>
         </div>
     </section>
 
-    <div class="connect-wrapper">
+    <div class="connect-wrapper" id="connect-section">
         <section class="section-container" style="padding-top: 0; padding-bottom: 0;">
             <div class="connect-grid">
                 
@@ -529,10 +506,9 @@
             <div>
                 <div class="footer-heading">Menu</div>
                 <ul class="footer-links">
-                    <li><a href="#">Home</a></li>
-                    <li><a href="#">About Us</a></li>
-                    <li><a href="#">Services</a></li>
-                    <li><a href="#">Solutions</a></li>
+                    <li><a href="../mera/about-us">About Us</a></li>
+                    <li><a href="../mera/services">Services</a></li>
+                    <li><a href="#connect-section">Contact</a></li>
                 </ul>
             </div>
 
@@ -591,9 +567,7 @@
 
             fetch(googleScriptUrl, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'text/plain;charset=utf-8'
-                },
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                 body: JSON.stringify(payload)
             })
             .then(response => {
@@ -602,9 +576,7 @@
                     feedback.style.color = "#ffffff";
                     feedback.style.display = "block";
                     this.reset();
-                } else {
-                    throw new Error('Server response error');
-                }
+                } else { throw new Error('Server response error'); }
             })
             .catch(error => {
                 feedback.innerText = "Error sending message. Please try again.";
@@ -615,9 +587,7 @@
                 btn.disabled = false;
                 btn.innerText = 'Send';
                 btn.style.opacity = '1';
-                setTimeout(() => {
-                    feedback.style.display = "none";
-                }, 5000);
+                setTimeout(() => { feedback.style.display = "none"; }, 5000);
             });
         });
 
@@ -644,9 +614,7 @@
         let autoSlideInterval;
         let isTransitioning = false;
 
-        function updateSliderPosition() {
-            track.style.transform = `translateX(${currentTranslate}px)`;
-        }
+        function updateSliderPosition() { track.style.transform = `translateX(${currentTranslate}px)`; }
 
         function setPositionByIndex(useTransition = true) {
             currentTranslate = currentIndex * -track.offsetWidth;
@@ -671,13 +639,8 @@
             setPositionByIndex(true);
         }
 
-        function startAutoSlide() {
-            autoSlideInterval = setInterval(nextSlide, 5000);
-        }
-
-        function stopAutoSlide() {
-            clearInterval(autoSlideInterval);
-        }
+        function startAutoSlide() { autoSlideInterval = setInterval(nextSlide, 5000); }
+        function stopAutoSlide() { clearInterval(autoSlideInterval); }
 
         track.addEventListener('transitionend', () => {
             isTransitioning = false;
@@ -698,6 +661,7 @@
         track.addEventListener('pointerleave', touchEnd);
         track.addEventListener('pointermove', touchMove);
 
+        // Chống giật lag kéo chuột
         window.addEventListener('contextmenu', e => { if(isDragging) e.preventDefault(); });
         track.ondragstart = () => false;
 
@@ -723,14 +687,8 @@
             cancelAnimationFrame(animationID);
             
             const movedBy = currentTranslate - prevTranslate;
-            
-            if (movedBy < -100) {
-                isTransitioning = true;
-                currentIndex++;
-            } else if (movedBy > 100) {
-                isTransitioning = true;
-                currentIndex--;
-            }
+            if (movedBy < -100) { isTransitioning = true; currentIndex++; } 
+            else if (movedBy > 100) { isTransitioning = true; currentIndex--; }
             
             setPositionByIndex(true);
             startAutoSlide();
