@@ -1,0 +1,31 @@
+{
+  "notion": {
+    "comment": "⚠️ NEVER HARDCODE API KEYS HERE - Use GitHub Secrets instead",
+    "apiKeyPlaceholder": "${NOTION_API_KEY}",
+    "databaseIdPlaceholder": "${NOTION_DATABASE_ID}",
+    "description": "Set these in GitHub Actions Secrets at: Settings > Secrets and variables > Actions"
+  },
+  "build": {
+    "articlesFolderName": "articles",
+    "outputIndexFile": "blog-list.json",
+    "imageCacheFolder": "_cache/images"
+  },
+  "paths": {
+    "comment": "Relative paths - works everywhere after copy",
+    "commonStyles": "../../common/style.css",
+    "commonFonts": "../../font/",
+    "commonImages": "../../images/",
+    "blogStyles": "./_styles/blog-theme.css",
+    "blogScripts": "./_scripts/"
+  },
+  "seo": {
+    "siteTitle": "Mera AI Blog",
+    "siteDescription": "Insights on global connectivity and infrastructure",
+    "siteUrl": "https://meraai.com/blog/"
+  },
+  "grid": {
+    "desktopColumns": 4,
+    "tabletColumns": 2,
+    "mobileColumns": 1
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "name": "mera-blog-system",
+  "version": "1.0.0",
+  "description": "Mera AI Blog - Static Site Generation from Notion",
+  "type": "module",
+  "scripts": {
+    "fetch-notion": "node _scripts/fetch-notion.mjs",
+    "build": "node _scripts/build-blog.mjs",
+    "generate-index": "node _scripts/generate-index.mjs",
+    "sync": "npm run fetch-notion && npm run build && npm run generate-index",
+    "dev": "node _scripts/dev-server.mjs"
+  },
+  "keywords": [
+    "blog",
+    "notion",
+    "static-site-generation",
+    "quartz"
+  ],
+  "author": "Mera AI",
+  "license": "MIT",
+  "dependencies": {
+    "@notionhq/client": "^2.2.8",
+    "node-html-parser": "^6.1.12",
+    "marked": "^11.1.1",
+    "gray-matter": "^4.0.3"
+  },
+  "devDependencies": {
+    "dotenv": "^16.3.1"
+  }
+}
