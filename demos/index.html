@@ -192,8 +192,13 @@
                     });
                 }
             });
-            if (fullTreeData[CONFIG.BASE_FOLDER]) {
+
+            if (CONFIG.BASE_FOLDER === "") {
+                renderColumn(0, fullTreeData, CONFIG.GITHUB_REPO);
+            } else if (fullTreeData[CONFIG.BASE_FOLDER]) {
                 renderColumn(0, fullTreeData[CONFIG.BASE_FOLDER]._content, CONFIG.BASE_FOLDER);
+            } else {
+                document.getElementById('miller-container').innerHTML = `<p style="padding: 20px; color: var(--nier-text-light);">Kho lưu trữ trống hoặc không tìm thấy thư mục "${CONFIG.BASE_FOLDER}".</p>`;
             }
         }
 
