@@ -157,14 +157,15 @@ export class AIController {
                 await new Promise(r => setTimeout(r, getDelay(500)));
                 
                 if (!receiver.isAI) {
-                    // Mở giao dịch tới Người chơi thật
-                    const offerSummary = `
-                        🤖 [${player.name} (${player.difficulty.toUpperCase()} AI)] gửi đề nghị giao dịch:
-                        - AI gửi cho bạn: $${proactiveTrade.offeredMoney} ${proactiveTrade.offeredProperties.length > 0 ? `+ BĐS: ${state.getTile(proactiveTrade.offeredProperties[0]).name}` : ''}
-                        - AI muốn nhận lại: BĐS ${state.getTile(proactiveTrade.requestedProperties[0]).name}
-                        Bạn có đồng ý không?
-                    `;
-                    const accept = confirm(offerSummary);
+                    // Mở giao dịch tới Người chơi thật qua Comic Speech Bubble
+                    const accept = await trade.promptComicTradeConfirmation(
+                        player, 
+                        receiver, 
+                        proactiveTrade.offeredMoney, 
+                        proactiveTrade.offeredProperties, 
+                        proactiveTrade.requestedMoney, 
+                        proactiveTrade.requestedProperties
+                    );
                     if (accept) {
                         trade.executeTrade(player.id, receiver.id, proactiveTrade.offeredMoney, proactiveTrade.offeredProperties, proactiveTrade.requestedMoney, proactiveTrade.requestedProperties);
                         state.addLog(`Bạn đã chấp thuận đề nghị giao dịch của <strong>${player.name} (AI)</strong>!`, 'success');

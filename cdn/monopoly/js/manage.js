@@ -39,7 +39,7 @@ export class PropertyManager {
         const netWorthEl = document.getElementById('manage-modal-networth');
         const listEl = document.getElementById('manage-properties-list');
 
-        if (titleEl) titleEl.textContent = `Quản Lý Tài Sản: ${player.name}`;
+        if (titleEl) titleEl.innerHTML = `<i class="fa-solid fa-city" style="color: #3B82F6;"></i> Quản Lý Tài Sản: <strong>${player.name}</strong>`;
         if (balanceEl) balanceEl.textContent = `$${player.money}`;
         if (netWorthEl) netWorthEl.textContent = `$${state.calculateNetWorth(player.id)}`;
 
@@ -48,7 +48,7 @@ export class PropertyManager {
 
         const ownedProps = state.getPlayerProperties(player.id);
         if (ownedProps.length === 0) {
-            listEl.innerHTML = `<div class="empty-state-text"><i class="fa-solid fa-folder-open"></i> Chưa sở hữu bất động sản nào.</div>`;
+            listEl.innerHTML = `<div class="empty-state-text" style="text-align: center; padding: 24px; color: var(--text-muted);"><i class="fa-solid fa-folder-open" style="font-size: 28px; margin-bottom: 8px; display: block;"></i> Chưa sở hữu bất động sản nào.</div>`;
             return;
         }
 
@@ -78,6 +78,7 @@ export class PropertyManager {
             const itemsListEl = groupContainer.querySelector(`#group-items-${groupKey}`);
 
             propList.forEach(prop => {
+                const tile = state.getTile(prop.id);
                 const propItemEl = document.createElement('div');
                 propItemEl.className = `manage-prop-row ${prop.isMortgaged ? 'is-mortgaged-row' : ''}`;
 
@@ -93,40 +94,40 @@ export class PropertyManager {
                 propItemEl.innerHTML = `
                     <div class="prop-info-col">
                         <div class="prop-title-row">
-                            <span class="prop-name">${prop.name}</span>
+                            <span class="prop-name">${tile.name}</span>
                             ${prop.isMortgaged ? '<span class="status-badge mortgage">ĐANG THẾ CHẤP</span>' : ''}
                         </div>
                         <div class="prop-details-row">
-                            <span>Giá trị: $${prop.price}</span>
-                            ${prop.type === 'PROPERTY' ? `<span>Xây dựng: <strong>${buildingText}</strong></span>` : ''}
-                            <span>Tiền thuê hiện tại: <strong>$${state.calculateRent(prop.id)}</strong></span>
+                            <span>Giá gốc: $${tile.price}</span>
+                            ${tile.type === 'PROPERTY' ? `<span>Xây dựng: <strong>${buildingText}</strong></span>` : ''}
+                            <span>Tiền thuê hiện tại: <strong>$${state.calculateRent(tile.id)}</strong></span>
                         </div>
                     </div>
                     <div class="prop-actions-col">
-                        ${prop.type === 'PROPERTY' ? `
+                        ${tile.type === 'PROPERTY' ? `
                             <button class="btn btn-sm btn-build ${!canBuild.allowed ? 'disabled' : ''}" 
                                     title="${canBuild.reason}" ${!canBuild.allowed ? 'disabled' : ''} 
-                                    data-action="build" data-tile="${prop.id}">
-                                <i class="fa-solid fa-plus"></i> Xây (${prop.houses === 4 ? 'KS' : 'Nhà'} $${prop.houseCost})
+                                    data-action="build" data-tile="${tile.id}">
+                                <i class="fa-solid fa-plus"></i> Xây (${prop.houses === 4 ? 'KS' : 'Nhà'} $${tile.houseCost})
                             </button>
                             <button class="btn btn-sm btn-sell ${!canSell.allowed ? 'disabled' : ''}" 
                                     title="${canSell.reason}" ${!canSell.allowed ? 'disabled' : ''} 
-                                    data-action="sell" data-tile="${prop.id}">
-                                <i class="fa-solid fa-minus"></i> Bán Nhà (+$${prop.houseCost / 2})
+                                    data-action="sell" data-tile="${tile.id}">
+                                <i class="fa-solid fa-minus"></i> Bán Nhà (+$${tile.houseCost / 2})
                             </button>
                         ` : ''}
                         
                         ${!prop.isMortgaged ? `
                             <button class="btn btn-sm btn-mortgage ${!canMortgage.allowed ? 'disabled' : ''}" 
                                     title="${canMortgage.reason}" ${!canMortgage.allowed ? 'disabled' : ''} 
-                                    data-action="mortgage" data-tile="${prop.id}">
-                                <i class="fa-solid fa-hand-holding-dollar"></i> Thế Chấp (+$${prop.mortgageValue})
+                                    data-action="mortgage" data-tile="${tile.id}">
+                                <i class="fa-solid fa-hand-holding-dollar"></i> Thế Chấp (+$${tile.mortgageValue})
                             </button>
                         ` : `
                             <button class="btn btn-sm btn-unmortgage ${!canUnmortgage.allowed ? 'disabled' : ''}" 
                                     title="${canUnmortgage.reason}" ${!canUnmortgage.allowed ? 'disabled' : ''} 
-                                    data-action="unmortgage" data-tile="${prop.id}">
-                                <i class="fa-solid fa-money-bill-wave"></i> Chuộc Lại (-$${prop.unmortgageCost})
+                                    data-action="unmortgage" data-tile="${tile.id}">
+                                <i class="fa-solid fa-money-bill-wave"></i> Chuộc Lại (-$${tile.unmortgageCost})
                             </button>
                         `}
                     </div>
@@ -158,6 +159,7 @@ export class PropertyManager {
             this.unmortgageProperty(playerId, tileId);
         }
         this.render();
+        window.dispatchEvent(new CustomEvent('monopoly:hud_update'));
     }
 
     // Kiểm tra tính hợp lệ xây nhà (Even Building Rule)
@@ -244,6 +246,7 @@ export class PropertyManager {
 
         player.stats.housesBuilt++;
         board.updateTileOwnership(tileId);
+        state.saveToStorage();
         return true;
     }
 
@@ -297,6 +300,7 @@ export class PropertyManager {
         }
 
         board.updateTileOwnership(tileId);
+        state.saveToStorage();
         return true;
     }
 
@@ -332,10 +336,11 @@ export class PropertyManager {
         const prop = state.properties[tileId];
 
         prop.isMortgaged = true;
-        player.money += prop.mortgageValue;
+        player.money += tile.mortgageValue;
         sound.playBuy();
-        state.addLog(`<strong>${player.name}</strong> đã thế chấp <strong>${tile.name}</strong> để nhận $${prop.mortgageValue}`, 'warning', player.id);
+        state.addLog(`<strong>${player.name}</strong> đã thế chấp <strong>${tile.name}</strong> để nhận $${tile.mortgageValue}`, 'warning', player.id);
         board.updateTileOwnership(tileId);
+        state.saveToStorage();
         return true;
     }
 
@@ -349,8 +354,8 @@ export class PropertyManager {
             return { allowed: false, reason: 'Không thể chuộc' };
         }
 
-        if (player.money < prop.unmortgageCost) {
-            return { allowed: false, reason: `Không đủ tiền (Cần $${prop.unmortgageCost})` };
+        if (player.money < tile.unmortgageCost) {
+            return { allowed: false, reason: `Không đủ tiền (Cần $${tile.unmortgageCost})` };
         }
 
         return { allowed: true, reason: 'Có thể chuộc lại' };
@@ -364,11 +369,12 @@ export class PropertyManager {
         const tile = state.getTile(tileId);
         const prop = state.properties[tileId];
 
-        player.money -= prop.unmortgageCost;
+        player.money -= tile.unmortgageCost;
         prop.isMortgaged = false;
         sound.playBuy();
-        state.addLog(`<strong>${player.name}</strong> đã chuộc lại <strong>${tile.name}</strong> (-$${prop.unmortgageCost})`, 'success', player.id);
+        state.addLog(`<strong>${player.name}</strong> đã chuộc lại <strong>${tile.name}</strong> (-$${tile.unmortgageCost})`, 'success', player.id);
         board.updateTileOwnership(tileId);
+        state.saveToStorage();
         return true;
     }
 }

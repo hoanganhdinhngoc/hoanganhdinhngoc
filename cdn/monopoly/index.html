@@ -124,9 +124,94 @@
     <!-- 3. CÁC MODAL HỘP THOẠI TƯƠNG TÁC (INTERACTIVE MODALS) -->
     <!-- ==================================================== -->
 
-    <!-- Modal 1: Chi Tiết Thẻ Bìa Đất (Property Deed Modal) -->
+    <!-- Hộp Thoại Truyện Tranh Giao Dịch (Comic Speech Bubble) -->
+    <div id="comic-trade-bubble-container" class="comic-bubble-overlay">
+        <div class="comic-bubble-wrapper">
+            <div class="comic-avatar-box">
+                <div id="comic-avatar-circle" class="comic-avatar-circle">
+                    <i class="fa-solid fa-car-side"></i>
+                </div>
+                <span id="comic-avatar-name" class="comic-avatar-name">Người chơi 1</span>
+            </div>
+            <div class="comic-speech-box">
+                <div id="comic-speech-title" class="comic-speech-title">ĐỀ XUẤT GIAO DỊCH</div>
+                <div id="comic-trade-details" class="comic-trade-details"></div>
+                <div id="comic-btn-row" class="comic-btn-row"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Thông Báo Game (Game Alert Modal with OK Button) -->
+    <div id="game-alert-modal" class="modal-overlay has-backdrop">
+        <div class="modal-dialog" style="max-width: 440px; text-align: center;">
+            <div class="modal-body" style="padding: 28px 20px 20px;">
+                <i id="alert-modal-icon" class="fa-solid fa-bell" style="font-size: 42px; color: #3B82F6; margin-bottom: 14px;"></i>
+                <h3 id="alert-modal-title" style="font-size: 20px; font-weight: 800; color: #FFF; margin-bottom: 10px;">THÔNG BÁO</h3>
+                <p id="alert-modal-message" style="font-size: 15px; color: var(--text-secondary); line-height: 1.5; margin-bottom: 20px;"></p>
+                <button id="alert-modal-ok-btn" class="btn btn-primary" style="min-width: 140px; margin: auto;">ĐÃ HIỂU (OK)</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Hồ Sơ Chi Tiết & Toàn Bộ Tài Sản Người Chơi (Player Profile Inspector) -->
+    <div id="player-profile-modal" class="modal-overlay">
+        <div class="modal-dialog profile-modal-dialog">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-id-badge" style="color: #60A5FA;"></i> Hồ Sơ & Tài Sản Người Chơi <span class="modal-drag-hint">(Kéo để di chuyển)</span></h3>
+                <button class="modal-close-btn modal-close-trigger"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="profile-top-header">
+                    <div id="profile-avatar-circle" class="profile-avatar-big">
+                        <i class="fa-solid fa-car-side"></i>
+                    </div>
+                    <div class="profile-info-col">
+                        <h2 id="profile-player-name">Tên Người Chơi</h2>
+                        <div style="display: flex; gap: 8px; align-items: center;">
+                            <span id="profile-player-type"></span>
+                            <span id="profile-player-status"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Lưới thống kê tài chính -->
+                <div class="profile-stats-grid">
+                    <div class="profile-stat-box">
+                        <div class="stat-label">Tiền Mặt</div>
+                        <div id="profile-stat-money" class="stat-val highlight-money">$1500</div>
+                    </div>
+                    <div class="profile-stat-box">
+                        <div class="stat-label">Tài Sản Ròng</div>
+                        <div id="profile-stat-net" class="stat-val highlight-net">$2500</div>
+                    </div>
+                    <div class="profile-stat-box">
+                        <div class="stat-label">Bất Động Sản</div>
+                        <div id="profile-stat-props" class="stat-val">5 ô</div>
+                    </div>
+                    <div class="profile-stat-box">
+                        <div class="stat-label">Thẻ Ra Tù</div>
+                        <div id="profile-stat-jailcards" class="stat-val">0 thẻ</div>
+                    </div>
+                </div>
+
+                <div class="profile-portfolio-title">
+                    <i class="fa-solid fa-layer-group"></i> Danh Mục Bất Động Sản Sở Hữu
+                </div>
+                <div id="profile-props-container" class="profile-props-container"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary modal-close-trigger">Đóng</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Chi Tiết Thẻ Bìa Đất (Property Deed Modal) -->
     <div id="deed-modal" class="modal-overlay">
         <div class="modal-dialog">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-file-contract" style="color: #F59E0B;"></i> Chi Tiết Bìa Đất <span class="modal-drag-hint">(Kéo để di chuyển)</span></h3>
+                <button id="deed-modal-close-btn" class="modal-close-btn"><i class="fa-solid fa-xmark"></i></button>
+            </div>
             <div class="modal-body" style="padding: 16px;">
                 <div class="deed-card-box">
                     <div id="deed-modal-header" class="deed-header-bar">
@@ -136,13 +221,13 @@
                 </div>
             </div>
             <div class="modal-footer">
-                <button id="deed-modal-close-btn" class="btn btn-secondary">Đóng</button>
+                <button class="btn btn-secondary modal-close-trigger">Đóng</button>
             </div>
         </div>
     </div>
 
-    <!-- Modal 2: Xác Nhận Mua Bất Động Sản (Buy Property Modal) -->
-    <div id="buy-property-modal" class="modal-overlay">
+    <!-- Modal Xác Nhận Mua Bất Động Sản (Buy Property Modal) -->
+    <div id="buy-property-modal" class="modal-overlay has-backdrop">
         <div class="modal-dialog">
             <div class="modal-header">
                 <h3><i class="fa-solid fa-cart-plus" style="color: #10B981;"></i> Mua Bất Động Sản</h3>
@@ -163,8 +248,8 @@
         </div>
     </div>
 
-    <!-- Modal 3: Rút Thẻ Khí Vận & Cơ Hội (Card Flip Modal) -->
-    <div id="card-modal" class="modal-overlay">
+    <!-- Modal Rút Thẻ Khí Vận & Cơ Hội (Card Flip Modal) -->
+    <div id="card-modal" class="modal-overlay has-backdrop">
         <div class="modal-dialog" style="max-width: 440px;">
             <div class="modal-header" style="background-color: rgba(255, 255, 255, 0.05);">
                 <span id="card-modal-header-type" style="font-size: 11px; font-weight: 800; padding: 3px 8px; border-radius: 4px; color: #FFF;">THẺ BÀI</span>
@@ -182,11 +267,11 @@
         </div>
     </div>
 
-    <!-- Modal 4: Trung Tâm Giao Dịch Đa Bên (Trade Hub Modal) -->
+    <!-- Modal Trung Tâm Giao Dịch Đa Bên (Trade Hub Modal) -->
     <div id="trade-modal" class="modal-overlay">
         <div class="modal-dialog trade-modal-dialog">
             <div class="modal-header">
-                <h3><i class="fa-solid fa-handshake" style="color: #8B5CF6;"></i> Trung Tâm Giao Dịch Tài Sản</h3>
+                <h3><i class="fa-solid fa-handshake" style="color: #8B5CF6;"></i> Trung Tâm Giao Dịch Tài Sản <span class="modal-drag-hint">(Kéo để di chuyển)</span></h3>
                 <button class="modal-close-btn modal-close-trigger"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <div class="modal-body">
@@ -230,11 +315,11 @@
         </div>
     </div>
 
-    <!-- Modal 5: Quản Lý Bất Động Sản (Manage Modal) -->
+    <!-- Modal Quản Lý Bất Động Sản (Manage Modal) -->
     <div id="manage-modal" class="modal-overlay">
         <div class="modal-dialog manage-modal-dialog">
             <div class="modal-header">
-                <h3 id="manage-modal-title"><i class="fa-solid fa-city" style="color: #3B82F6;"></i> Quản Lý Bất Động Sản</h3>
+                <h3 id="manage-modal-title"><i class="fa-solid fa-city" style="color: #3B82F6;"></i> Quản Lý Bất Động Sản <span class="modal-drag-hint">(Kéo để di chuyển)</span></h3>
                 <button class="modal-close-btn modal-close-trigger"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <div class="modal-body">
@@ -250,8 +335,8 @@
         </div>
     </div>
 
-    <!-- Modal 6: Vinh Danh Chiến Thắng (Victory Modal) -->
-    <div id="victory-modal" class="modal-overlay">
+    <!-- Modal Vinh Danh Chiến Thắng (Victory Modal) -->
+    <div id="victory-modal" class="modal-overlay has-backdrop">
         <div class="modal-dialog" style="text-align: center; max-width: 480px;">
             <div class="modal-body" style="padding: 36px 24px;">
                 <i class="fa-solid fa-trophy victory-icon-trophy"></i>
@@ -265,8 +350,8 @@
         </div>
     </div>
 
-    <!-- Modal 7: Luật Chơi & Cấp Độ AI (Rules & Help Modal) -->
-    <div id="rules-modal" class="modal-overlay">
+    <!-- Modal Luật Chơi & Cấp Độ AI (Rules & Help Modal) -->
+    <div id="rules-modal" class="modal-overlay has-backdrop">
         <div class="modal-dialog" style="max-width: 640px;">
             <div class="modal-header">
                 <h3><i class="fa-solid fa-book" style="color: #F59E0B;"></i> Hướng Dẫn & Luật Chơi Monopoly</h3>

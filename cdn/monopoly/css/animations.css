@@ -1,5 +1,5 @@
 /* css/animations.css */
-/* Hiệu Ứng Xúc Xắc 3D, Di Chuyển Token, Lật Thẻ Bài & Hiệu Ứng Tiền Bay */
+/* Hiệu Ứng Xúc Xắc 3D Chuẩn Đối Xứng, Di Chuyển Token, Lật Thẻ Bài & Hiệu Ứng Tiền Bay */
 
 /* ==================================================== */
 /* XÚC XẮC 3D (3D CUBE DICE) */
@@ -38,14 +38,17 @@
     border: 2px solid #CBD5E1;
     border-radius: 8px;
     display: grid;
-    padding: 6px;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+    padding: 5px;
     box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.15);
+    box-sizing: border-box;
 }
 
 .face span {
     display: block;
-    width: 7px;
-    height: 7px;
+    width: 6px;
+    height: 6px;
     background: #1E293B;
     border-radius: 50%;
     margin: auto;
@@ -59,19 +62,49 @@
 .top    { transform: rotateX(90deg) translateZ(22px); }
 .bottom { transform: rotateX(-90deg) translateZ(22px); }
 
-/* Bố cục chấm tròn của từng mặt */
-.face.front { display: flex; align-items: center; justify-content: center; }
-.face.back { grid-template-columns: 1fr 1fr; align-items: center; }
-.face.right { grid-template-columns: 1fr 1fr 1fr; align-items: center; }
-.face.left { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; }
-.face.top { grid-template-columns: 1fr 1fr 1fr; grid-template-rows: 1fr 1fr 1fr; }
-.face.bottom { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr 1fr; }
+/* Bố cục chấm tròn đối xứng chuẩn quốc tế theo lưới 3x3 */
 
+/* Mặt 1 (Front): 1 chấm đỏ lớn chính giữa */
+.face.front {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
 .face.front span {
     width: 10px;
     height: 10px;
-    background: #DC2626; /* Chấm đỏ mặt 1 điểm phong cách truyền thống */
+    background: #DC2626;
 }
+
+/* Mặt 2 (Right): 2 chấm chéo đối xứng (Góc trên-trái, Góc dưới-phải) */
+.face.right span:nth-child(1) { grid-column: 1; grid-row: 1; }
+.face.right span:nth-child(2) { grid-column: 3; grid-row: 3; }
+
+/* Mặt 3 (Back): 3 chấm chéo đối xứng (Góc trên-trái, Tâm, Góc dưới-phải) */
+.face.back span:nth-child(1) { grid-column: 1; grid-row: 1; }
+.face.back span:nth-child(2) { grid-column: 2; grid-row: 2; }
+.face.back span:nth-child(3) { grid-column: 3; grid-row: 3; }
+
+/* Mặt 4 (Left): 4 chấm tại 4 góc đối xứng hoàn hảo */
+.face.left span:nth-child(1) { grid-column: 1; grid-row: 1; }
+.face.left span:nth-child(2) { grid-column: 3; grid-row: 1; }
+.face.left span:nth-child(3) { grid-column: 1; grid-row: 3; }
+.face.left span:nth-child(4) { grid-column: 3; grid-row: 3; }
+
+/* Mặt 5 (Top): 4 góc + 1 chấm ở chính giữa tâm */
+.face.top span:nth-child(1) { grid-column: 1; grid-row: 1; }
+.face.top span:nth-child(2) { grid-column: 3; grid-row: 1; }
+.face.top span:nth-child(3) { grid-column: 2; grid-row: 2; }
+.face.top span:nth-child(4) { grid-column: 1; grid-row: 3; }
+.face.top span:nth-child(5) { grid-column: 3; grid-row: 3; }
+
+/* Mặt 6 (Bottom): 6 chấm chia đều 2 cột trái phải đối xứng */
+.face.bottom span:nth-child(1) { grid-column: 1; grid-row: 1; }
+.face.bottom span:nth-child(2) { grid-column: 3; grid-row: 1; }
+.face.bottom span:nth-child(3) { grid-column: 1; grid-row: 2; }
+.face.bottom span:nth-child(4) { grid-column: 3; grid-row: 2; }
+.face.bottom span:nth-child(5) { grid-column: 1; grid-row: 3; }
+.face.bottom span:nth-child(6) { grid-column: 3; grid-row: 3; }
 
 @keyframes diceTumble {
     0% { transform: rotateX(0deg) rotateY(0deg) rotateZ(0deg); }
@@ -82,10 +115,11 @@
     font-size: 13px;
     font-weight: 700;
     color: #1E293B;
-    background-color: rgba(255, 255, 255, 0.8);
-    padding: 4px 12px;
+    background-color: rgba(255, 255, 255, 0.9);
+    padding: 5px 14px;
     border-radius: 20px;
     box-shadow: var(--shadow-sm);
+    border: 1px solid rgba(0, 0, 0, 0.1);
 }
 
 /* ==================================================== */

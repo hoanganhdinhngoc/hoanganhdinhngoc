@@ -27,7 +27,7 @@ export class AIEvaluator {
         if (!tile || !prop) return 0;
 
         let baseValue = tile.price;
-        if (prop.isMortgaged) baseValue = prop.mortgageValue;
+        if (prop.isMortgaged) baseValue = tile.mortgageValue;
 
         const groupWeight = this.GROUP_IMPORTANCE[tile.group] || 1.0;
         let strategicValue = baseValue * groupWeight;

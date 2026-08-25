@@ -1,5 +1,5 @@
 // js/game.js
-// Vòng Lặp Trò Chơi Cốt Lõi (Core Game Loop & Controller)
+// Vòng Lặp Trò Chơi Cốt Lõi (Core Game Loop, Thông Báo OK, Hồ Sơ Người Chơi)
 
 import { state } from './state.js';
 import { sound } from './audio.js';
@@ -21,7 +21,12 @@ export class GameEngine {
     init() {
         this.cacheDOMElements();
         this.bindEvents();
-        board.init('monopoly-board', (tileId) => this.showTileDetailsModal(tileId));
+        board.init(
+            'monopoly-board', 
+            (tileId) => this.showTileDetailsModal(tileId),
+            (playerId) => this.showPlayerProfileModal(playerId)
+        );
+        this.initDraggableModals();
         this.updateHUD();
     }
 
@@ -53,6 +58,86 @@ export class GameEngine {
         }
 
         window.addEventListener('monopoly:hud_update', () => this.updateHUD());
+    }
+
+    // Khởi tạo tính năng kéo thả (Draggable) cho tất cả các modal hộp thoại
+    initDraggableModals() {
+        const dialogs = [
+            { dialog: document.querySelector('#manage-modal .modal-dialog'), header: document.querySelector('#manage-modal .modal-header') },
+            { dialog: document.querySelector('#trade-modal .modal-dialog'), header: document.querySelector('#trade-modal .modal-header') },
+            { dialog: document.querySelector('#player-profile-modal .modal-dialog'), header: document.querySelector('#player-profile-modal .modal-header') },
+            { dialog: document.querySelector('#deed-modal .modal-dialog'), header: document.querySelector('#deed-modal .modal-header') },
+            { dialog: document.querySelector('#buy-property-modal .modal-dialog'), header: document.querySelector('#buy-property-modal .modal-header') }
+        ];
+
+        dialogs.forEach(item => {
+            if (item.dialog && item.header) {
+                this.makeElementDraggable(item.dialog, item.header);
+            }
+        });
+    }
+
+    makeElementDraggable(element, handle) {
+        let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+
+        handle.onmousedown = (e) => {
+            if (e.target.closest('.modal-close-btn') || e.target.closest('button')) return;
+            e.preventDefault();
+            pos3 = e.clientX;
+            pos4 = e.clientY;
+            document.onmouseup = closeDragElement;
+            document.onmousemove = elementDrag;
+        };
+
+        const elementDrag = (e) => {
+            e.preventDefault();
+            pos1 = pos3 - e.clientX;
+            pos2 = pos4 - e.clientY;
+            pos3 = e.clientX;
+            pos4 = e.clientY;
+
+            const newTop = element.offsetTop - pos2;
+            const newLeft = element.offsetLeft - pos1;
+
+            element.style.position = 'absolute';
+            element.style.top = `${newTop}px`;
+            element.style.left = `${newLeft}px`;
+            element.style.margin = '0';
+        };
+
+        const closeDragElement = () => {
+            document.onmouseup = null;
+            document.onmousemove = null;
+        };
+    }
+
+    // Hiển thị Thông Báo Game tùy chỉnh có nút OK
+    showGameAlert(title, message, icon = 'fa-solid fa-bell', type = 'info') {
+        return new Promise(resolve => {
+            const alertModal = document.getElementById('game-alert-modal');
+            const alertTitle = document.getElementById('alert-modal-title');
+            const alertMessage = document.getElementById('alert-modal-message');
+            const alertIcon = document.getElementById('alert-modal-icon');
+            const okBtn = document.getElementById('alert-modal-ok-btn');
+
+            if (alertTitle) alertTitle.textContent = title;
+            if (alertMessage) alertMessage.innerHTML = message;
+            if (alertIcon) {
+                alertIcon.className = `${icon} alert-big-icon`;
+                alertIcon.style.color = (type === 'success') ? '#10B981' : ((type === 'danger') ? '#EF4444' : '#3B82F6');
+            }
+
+            if (alertModal) alertModal.classList.add('active');
+
+            const handler = () => {
+                sound.playClick();
+                if (alertModal) alertModal.classList.remove('active');
+                if (okBtn) okBtn.removeEventListener('click', handler);
+                resolve();
+            };
+
+            if (okBtn) okBtn.onclick = handler;
+        });
     }
 
     // Bắt đầu game mới
@@ -129,6 +214,7 @@ export class GameEngine {
                 player.jailTurns = 0;
                 sound.playUnjail();
                 state.addLog(`<strong>${player.name}</strong> đổ được xúc xắc ĐÔI (${rollResult.die1}-${rollResult.die2}) và thoát khỏi Tù!`, 'success', player.id);
+                await this.showGameAlert('THOÁT TÙ THÀNH CÔNG!', `Bạn đã đổ được xúc xắc Đôi (${rollResult.die1} - ${rollResult.die2}) và được tự do di chuyển!`, 'fa-solid fa-door-open', 'success');
             } else {
                 player.jailTurns++;
                 if (player.jailTurns >= 3) {
@@ -136,9 +222,11 @@ export class GameEngine {
                     player.inJail = false;
                     player.jailTurns = 0;
                     sound.playUnjail();
-                    state.addLog(`<strong>${player.name}</strong> đã ở tù 3 lượt, phải nộp phạt $50 và được đi tiếp.`, 'warning', player.id);
+                    state.addLog(`<strong>${player.name}</strong> đã ở tù 3 lượt, nộp phạt $50 và được đi tiếp.`, 'warning', player.id);
+                    await this.showGameAlert('HẾT HẠN Ở TÙ', `Bạn đã ở tù đủ 3 lượt, phải nộp phạt bảo lãnh $50 và tiến bước.`, 'fa-solid fa-receipt', 'warning');
                 } else {
                     state.addLog(`<strong>${player.name}</strong> không đổ được đôi (Lần ${player.jailTurns}/3) và tiếp tục ở lại trong Tù.`, 'info', player.id);
+                    await this.showGameAlert('KHÔNG ĐỔ ĐƯỢC ĐÔI', `Bạn đổ được ${rollResult.die1} và ${rollResult.die2} (Lần ${player.jailTurns}/3). Vẫn phải ở lại trong Tù!`, 'fa-solid fa-lock', 'danger');
                     this.isProcessing = false;
                     state.turnPhase = 'MANAGE_OR_END';
                     this.updateControlsState();
@@ -158,6 +246,7 @@ export class GameEngine {
                 player.stats.timesInJail++;
                 board.updatePlayerTokens();
                 sound.playJail();
+                await this.showGameAlert('BỊ BẮT VÀO TÙ!', `Bạn đã đổ đôi 3 lần liên tiếp và bị cảnh sát giải thẳng vào Tù!`, 'fa-solid fa-handcuffs', 'danger');
                 this.isProcessing = false;
                 this.endTurn();
                 return;
@@ -174,6 +263,7 @@ export class GameEngine {
             player.money += 200;
             sound.playBuy();
             state.addLog(`<strong>${player.name}</strong> đi qua ô Bắt Đầu (GO) và nhận $200!`, 'success', player.id);
+            await this.showGameAlert('QUA Ô BẮT ĐẦU (GO)!', `Bạn vừa hoàn thành một vòng bàn cờ và nhận <strong>+$200</strong> từ Ngân Hàng!`, 'fa-solid fa-money-bill-trend-up', 'success');
         }
 
         await board.animatePlayerMove(player.id, oldPos, newPos, state.gameSpeed);
@@ -196,7 +286,7 @@ export class GameEngine {
     }
 
     // Xử lý nộp phạt hoặc dùng thẻ để ra tù ngay
-    handleHumanLeaveJail() {
+    async handleHumanLeaveJail() {
         const player = state.getActivePlayer();
         if (!player || !player.inJail) return;
 
@@ -206,14 +296,16 @@ export class GameEngine {
             player.jailTurns = 0;
             sound.playUnjail();
             state.addLog(`<strong>${player.name}</strong> đã sử dụng Thẻ Ra Tù Miễn Phí.`, 'success', player.id);
+            await this.showGameAlert('RA TÙ THÀNH CÔNG', 'Bạn đã sử dụng Thẻ Ra Tù Miễn Phí và được tự do!', 'fa-solid fa-id-card', 'success');
         } else if (player.money >= 50) {
             player.money -= 50;
             player.inJail = false;
             player.jailTurns = 0;
             sound.playUnjail();
             state.addLog(`<strong>${player.name}</strong> đã nộp $50 tiền bảo lãnh để ra tù.`, 'warning', player.id);
+            await this.showGameAlert('RA TÙ THÀNH CÔNG', 'Bạn đã nộp $50 tiền bảo lãnh để ra tù!', 'fa-solid fa-key', 'success');
         } else {
-            alert('Bạn không đủ $50 tiền mặt để ra tù!');
+            await this.showGameAlert('KHÔNG ĐỦ TIỀN', 'Bạn không có đủ $50 tiền mặt để bảo lãnh ra tù!', 'fa-solid fa-circle-xmark', 'danger');
             return;
         }
 
@@ -248,6 +340,9 @@ export class GameEngine {
             case 'TAX': {
                 sound.playRent();
                 state.addLog(`<strong>${player.name}</strong> phải nộp thuế $${tile.taxAmount} cho Ngân Hàng.`, 'danger', player.id);
+                if (!player.isAI) {
+                    await this.showGameAlert('NỘP THUẾ', `Bạn đã đáp xuống ô <strong>${tile.name}</strong> và phải nộp phạt <strong>-$${tile.taxAmount}</strong> cho Ngân Hàng!`, 'fa-solid fa-receipt', 'danger');
+                }
                 await this.deductMoneyOrHandleDebt(player, tile.taxAmount, null);
                 break;
             }
@@ -270,13 +365,15 @@ export class GameEngine {
                 board.updatePlayerTokens();
                 sound.playJail();
                 state.addLog(`<strong>${player.name}</strong> bị cảnh sát bắt và giải thẳng vào Tù!`, 'danger', player.id);
+                if (!player.isAI) {
+                    await this.showGameAlert('VÀO TÙ NGAY', `Bạn đã đáp vào ô "Vào Tù Ngay" và bị giải thẳng vào Tù!`, 'fa-solid fa-handcuffs', 'danger');
+                }
                 break;
             }
 
             case 'GO':
             case 'JAIL':
             case 'PARKING':
-                // Không có phí phạt đặc biệt
                 break;
         }
 
@@ -286,7 +383,6 @@ export class GameEngine {
     // Xử lý ô đất chưa có chủ
     async handleUnownedProperty(player, tile) {
         if (player.isAI) {
-            // Quyết định mua của AI
             const shouldBuy = AIDifficulty.shouldBuyProperty(player, tile);
             if (shouldBuy && player.money >= tile.price) {
                 this.buyProperty(player.id, tile.id);
@@ -294,7 +390,6 @@ export class GameEngine {
                 state.addLog(`<strong>${player.name} (AI)</strong> quyết định không mua ô <strong>${tile.name}</strong>.`, 'info', player.id);
             }
         } else {
-            // Người chơi thật: Mở popup xác nhận mua
             await this.promptHumanBuyProperty(player, tile);
         }
     }
@@ -354,6 +449,7 @@ export class GameEngine {
 
         state.addLog(`<strong>${player.name}</strong> đã mua <strong>${tile.name}</strong> với giá $${tile.price}!`, 'success', player.id);
         board.updateTileOwnership(tileId);
+        state.saveToStorage();
         return true;
     }
 
@@ -373,6 +469,10 @@ export class GameEngine {
 
         sound.playRent();
         state.addLog(`<strong>${player.name}</strong> phải trả $${rentAmount} tiền thuê cho <strong>${owner.name}</strong> khi vào <strong>${tile.name}</strong>.`, 'danger', player.id);
+
+        if (!player.isAI) {
+            await this.showGameAlert('TRẢ TIỀN THUÊ', `Bạn đã vào ô <strong>${tile.name}</strong> của <strong>${owner.name}</strong> và phải trả <strong>-$${rentAmount}</strong> tiền thuê!`, 'fa-solid fa-house-user', 'danger');
+        }
 
         await this.deductMoneyOrHandleDebt(player, rentAmount, owner);
     }
@@ -398,7 +498,6 @@ export class GameEngine {
 
         // Có thể cứu vãn bằng cách thế chấp hoặc bán nhà
         if (debtor.isAI) {
-            // AI tự động thế chấp tài sản để trả nợ
             this.autoLiquidateForAI(debtor, amount);
             if (debtor.money >= amount) {
                 debtor.money -= amount;
@@ -409,26 +508,19 @@ export class GameEngine {
                 return false;
             }
         } else {
-            // Người chơi thật: Bắt buộc mở modal Quản lý tài sản để huy động vốn
-            alert(`CẢNH BÁO NỢ: Bạn cần $${amount} nhưng chỉ có $${debtor.money}. Vui lòng bán nhà hoặc thế chấp tài sản để đủ tiền thanh toán!`);
+            await this.showGameAlert('CẢNH BÁO NỢ!', `Bạn cần $${amount} nhưng chỉ có $${debtor.money}. Hãy mở bảng <strong>Quản Lý BĐS</strong> để bán nhà hoặc thế chấp tài sản trả nợ!`, 'fa-solid fa-triangle-exclamation', 'danger');
             manage.open(debtor.id);
-            // Người chơi sẽ phải tự xoay xở và đóng modal
             return true;
         }
     }
 
-    // AI tự động giải cứu dòng tiền khi bị thiếu nợ
     autoLiquidateForAI(player, requiredAmount) {
         const owned = state.getPlayerProperties(player.id);
-
-        // 1. Bán nhà trước
         for (const prop of owned) {
             while (prop.houses > 0 && player.money < requiredAmount) {
                 manage.sellHouse(player.id, prop.id);
             }
         }
-
-        // 2. Thế chấp bất động sản nếu vẫn thiếu tiền
         for (const prop of owned) {
             if (!prop.isMortgaged && player.money < requiredAmount) {
                 manage.mortgageProperty(player.id, prop.id);
@@ -436,15 +528,13 @@ export class GameEngine {
         }
     }
 
-    // Xử lý tuyên bố Phá sản
     declareBankruptcy(debtor, creditor = null) {
         debtor.bankrupt = true;
         debtor.money = 0;
         sound.playBankruptcy();
 
         if (creditor) {
-            state.addLog(`🚨 <strong>${debtor.name}</strong> đã PHÁ SẢN trước <strong>${creditor.name}</strong>! Toàn bộ tài sản được chuyển giao cho ${creditor.name}.`, 'danger', debtor.id);
-            // Chuyển toàn bộ tài sản cho chủ nợ
+            state.addLog(`🚨 <strong>${debtor.name}</strong> đã PHÁ SẢN trước <strong>${creditor.name}</strong>! Toàn bộ tài sản chuyển cho ${creditor.name}.`, 'danger', debtor.id);
             for (const [tileIdStr, prop] of Object.entries(state.properties)) {
                 if (prop.ownerId === debtor.id) {
                     prop.ownerId = creditor.id;
@@ -453,8 +543,7 @@ export class GameEngine {
             creditor.jailCards += debtor.jailCards;
             debtor.jailCards = 0;
         } else {
-            state.addLog(`🚨 <strong>${debtor.name}</strong> đã PHÁ SẢN trước Ngân Hàng! Toàn bộ tài sản được trả về cho Ngân Hàng.`, 'danger', debtor.id);
-            // Trả toàn bộ tài sản về Ngân hàng (reset về đất trống)
+            state.addLog(`🚨 <strong>${debtor.name}</strong> đã PHÁ SẢN trước Ngân Hàng!`, 'danger', debtor.id);
             for (const [tileIdStr, prop] of Object.entries(state.properties)) {
                 if (prop.ownerId === debtor.id) {
                     prop.ownerId = null;
@@ -474,14 +563,12 @@ export class GameEngine {
         }
     }
 
-    // Kết thúc lượt đi hiện tại
     endTurn() {
         if (state.turnPhase === 'GAME_OVER') return;
         state.nextTurn();
         this.checkTurnStart();
     }
 
-    // Cập nhật trạng thái hiển thị của các nút điều khiển
     updateControlsState() {
         const active = state.getActivePlayer();
         const isHumanTurn = active && !active.isAI && !active.bankrupt;
@@ -517,7 +604,6 @@ export class GameEngine {
         if (this.actionButtons.leaveJailBtn) this.actionButtons.leaveJailBtn.disabled = true;
     }
 
-    // Cập nhật giao diện HUD danh sách người chơi
     updateHUD() {
         const hudListEl = document.getElementById('players-hud-list');
         if (!hudListEl) return;
@@ -528,6 +614,7 @@ export class GameEngine {
             const isActive = (state.currentTurnPlayerId === player.id && !player.bankrupt);
             card.className = `player-hud-card ${isActive ? 'active-turn' : ''} ${player.bankrupt ? 'bankrupt' : ''}`;
             card.style.borderLeftColor = player.token.color;
+            card.title = 'Nhấn để xem toàn bộ hồ sơ & tài sản';
 
             const owned = state.getPlayerProperties(player.id);
             const netWorth = state.calculateNetWorth(player.id);
@@ -553,11 +640,99 @@ export class GameEngine {
                 ` : ''}
             `;
 
+            card.onclick = () => {
+                sound.playClick();
+                this.showPlayerProfileModal(player.id);
+            };
+
             hudListEl.appendChild(card);
         });
 
-        // Cập nhật vị trí token trên bàn cờ
         board.updatePlayerTokens();
+    }
+
+    // Modal Hồ Sơ Chi Tiết & Toàn Bộ Tài Sản Người Chơi
+    showPlayerProfileModal(playerId) {
+        const player = state.getPlayer(playerId);
+        const modalEl = document.getElementById('player-profile-modal');
+        if (!player || !modalEl) return;
+
+        const avatarEl = document.getElementById('profile-avatar-circle');
+        const nameEl = document.getElementById('profile-player-name');
+        const typeEl = document.getElementById('profile-player-type');
+        const statusEl = document.getElementById('profile-player-status');
+
+        const moneyStat = document.getElementById('profile-stat-money');
+        const netStat = document.getElementById('profile-stat-net');
+        const propsStat = document.getElementById('profile-stat-props');
+        const jailCardsStat = document.getElementById('profile-stat-jailcards');
+        const rentRecStat = document.getElementById('profile-stat-rent-rec');
+        const rentPaidStat = document.getElementById('profile-stat-rent-paid');
+
+        const propsContainer = document.getElementById('profile-props-container');
+
+        if (avatarEl) {
+            avatarEl.style.backgroundColor = player.token.color;
+            avatarEl.innerHTML = `<i class="${player.token.icon}"></i>`;
+        }
+        if (nameEl) nameEl.textContent = player.name;
+        if (typeEl) {
+            typeEl.innerHTML = player.isAI 
+                ? `<span class="ai-badge diff-${player.difficulty}">${player.difficulty.toUpperCase()} AI</span>` 
+                : `<span class="human-badge">NGƯỜI THẬT</span>`;
+        }
+        if (statusEl) {
+            if (player.bankrupt) statusEl.innerHTML = '<span class="status-badge" style="background:#EF4444; color:#FFF; padding:2px 8px; border-radius:4px;">ĐÃ PHÁ SẢN</span>';
+            else if (player.inJail) statusEl.innerHTML = '<span class="status-badge" style="background:#EA580C; color:#FFF; padding:2px 8px; border-radius:4px;">ĐANG TRONG TÙ</span>';
+            else statusEl.innerHTML = '<span class="status-badge" style="background:#10B981; color:#FFF; padding:2px 8px; border-radius:4px;">ĐANG HOẠT ĐỘNG</span>';
+        }
+
+        const owned = state.getPlayerProperties(player.id);
+        let totalHouses = 0;
+        let totalHotels = 0;
+        owned.forEach(p => {
+            if (p.houses >= 1 && p.houses <= 4) totalHouses += p.houses;
+            else if (p.houses === 5) totalHotels++;
+        });
+
+        if (moneyStat) moneyStat.textContent = `$${player.money}`;
+        if (netStat) netStat.textContent = `$${state.calculateNetWorth(player.id)}`;
+        if (propsStat) propsStat.textContent = `${owned.length} ô (${totalHouses} nhà, ${totalHotels} KS)`;
+        if (jailCardsStat) jailCardsStat.textContent = `${player.jailCards} thẻ`;
+        if (rentRecStat) rentRecStat.textContent = `+$${player.stats.rentReceived}`;
+        if (rentPaidStat) rentPaidStat.textContent = `-$${player.stats.rentPaid}`;
+
+        if (propsContainer) {
+            propsContainer.innerHTML = '';
+            if (owned.length === 0) {
+                propsContainer.innerHTML = '<div style="text-align: center; padding: 20px; color: var(--text-muted);">Người chơi chưa sở hữu bất động sản nào.</div>';
+            } else {
+                owned.forEach(prop => {
+                    const tile = state.getTile(prop.id);
+                    const chip = document.createElement('div');
+                    chip.className = 'profile-prop-chip';
+
+                    let buildLabel = 'Đất trống';
+                    if (prop.houses >= 1 && prop.houses <= 4) buildLabel = `🏠 ${prop.houses} Nhà`;
+                    else if (prop.houses === 5) buildLabel = `🏨 Khách Sạn`;
+
+                    chip.innerHTML = `
+                        <div class="profile-prop-left">
+                            <span class="prop-tag-dot" style="background-color: ${COLOR_GROUPS[tile.group]?.hex || '#4B5563'};"></span>
+                            <strong>${tile.name}</strong>
+                            ${prop.isMortgaged ? '<span class="status-badge mortgage">THẾ CHẤP</span>' : ''}
+                        </div>
+                        <div class="profile-prop-right">
+                            ${tile.type === 'PROPERTY' ? `<span>${buildLabel}</span>` : ''}
+                            <span style="color: #34D399; font-weight: 700;">Thuê: $${state.calculateRent(tile.id)}</span>
+                        </div>
+                    `;
+                    propsContainer.appendChild(chip);
+                });
+            }
+        }
+
+        modalEl.classList.add('active');
     }
 
     // Hiển thị chi tiết ô cờ khi bấm vào

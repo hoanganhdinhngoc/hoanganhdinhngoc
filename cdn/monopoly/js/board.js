@@ -10,11 +10,13 @@ export class BoardRenderer {
         this.boardContainer = null;
         this.tokensContainer = null;
         this.onTileClickCallback = null;
+        this.onPlayerClickCallback = null;
     }
 
-    init(containerId = 'monopoly-board', onTileClick = null) {
+    init(containerId = 'monopoly-board', onTileClick = null, onPlayerClick = null) {
         this.boardContainer = document.getElementById(containerId);
         this.onTileClickCallback = onTileClick;
+        this.onPlayerClickCallback = onPlayerClick;
         if (!this.boardContainer) return;
         this.renderTiles();
     }
@@ -38,16 +40,16 @@ export class BoardRenderer {
                 <div class="dice-container">
                     <div class="die-3d" id="die-1">
                         <div class="face front"><span></span></div>
-                        <div class="face back"><span></span><span></span></div>
-                        <div class="face right"><span></span><span></span><span></span></div>
+                        <div class="face right"><span></span><span></span></div>
+                        <div class="face back"><span></span><span></span><span></span></div>
                         <div class="face left"><span></span><span></span><span></span><span></span></div>
                         <div class="face top"><span></span><span></span><span></span><span></span><span></span></div>
                         <div class="face bottom"><span></span><span></span><span></span><span></span><span></span><span></span></div>
                     </div>
                     <div class="die-3d" id="die-2">
                         <div class="face front"><span></span></div>
-                        <div class="face back"><span></span><span></span></div>
-                        <div class="face right"><span></span><span></span><span></span></div>
+                        <div class="face right"><span></span><span></span></div>
+                        <div class="face back"><span></span><span></span><span></span></div>
                         <div class="face left"><span></span><span></span><span></span><span></span></div>
                         <div class="face top"><span></span><span></span><span></span><span></span><span></span></div>
                         <div class="face bottom"><span></span><span></span><span></span><span></span><span></span><span></span></div>
@@ -86,7 +88,9 @@ export class BoardRenderer {
             // Xây dựng nội dung từng ô
             tileEl.innerHTML = this.buildTileHTML(tile);
 
-            tileEl.addEventListener('click', () => {
+            tileEl.addEventListener('click', (e) => {
+                // Nếu click vào token thì không mở modal ô
+                if (e.target.closest('.player-token')) return;
                 sound.playClick();
                 if (this.onTileClickCallback) {
                     this.onTileClickCallback(tile.id);
@@ -222,8 +226,19 @@ export class BoardRenderer {
                 const tokenEl = document.createElement('div');
                 tokenEl.className = `player-token token-${player.id} ${state.currentTurnPlayerId === player.id ? 'active-turn' : ''}`;
                 tokenEl.style.backgroundColor = player.token.color;
-                tokenEl.title = `${player.name} ($${player.money})`;
+                tokenEl.title = `Nhấn để xem thông tin: ${player.name} ($${player.money})`;
                 tokenEl.innerHTML = `<i class="${player.token.icon}"></i>`;
+                tokenEl.style.pointerEvents = 'auto';
+                tokenEl.style.cursor = 'pointer';
+
+                tokenEl.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    sound.playClick();
+                    if (this.onPlayerClickCallback) {
+                        this.onPlayerClickCallback(player.id);
+                    }
+                });
+
                 slot.appendChild(tokenEl);
             }
         });
