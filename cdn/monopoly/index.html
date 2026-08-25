@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cờ Tỷ Phú - Classic Monopoly Web Game</title>
+    
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- Game Stylesheets -->
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/board.css">
+    <link rel="stylesheet" href="css/components.css">
+    <link rel="stylesheet" href="css/animations.css">
+</head>
+<body>
+
+    <!-- ==================================================== -->
+    <!-- 1. MÀN HÌNH THIẾT LẬP NGƯỜI CHƠI (SETUP SCREEN) -->
+    <!-- ==================================================== -->
+    <div id="setup-screen" class="screen-container">
+        <div class="setup-box">
+            <div class="setup-header">
+                <div class="logo-badge"><i class="fa-solid fa-dice"></i> MONOPOLY CLASSIC</div>
+                <h1>CỜ TỶ PHÚ VIỆT NAM</h1>
+                <p>Chọn từ 2 đến 6 người chơi, tùy chỉnh chế độ đấu với AI từ Tân Thủ đến Bậc Thầy thao túng tâm lý!</p>
+            </div>
+
+            <!-- Danh sách người chơi trong setup -->
+            <div id="setup-players-list" class="setup-players-container"></div>
+
+            <div class="setup-actions-bar">
+                <button id="btn-add-player" class="btn btn-secondary">
+                    <i class="fa-solid fa-user-plus"></i> Thêm Người Chơi
+                </button>
+                <div style="display: flex; gap: 12px;">
+                    <button id="btn-resume-game" class="btn btn-secondary" style="display: none;">
+                        <i class="fa-solid fa-rotate-left"></i> Tiếp Tục Game Cũ
+                    </button>
+                    <button id="btn-start-game" class="btn btn-primary">
+                        <i class="fa-solid fa-play"></i> BẮT ĐẦU CHƠI
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================================================== -->
+    <!-- 2. MÀN HÌNH BÀN CỜ CHÍNH (GAME SCREEN) -->
+    <!-- ==================================================== -->
+    <div id="game-screen" class="game-layout hidden">
+        
+        <!-- Khu vực hiển thị Bàn cờ 11x11 -->
+        <main class="game-main-area">
+            <div class="board-wrapper">
+                <div id="monopoly-board" class="monopoly-board"></div>
+            </div>
+        </main>
+
+        <!-- Thanh bên Sidebar (HUD, Điều Khiển, Nhật Ký) -->
+        <aside class="game-sidebar">
+            <header class="sidebar-header">
+                <h2><i class="fa-solid fa-gem" style="color: #F59E0B;"></i> BẢNG ĐIỀU KHIỂN</h2>
+                <div class="header-tools">
+                    <!-- Tốc độ game -->
+                    <div class="speed-control-group">
+                        <button class="btn-speed active" data-speed="normal">1x</button>
+                        <button class="btn-speed" data-speed="fast">2x</button>
+                        <button class="btn-speed" data-speed="instant">MAX</button>
+                    </div>
+                    <!-- Bật/tắt âm thanh -->
+                    <button id="btn-toggle-sound" class="tool-btn" title="Bật/Tắt Âm Thanh">
+                        <i class="fa-solid fa-volume-high"></i>
+                    </button>
+                    <!-- Luật chơi -->
+                    <button id="btn-rules-help" class="tool-btn" title="Luật Chơi & Hướng Dẫn">
+                        <i class="fa-solid fa-circle-question"></i>
+                    </button>
+                    <!-- Thoát ra menu -->
+                    <button id="btn-restart-game" class="tool-btn" title="Thoát Về Menu">
+                        <i class="fa-solid fa-right-from-bracket"></i>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Danh sách HUD Người Chơi -->
+            <div id="players-hud-list" class="players-hud-container"></div>
+
+            <!-- Bảng Nút Hành Động -->
+            <div class="game-controls-bar">
+                <div class="primary-actions-row">
+                    <button id="btn-roll-dice" class="btn btn-primary">
+                        <i class="fa-solid fa-dice"></i> ĐỔ XÚC XẮC
+                    </button>
+                    <button id="btn-leave-jail" class="btn btn-secondary" style="display: none;">
+                        <i class="fa-solid fa-key"></i> Ra Tù ($50/Thẻ)
+                    </button>
+                </div>
+                <div class="secondary-actions-row">
+                    <button id="btn-manage-props" class="btn btn-secondary btn-sm">
+                        <i class="fa-solid fa-city"></i> Quản Lý BĐS
+                    </button>
+                    <button id="btn-open-trade" class="btn btn-secondary btn-sm">
+                        <i class="fa-solid fa-handshake"></i> Giao Dịch
+                    </button>
+                    <button id="btn-end-turn" class="btn btn-success btn-sm" disabled>
+                        <i class="fa-solid fa-forward-step"></i> Xong Lượt
+                    </button>
+                </div>
+            </div>
+
+            <!-- Nhật Ký Game -->
+            <section class="game-log-section">
+                <div class="log-header">
+                    <i class="fa-solid fa-clock-rotate-left"></i> Nhật Ký Hoạt Động
+                </div>
+                <div id="game-logs-container" class="game-logs-container"></div>
+            </section>
+        </aside>
+    </div>
+
+    <!-- ==================================================== -->
+    <!-- 3. CÁC MODAL HỘP THOẠI TƯƠNG TÁC (INTERACTIVE MODALS) -->
+    <!-- ==================================================== -->
+
+    <!-- Modal 1: Chi Tiết Thẻ Bìa Đất (Property Deed Modal) -->
+    <div id="deed-modal" class="modal-overlay">
+        <div class="modal-dialog">
+            <div class="modal-body" style="padding: 16px;">
+                <div class="deed-card-box">
+                    <div id="deed-modal-header" class="deed-header-bar">
+                        <h3 id="deed-modal-title">TÊN BẤT ĐỘNG SẢN</h3>
+                    </div>
+                    <div id="deed-modal-content"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="deed-modal-close-btn" class="btn btn-secondary">Đóng</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal 2: Xác Nhận Mua Bất Động Sản (Buy Property Modal) -->
+    <div id="buy-property-modal" class="modal-overlay">
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-cart-plus" style="color: #10B981;"></i> Mua Bất Động Sản</h3>
+            </div>
+            <div class="modal-body">
+                <p style="margin-bottom: 12px; color: var(--text-secondary);">Bạn đã đáp xuống ô đất trống chưa có chủ sở hữu:</p>
+                <div style="background-color: var(--bg-surface-elevated); padding: 14px; border-radius: var(--radius-md); text-align: center; margin-bottom: 16px;">
+                    <span id="buy-modal-prop-group" style="display: inline-block; font-size: 11px; font-weight: 800; padding: 2px 10px; border-radius: 20px; color: #FFF; margin-bottom: 8px;">NHÓM MÀU</span>
+                    <h2 id="buy-modal-prop-name" style="font-size: 20px; color: #FFF; margin-bottom: 4px;">Đại Lộ Boardwalk</h2>
+                    <div id="buy-modal-prop-price" style="font-size: 24px; font-weight: 900; color: #34D399;">$400</div>
+                </div>
+                <p style="font-size: 13px; color: var(--text-muted); text-align: center;">Bạn có muốn mua bất động sản này từ Ngân Hàng không?</p>
+            </div>
+            <div class="modal-footer">
+                <button id="buy-modal-btn-pass" class="btn btn-secondary">Bỏ Qua</button>
+                <button id="buy-modal-btn-confirm" class="btn btn-success"><i class="fa-solid fa-check"></i> Mua Ngay</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal 3: Rút Thẻ Khí Vận & Cơ Hội (Card Flip Modal) -->
+    <div id="card-modal" class="modal-overlay">
+        <div class="modal-dialog" style="max-width: 440px;">
+            <div class="modal-header" style="background-color: rgba(255, 255, 255, 0.05);">
+                <span id="card-modal-header-type" style="font-size: 11px; font-weight: 800; padding: 3px 8px; border-radius: 4px; color: #FFF;">THẺ BÀI</span>
+            </div>
+            <div class="modal-body">
+                <div class="card-modal-content">
+                    <i id="card-modal-icon" class="fa-solid fa-question card-big-icon"></i>
+                    <h3 id="card-modal-title" class="card-modal-title">Tiêu Đề Thẻ</h3>
+                    <p id="card-modal-text" class="card-modal-text">Nội dung chi tiết của thẻ bài rút được.</p>
+                </div>
+            </div>
+            <div class="modal-footer" style="justify-content: center;">
+                <button id="card-modal-ok-btn" class="btn btn-primary" style="min-width: 140px;">Đồng Ý</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal 4: Trung Tâm Giao Dịch Đa Bên (Trade Hub Modal) -->
+    <div id="trade-modal" class="modal-overlay">
+        <div class="modal-dialog trade-modal-dialog">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-handshake" style="color: #8B5CF6;"></i> Trung Tâm Giao Dịch Tài Sản</h3>
+                <button class="modal-close-btn modal-close-trigger"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <div style="margin-bottom: 14px; display: flex; align-items: center; gap: 10px;">
+                    <label style="font-size: 13px; font-weight: 700; color: var(--text-secondary);">Giao dịch với:</label>
+                    <select id="trade-receiver-select" style="flex: 1;"></select>
+                </div>
+                <div class="trade-columns-grid">
+                    <!-- Bên đề xuất (Sender) -->
+                    <div class="trade-col">
+                        <div class="trade-col-header">
+                            <span id="trade-sender-name" class="trade-party-name">Bạn</span>
+                            <span id="trade-sender-balance" class="trade-party-balance">$1500</span>
+                        </div>
+                        <div class="trade-cash-field">
+                            <label>Tiền mặt bạn đưa ra ($):</label>
+                            <input type="number" id="trade-sender-cash" min="0" value="0">
+                        </div>
+                        <label style="font-size: 11px; color: var(--text-muted); text-transform: uppercase;">Bất động sản bạn chuyển đi:</label>
+                        <div id="trade-sender-props" class="trade-props-box"></div>
+                    </div>
+                    <!-- Bên nhận đề xuất (Receiver) -->
+                    <div class="trade-col">
+                        <div class="trade-col-header">
+                            <span id="trade-receiver-name" class="trade-party-name">Đối tác</span>
+                            <span id="trade-receiver-balance" class="trade-party-balance">$1500</span>
+                        </div>
+                        <div class="trade-cash-field">
+                            <label>Tiền mặt bạn muốn nhận ($):</label>
+                            <input type="number" id="trade-receiver-cash" min="0" value="0">
+                        </div>
+                        <label style="font-size: 11px; color: var(--text-muted); text-transform: uppercase;">Bất động sản bạn muốn nhận:</label>
+                        <div id="trade-receiver-props" class="trade-props-box"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary modal-close-trigger">Hủy Bỏ</button>
+                <button id="trade-submit-btn" class="btn btn-primary"><i class="fa-solid fa-paper-plane"></i> Gửi Đề Xuất Giao Dịch</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal 5: Quản Lý Bất Động Sản (Manage Modal) -->
+    <div id="manage-modal" class="modal-overlay">
+        <div class="modal-dialog manage-modal-dialog">
+            <div class="modal-header">
+                <h3 id="manage-modal-title"><i class="fa-solid fa-city" style="color: #3B82F6;"></i> Quản Lý Bất Động Sản</h3>
+                <button class="modal-close-btn modal-close-trigger"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="manage-summary-bar">
+                    <div>Tiền mặt hiện có: <strong id="manage-modal-balance" style="color: #34D399;">$1500</strong></div>
+                    <div>Tổng tài sản ròng: <strong id="manage-modal-networth" style="color: #60A5FA;">$2500</strong></div>
+                </div>
+                <div id="manage-properties-list"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary modal-close-trigger">Hoàn Tất</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal 6: Vinh Danh Chiến Thắng (Victory Modal) -->
+    <div id="victory-modal" class="modal-overlay">
+        <div class="modal-dialog" style="text-align: center; max-width: 480px;">
+            <div class="modal-body" style="padding: 36px 24px;">
+                <i class="fa-solid fa-trophy victory-icon-trophy"></i>
+                <h1 style="font-size: 28px; font-weight: 900; color: #FFF; margin-bottom: 8px;">CHIẾN THẮNG HOÀN TOÀN!</h1>
+                <h2 id="victory-winner-name" style="font-size: 20px; color: #34D399; margin-bottom: 20px;">Người chơi 1</h2>
+                <div id="victory-stats-summary" style="background-color: var(--bg-surface-elevated); padding: 16px; border-radius: var(--radius-md); font-size: 14px; text-align: left; margin-bottom: 24px; line-height: 1.8;"></div>
+                <button id="victory-play-again-btn" class="btn btn-primary" style="width: 100%;">
+                    <i class="fa-solid fa-rotate-right"></i> Chơi Ván Mới
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal 7: Luật Chơi & Cấp Độ AI (Rules & Help Modal) -->
+    <div id="rules-modal" class="modal-overlay">
+        <div class="modal-dialog" style="max-width: 640px;">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-book" style="color: #F59E0B;"></i> Hướng Dẫn & Luật Chơi Monopoly</h3>
+                <button id="rules-modal-close" class="modal-close-btn"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body" style="font-size: 14px; line-height: 1.6; color: var(--text-secondary);">
+                <h4 style="color: #FFF; margin-bottom: 6px;">1. Mục Tiêu Trò Chơi</h4>
+                <p style="margin-bottom: 12px;">Mua bất động sản, xây dựng nhà và khách sạn để thu tiền thuê, đẩy tất cả các đối thủ còn lại vào cảnh phá sản.</p>
+
+                <h4 style="color: #FFF; margin-bottom: 6px;">2. Quy Tắc Xây Dựng & Thế Chấp</h4>
+                <ul style="margin-left: 20px; margin-bottom: 12px;">
+                    <li>Khi sở hữu trọn bộ nhóm màu (Monopoly), tiền thuê đất trống tăng gấp đôi và được phép xây nhà.</li>
+                    <li><strong>Luật Xây Đồng Đều:</strong> Không được xây căn thứ 2 trên 1 ô nếu các ô cùng màu chưa có 1 căn. Tối đa 4 nhà được nâng cấp lên 1 Khách sạn.</li>
+                    <li>Có thể thế chấp tài sản để nhận 50% giá trị, chuộc lại với phí lãi 10%. Tài sản thế chấp không thu được tiền thuê.</li>
+                </ul>
+
+                <h4 style="color: #FFF; margin-bottom: 6px;">3. Các Cấp Độ AI Đối Thủ</h4>
+                <ul style="margin-left: 20px;">
+                    <li><strong>Easy (Tân thủ):</strong> Quyết định ngẫu nhiên, mua bừa bãi, không có chiến thuật dự phòng.</li>
+                    <li><strong>Normal (Tiêu chuẩn):</strong> Mua và xây dựng khi đủ ngân sách, giao dịch theo giá trị sòng phẳng.</li>
+                    <li><strong>Hard (Chiến lược gia):</strong> Ưu tiên nhóm màu vàng (Cam, Đỏ, Ga Xe Lửa), xây 3 nhà thần tốc, quản lý quỹ rủi ro chặt chẽ.</li>
+                    <li><strong>Very Hard (Bậc thầy):</strong> Phân tích xác suất dẫm ô, chủ động đưa đề nghị bẫy giao dịch có lợi, tạo khan hiếm nhà và ép đối thủ phá sản.</li>
+                </ul>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary modal-close-trigger">Đã Hiểu</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script chính -->
+    <script type="module" src="js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,451 @@
+/* css/board.css */
+/* Bàn Cờ 11x11 Monopoly Cổ Điển, Định Vị Token & Nhà/Khách Sạn */
+
+.board-wrapper {
+    position: relative;
+    max-width: 90vh;
+    max-height: 90vh;
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: var(--shadow-board);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+}
+
+.monopoly-board {
+    display: grid;
+    grid-template-columns: 1.5fr repeat(9, 1fr) 1.5fr;
+    grid-template-rows: 1.5fr repeat(9, 1fr) 1.5fr;
+    width: 100%;
+    height: 100%;
+    background-color: var(--bg-board);
+    border: 3px solid #1E293B;
+    position: relative;
+    user-select: none;
+}
+
+/* ==================================================== */
+/* TRUNG TÂM BÀN CỜ (CENTER AREA) */
+/* ==================================================== */
+.board-center {
+    grid-row: 2 / 11;
+    grid-column: 2 / 11;
+    background: radial-gradient(circle at center, #DDF3E1 0%, #CDE6D0 100%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    padding: 24px;
+    position: relative;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.center-branding {
+    text-align: center;
+}
+
+.monopoly-logo-box {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    background: linear-gradient(135deg, #DC2626, #B91C1C);
+    border: 3px solid #FFF;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.25);
+    padding: 8px 28px;
+    border-radius: var(--radius-sm);
+    transform: rotate(-10deg);
+}
+
+.logo-text {
+    font-size: 26px;
+    font-weight: 900;
+    color: #FFF;
+    letter-spacing: 2px;
+    text-shadow: 2px 2px 0px #000;
+}
+
+.logo-sub {
+    font-size: 9px;
+    font-weight: 800;
+    color: #FEF08A;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+}
+
+.decks-visual {
+    display: flex;
+    justify-content: space-around;
+    width: 100%;
+    margin-top: auto;
+}
+
+.card-deck-slot {
+    width: 100px;
+    height: 65px;
+    border-radius: var(--radius-sm);
+    border: 2px dashed rgba(0, 0, 0, 0.3);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    transform: rotate(20deg);
+}
+
+.chance-slot {
+    background-color: rgba(255, 152, 0, 0.2);
+    color: #D97706;
+    border-color: #D97706;
+}
+
+.chest-slot {
+    background-color: rgba(59, 130, 246, 0.2);
+    color: #2563EB;
+    border-color: #2563EB;
+    transform: rotate(-20deg);
+}
+
+/* ==================================================== */
+/* CÁC Ô TRÊN BÀN CỜ (TILES) */
+/* ==================================================== */
+.board-tile {
+    border: 1px solid #1E293B;
+    background-color: #DDF3E1;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    overflow: hidden;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+.board-tile:hover {
+    background-color: #ECFDF5;
+    z-index: 5;
+}
+
+/* Các cạnh của bàn cờ */
+.edge-bottom {
+    flex-direction: column;
+}
+
+.edge-bottom .tile-color-bar {
+    order: 1;
+    height: 20%;
+    width: 100%;
+    border-bottom: 1.5px solid #1E293B;
+}
+
+.edge-top {
+    flex-direction: column;
+}
+
+.edge-top .tile-color-bar {
+    order: 2;
+    height: 20%;
+    width: 100%;
+    border-top: 1.5px solid #1E293B;
+}
+
+.edge-left {
+    flex-direction: row;
+}
+
+.edge-left .tile-color-bar {
+    order: 2;
+    width: 20%;
+    height: 100%;
+    border-left: 1.5px solid #1E293B;
+}
+
+.edge-right {
+    flex-direction: row;
+}
+
+.edge-right .tile-color-bar {
+    order: 1;
+    width: 20%;
+    height: 100%;
+    border-right: 1.5px solid #1E293B;
+}
+
+.tile-color-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    padding: 1px;
+}
+
+.tile-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-around;
+    padding: 2px;
+    text-align: center;
+    color: var(--text-dark);
+}
+
+.tile-name {
+    font-size: 8px;
+    font-weight: 700;
+    line-height: 1.1;
+    text-transform: uppercase;
+}
+
+.tile-price {
+    font-size: 8px;
+    font-weight: 800;
+    color: #1E3A8A;
+}
+
+.tile-header-special {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding-top: 4px;
+    font-size: 14px;
+    color: var(--text-dark);
+}
+
+.chance-header {
+    color: #D97706;
+}
+
+.chest-header {
+    color: #2563EB;
+}
+
+.tax-header {
+    color: #DC2626;
+}
+
+/* ==================================================== */
+/* CÁC Ô GÓC (CORNER TILES) */
+/* ==================================================== */
+.corner-tile {
+    background-color: #E2E8F0;
+}
+
+.corner-content {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 4px;
+    color: var(--text-dark);
+}
+
+.go-corner {
+    background-color: #FEF3C7;
+}
+
+.go-label {
+    font-size: 6px;
+    font-weight: 700;
+    color: #B45309;
+}
+
+.go-title {
+    font-size: 16px;
+    font-weight: 900;
+    color: #DC2626;
+    letter-spacing: 1px;
+}
+
+.go-arrow {
+    font-size: 18px;
+    color: #DC2626;
+    margin-top: 2px;
+}
+
+.jail-corner-grid {
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    grid-template-rows: 2fr 1fr;
+    width: 100%;
+    height: 100%;
+    background-color: #FED7AA;
+}
+
+.in-jail-cell {
+    grid-column: 2 / 3;
+    grid-row: 1 / 2;
+    background-color: #EA580C;
+    color: #FFF;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-size: 7px;
+    font-weight: 800;
+    border: 1px solid #1E293B;
+}
+
+.in-jail-cell i {
+    font-size: 14px;
+    margin-bottom: 2px;
+}
+
+.just-visiting-top {
+    grid-column: 2 / 3;
+    grid-row: 2 / 3;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 7px;
+    font-weight: 800;
+    color: #7C2D12;
+}
+
+.just-visiting-side {
+    grid-column: 1 / 2;
+    grid-row: 1 / 3;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 7px;
+    font-weight: 800;
+    color: #7C2D12;
+    writing-mode: vertical-rl;
+}
+
+.parking-corner {
+    background-color: #E0E7FF;
+}
+
+.go-to-jail-corner {
+    background-color: #FEE2E2;
+}
+
+.corner-title {
+    font-size: 9px;
+    font-weight: 800;
+}
+
+.corner-icon {
+    font-size: 20px;
+    margin: 3px 0;
+}
+
+.corner-sub {
+    font-size: 7px;
+    font-weight: 700;
+    color: var(--text-muted);
+}
+
+/* ==================================================== */
+/* CHỦ SỞ HỮU & CÔNG TRÌNH NHÀ/KHÁCH SẠN */
+/* ==================================================== */
+.owner-indicator {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    color: #FFF;
+    font-size: 8px;
+    border: 1px solid #FFF;
+    box-shadow: var(--shadow-sm);
+    z-index: 3;
+}
+
+.is-mortgaged {
+    opacity: 0.65;
+    background-color: #E2E8F0 !important;
+}
+
+.is-mortgaged::after {
+    content: 'THẾ CHẤP';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) rotate(-30deg);
+    font-size: 7px;
+    font-weight: 900;
+    color: #DC2626;
+    background: rgba(255, 255, 255, 0.85);
+    padding: 1px 3px;
+    border: 1px solid #DC2626;
+    border-radius: 2px;
+    z-index: 4;
+}
+
+.building-slots {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    width: 100%;
+    height: 100%;
+}
+
+.mini-house {
+    width: 6px;
+    height: 6px;
+    background-color: #16A34A;
+    border: 1px solid #14532D;
+    border-radius: 1px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.mini-hotel {
+    width: 12px;
+    height: 7px;
+    background-color: #DC2626;
+    border: 1px solid #7F1D1D;
+    border-radius: 1px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+/* ==================================================== */
+/* TOKEN NGƯỜI CHƠI TRÊN Ô (PLAYER TOKENS) */
+/* ==================================================== */
+.tokens-slot {
+    position: absolute;
+    bottom: 2px;
+    left: 2px;
+    right: 2px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    z-index: 6;
+    pointer-events: none;
+}
+
+.player-token {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #FFF;
+    font-size: 9px;
+    border: 1.5px solid #FFF;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+    transition: transform 0.15s ease;
+}
+
+.player-token.active-turn {
+    animation: tokenPulse 1.2s infinite ease-in-out;
+    z-index: 10;
+}
