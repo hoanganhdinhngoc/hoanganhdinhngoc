@@ -63,15 +63,9 @@
             <header class="sidebar-header">
                 <h2><i class="fa-solid fa-gem" style="color: #F59E0B;"></i> BẢNG ĐIỀU KHIỂN</h2>
                 <div class="header-tools">
-                    <!-- Tốc độ game -->
-                    <div class="speed-control-group">
-                        <button class="btn-speed active" data-speed="normal">1x</button>
-                        <button class="btn-speed" data-speed="fast">2x</button>
-                        <button class="btn-speed" data-speed="instant">MAX</button>
-                    </div>
-                    <!-- Bật/tắt âm thanh -->
-                    <button id="btn-toggle-sound" class="tool-btn" title="Bật/Tắt Âm Thanh">
-                        <i class="fa-solid fa-volume-high"></i>
+                    <!-- Nút Mở Cài Đặt (Settings) -->
+                    <button id="btn-open-settings" class="tool-btn" title="Cài Đặt Game">
+                        <i class="fa-solid fa-gear"></i>
                     </button>
                     <!-- Luật chơi -->
                     <button id="btn-rules-help" class="tool-btn" title="Luật Chơi & Hướng Dẫn">
@@ -242,6 +236,7 @@
                 <p style="font-size: 13px; color: var(--text-muted); text-align: center;">Bạn có muốn mua bất động sản này từ Ngân Hàng không?</p>
             </div>
             <div class="modal-footer">
+                <button id="buy-modal-btn-manage" class="btn btn-secondary" style="margin-right: auto;"><i class="fa-solid fa-city"></i> Quản Lý BĐS</button>
                 <button id="buy-modal-btn-pass" class="btn btn-secondary">Bỏ Qua</button>
                 <button id="buy-modal-btn-confirm" class="btn btn-success"><i class="fa-solid fa-check"></i> Mua Ngay</button>
             </div>
@@ -378,6 +373,48 @@
             </div>
             <div class="modal-footer">
                 <button class="btn btn-primary modal-close-trigger">Đã Hiểu</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Cài Đặt (Settings Modal) -->
+    <div id="settings-modal" class="modal-overlay has-backdrop">
+        <div class="modal-dialog" style="max-width: 480px;">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-gear" style="color: #9CA3AF;"></i> Cài Đặt Trò Chơi</h3>
+                <button class="modal-close-btn modal-close-trigger"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body" style="padding: 20px;">
+                <!-- Cài đặt tốc độ -->
+                <div class="settings-group" style="margin-bottom: 24px;">
+                    <label style="display: block; font-size: 14px; font-weight: 700; color: #FFF; margin-bottom: 12px;"><i class="fa-solid fa-gauge-high"></i> Tốc Độ Trò Chơi</label>
+                    <div class="speed-control-group" style="display: flex; gap: 8px;">
+                        <button class="btn-speed active" data-speed="normal" style="flex: 1; padding: 10px;">1x Normal</button>
+                        <button class="btn-speed" data-speed="fast" style="flex: 1; padding: 10px;">2x Fast</button>
+                        <button class="btn-speed" data-speed="instant" style="flex: 1; padding: 10px;">MAX Instant</button>
+                    </div>
+                </div>
+
+                <!-- Cài đặt SFX -->
+                <div class="settings-group" style="margin-bottom: 24px;">
+                    <label style="display: flex; justify-content: space-between; align-items: center; font-size: 14px; font-weight: 700; color: #FFF; margin-bottom: 12px;">
+                        <span><i class="fa-solid fa-volume-high"></i> Âm Thanh Tương Tác (SFX)</span>
+                        <button id="btn-toggle-sfx" class="btn btn-sm btn-secondary" style="padding: 4px 12px;">BẬT</button>
+                    </label>
+                    <input type="range" id="slider-sfx-volume" min="0" max="1" step="0.05" value="0.6" style="width: 100%; accent-color: #3B82F6;">
+                </div>
+
+                <!-- Cài đặt BGM -->
+                <div class="settings-group" style="margin-bottom: 10px;">
+                    <label style="display: flex; justify-content: space-between; align-items: center; font-size: 14px; font-weight: 700; color: #FFF; margin-bottom: 12px;">
+                        <span><i class="fa-solid fa-music"></i> Nhạc Nền (BGM)</span>
+                        <button id="btn-toggle-bgm" class="btn btn-sm btn-secondary" style="padding: 4px 12px;">BẬT</button>
+                    </label>
+                    <input type="range" id="slider-bgm-volume" min="0" max="1" step="0.05" value="0.3" style="width: 100%; accent-color: #10B981;">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary modal-close-trigger" style="width: 100%;">Lưu Cài Đặt</button>
             </div>
         </div>
     </div>

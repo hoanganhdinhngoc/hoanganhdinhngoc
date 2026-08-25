@@ -22,6 +22,15 @@ class App {
         this.bindGameControls();
         this.bindLogListener();
         this.checkSavedGame();
+
+        // Kích hoạt BGM Menu khi người chơi tương tác lần đầu
+        const startMenuBgm = () => {
+            sound.playMenuBGM();
+            document.removeEventListener('click', startMenuBgm);
+            document.removeEventListener('keydown', startMenuBgm);
+        };
+        document.addEventListener('click', startMenuBgm);
+        document.addEventListener('keydown', startMenuBgm);
     }
 
     // Render danh sách cấu hình người chơi trong Setup Wizard
@@ -133,6 +142,7 @@ class App {
         if (startBtn) {
             startBtn.onclick = () => {
                 sound.playBuy();
+                sound.playGameBGM();
                 document.getElementById('setup-screen').classList.add('hidden');
                 document.getElementById('game-screen').classList.remove('hidden');
                 game.init();
@@ -144,6 +154,7 @@ class App {
         if (resumeBtn) {
             resumeBtn.onclick = () => {
                 sound.playClick();
+                sound.playGameBGM();
                 document.getElementById('setup-screen').classList.add('hidden');
                 document.getElementById('game-screen').classList.remove('hidden');
                 game.init();
@@ -160,18 +171,60 @@ class App {
     }
 
     bindGameControls() {
-        // Tắt/Mở âm thanh
-        const soundBtn = document.getElementById('btn-toggle-sound');
-        if (soundBtn) {
-            const updateSoundIcon = () => {
-                soundBtn.innerHTML = sound.isMuted 
-                    ? '<i class="fa-solid fa-volume-xmark"></i>' 
-                    : '<i class="fa-solid fa-volume-high"></i>';
+        // Nút mở Cài đặt
+        const settingsBtn = document.getElementById('btn-open-settings');
+        const settingsModal = document.getElementById('settings-modal');
+        if (settingsBtn && settingsModal) {
+            settingsBtn.onclick = () => settingsModal.classList.add('active');
+        }
+
+        // Cài đặt SFX
+        const btnToggleSfx = document.getElementById('btn-toggle-sfx');
+        const sliderSfx = document.getElementById('slider-sfx-volume');
+        if (btnToggleSfx && sliderSfx) {
+            const updateSfxUI = () => {
+                btnToggleSfx.textContent = sound.sfxMuted ? 'TẮT' : 'BẬT';
+                btnToggleSfx.className = sound.sfxMuted ? 'btn btn-sm btn-danger' : 'btn btn-sm btn-secondary';
+                sliderSfx.value = sound.sfxVolume;
             };
-            updateSoundIcon();
-            soundBtn.onclick = () => {
-                sound.toggleMute();
-                updateSoundIcon();
+            updateSfxUI();
+            
+            btnToggleSfx.onclick = () => {
+                sound.toggleSFX();
+                updateSfxUI();
+                if (!sound.sfxMuted) sound.playClick();
+            };
+            sliderSfx.oninput = (e) => {
+                sound.setSFXVolume(e.target.value);
+                if (sound.sfxMuted && e.target.value > 0) {
+                    sound.toggleSFX();
+                    updateSfxUI();
+                }
+            };
+            sliderSfx.onchange = () => sound.playClick();
+        }
+
+        // Cài đặt BGM
+        const btnToggleBgm = document.getElementById('btn-toggle-bgm');
+        const sliderBgm = document.getElementById('slider-bgm-volume');
+        if (btnToggleBgm && sliderBgm) {
+            const updateBgmUI = () => {
+                btnToggleBgm.textContent = sound.bgmMuted ? 'TẮT' : 'BẬT';
+                btnToggleBgm.className = sound.bgmMuted ? 'btn btn-sm btn-danger' : 'btn btn-sm btn-secondary';
+                sliderBgm.value = sound.bgmVolume;
+            };
+            updateBgmUI();
+            
+            btnToggleBgm.onclick = () => {
+                sound.toggleBGM();
+                updateBgmUI();
+            };
+            sliderBgm.oninput = (e) => {
+                sound.setBGMVolume(e.target.value);
+                if (sound.bgmMuted && e.target.value > 0) {
+                    sound.toggleBGM();
+                    updateBgmUI();
+                }
             };
         }
 
@@ -191,6 +244,7 @@ class App {
         if (restartBtn) {
             restartBtn.onclick = () => {
                 if (confirm('Bạn có chắc chắn muốn thoát về màn hình cài đặt không? Tiến trình hiện tại đã được lưu.')) {
+                    sound.playMenuBGM();
                     document.getElementById('game-screen').classList.add('hidden');
                     document.getElementById('setup-screen').classList.remove('hidden');
                     this.checkSavedGame();

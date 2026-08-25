@@ -4,16 +4,40 @@
 class AudioManager {
     constructor() {
         this.ctx = null;
-        this.isMuted = false;
-        this.volume = 0.6;
+        this.sfxMuted = false;
+        this.bgmMuted = false;
+        this.sfxVolume = 0.6;
+        this.bgmVolume = 0.3;
+        
+        this.menuBGM = new Audio('materials/sound/bgm_menu.mp3');
+        this.menuBGM.loop = true;
+        this.gameBGM = new Audio('materials/sound/bgm_game.mp3');
+        this.gameBGM.loop = true;
+
         this.initStorage();
     }
 
     initStorage() {
-        const saved = localStorage.getItem('monopoly_sound_muted');
-        if (saved !== null) {
-            this.isMuted = JSON.parse(saved);
+        const sfxSaved = localStorage.getItem('monopoly_sfx_muted');
+        if (sfxSaved !== null) {
+            this.sfxMuted = JSON.parse(sfxSaved);
         }
+        const bgmSaved = localStorage.getItem('monopoly_bgm_muted');
+        if (bgmSaved !== null) {
+            this.bgmMuted = JSON.parse(bgmSaved);
+            this.menuBGM.muted = this.bgmMuted;
+            this.gameBGM.muted = this.bgmMuted;
+        }
+        
+        const sfxVolSaved = localStorage.getItem('monopoly_sfx_volume');
+        if (sfxVolSaved !== null) this.sfxVolume = parseFloat(sfxVolSaved);
+        
+        const bgmVolSaved = localStorage.getItem('monopoly_bgm_volume');
+        if (bgmVolSaved !== null) {
+            this.bgmVolume = parseFloat(bgmVolSaved);
+        }
+        this.menuBGM.volume = this.bgmVolume;
+        this.gameBGM.volume = this.bgmVolume;
     }
 
     ensureContext() {
@@ -28,14 +52,51 @@ class AudioManager {
         }
     }
 
-    toggleMute() {
-        this.isMuted = !this.isMuted;
-        localStorage.setItem('monopoly_sound_muted', JSON.stringify(this.isMuted));
-        return this.isMuted;
+    toggleSFX() {
+        this.sfxMuted = !this.sfxMuted;
+        localStorage.setItem('monopoly_sfx_muted', JSON.stringify(this.sfxMuted));
+        return this.sfxMuted;
+    }
+    
+    toggleBGM() {
+        this.bgmMuted = !this.bgmMuted;
+        this.menuBGM.muted = this.bgmMuted;
+        this.gameBGM.muted = this.bgmMuted;
+        localStorage.setItem('monopoly_bgm_muted', JSON.stringify(this.bgmMuted));
+        return this.bgmMuted;
+    }
+    
+    setSFXVolume(val) {
+        this.sfxVolume = parseFloat(val);
+        localStorage.setItem('monopoly_sfx_volume', this.sfxVolume);
+    }
+    
+    setBGMVolume(val) {
+        this.bgmVolume = parseFloat(val);
+        this.menuBGM.volume = this.bgmVolume;
+        this.gameBGM.volume = this.bgmVolume;
+        localStorage.setItem('monopoly_bgm_volume', this.bgmVolume);
+    }
+    
+    playMenuBGM() {
+        this.gameBGM.pause();
+        this.gameBGM.currentTime = 0;
+        this.menuBGM.play().catch(e => console.warn("Autoplay prevented:", e));
+    }
+    
+    playGameBGM() {
+        this.menuBGM.pause();
+        this.menuBGM.currentTime = 0;
+        this.gameBGM.play().catch(e => console.warn("Autoplay prevented:", e));
+    }
+    
+    stopBGM() {
+        this.menuBGM.pause();
+        this.gameBGM.pause();
     }
 
     playTone(freq, type = 'sine', duration = 0.15, gainVal = 0.3) {
-        if (this.isMuted) return;
+        if (this.sfxMuted) return;
         this.ensureContext();
         if (!this.ctx) return;
 
@@ -45,7 +106,7 @@ class AudioManager {
             osc.type = type;
             osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
 
-            gain.gain.setValueAtTime(gainVal * this.volume, this.ctx.currentTime);
+            gain.gain.setValueAtTime(gainVal * this.sfxVolume, this.ctx.currentTime);
             gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
 
             osc.connect(gain);
@@ -63,7 +124,7 @@ class AudioManager {
     }
 
     playDiceRoll() {
-        if (this.isMuted) return;
+        if (this.sfxMuted) return;
         this.ensureContext();
         if (!this.ctx) return;
 
@@ -83,7 +144,7 @@ class AudioManager {
     }
 
     playBuy() {
-        if (this.isMuted) return;
+        if (this.sfxMuted) return;
         this.ensureContext();
         if (!this.ctx) return;
 
@@ -103,7 +164,7 @@ class AudioManager {
     }
 
     playCardDraw() {
-        if (this.isMuted) return;
+        if (this.sfxMuted) return;
         this.ensureContext();
         if (!this.ctx) return;
 
@@ -114,7 +175,7 @@ class AudioManager {
     }
 
     playJail() {
-        if (this.isMuted) return;
+        if (this.sfxMuted) return;
         this.ensureContext();
         if (!this.ctx) return;
 
@@ -132,7 +193,7 @@ class AudioManager {
     }
 
     playBankruptcy() {
-        if (this.isMuted) return;
+        if (this.sfxMuted) return;
         this.ensureContext();
         if (!this.ctx) return;
 
@@ -144,7 +205,7 @@ class AudioManager {
     }
 
     playFanfare() {
-        if (this.isMuted) return;
+        if (this.sfxMuted) return;
         this.ensureContext();
         if (!this.ctx) return;
 

@@ -402,6 +402,7 @@ export class GameEngine {
             const propGroupEl = document.getElementById('buy-modal-prop-group');
             const buyBtn = document.getElementById('buy-modal-btn-confirm');
             const passBtn = document.getElementById('buy-modal-btn-pass');
+            const manageBtn = document.getElementById('buy-modal-btn-manage');
 
             const groupInfo = COLOR_GROUPS[tile.group] || { name: tile.group, hex: '#4B5563' };
 
@@ -411,10 +412,19 @@ export class GameEngine {
                 propGroupEl.textContent = groupInfo.name;
                 propGroupEl.style.backgroundColor = groupInfo.hex;
             }
+            
+            // Hàm cập nhật trạng thái nút mua dựa trên tiền hiện tại
+            const updateBuyButtonState = () => {
+                if (buyBtn) buyBtn.disabled = (player.money < tile.price);
+            };
+
+            // Lắng nghe sự thay đổi tài chính để cập nhật nút mua liên tục khi mở modal quản lý
+            const moneyCheckInterval = setInterval(updateBuyButtonState, 500);
 
             if (buyBtn) {
-                buyBtn.disabled = (player.money < tile.price);
+                updateBuyButtonState();
                 buyBtn.onclick = () => {
+                    clearInterval(moneyCheckInterval);
                     sound.playClick();
                     if (buyModalEl) buyModalEl.classList.remove('active');
                     this.buyProperty(player.id, tile.id);
@@ -424,10 +434,21 @@ export class GameEngine {
 
             if (passBtn) {
                 passBtn.onclick = () => {
+                    clearInterval(moneyCheckInterval);
                     sound.playClick();
                     if (buyModalEl) buyModalEl.classList.remove('active');
                     state.addLog(`<strong>${player.name}</strong> bỏ qua cơ hội mua <strong>${tile.name}</strong>.`, 'info', player.id);
                     resolve();
+                };
+            }
+            
+            if (manageBtn) {
+                manageBtn.onclick = () => {
+                    sound.playClick();
+                    // Mở Manage Modal cho player hiện tại
+                    import('./manage.js').then(module => {
+                        module.manage.openManageModal(player.id);
+                    });
                 };
             }
 
