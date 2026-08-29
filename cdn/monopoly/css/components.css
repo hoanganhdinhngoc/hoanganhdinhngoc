@@ -923,3 +923,69 @@
 .btn-sell { background-color: #F59E0B; color: #000; }
 .btn-mortgage { background-color: #EF4444; color: #FFF; }
 .btn-unmortgage { background-color: #3B82F6; color: #FFF; }
+
+/* --- Trade Player Selection Button --- */
+.trade-partner-btn {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 12px 15px;
+    background: var(--bg-surface);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: var(--transition-base);
+    color: #FFF;
+    text-align: left;
+    width: 100%;
+}
+.trade-partner-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+.trade-partner-token {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    color: #000;
+}
+.trade-partner-info {
+    flex: 1;
+}
+.trade-partner-name {
+    font-weight: 700;
+    font-size: 15px;
+    margin-bottom: 4px;
+}
+.trade-partner-stats {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+.btn-cash-adjust {
+    padding: 4px 10px;
+    font-size: 12px;
+}
+.trade-prop-item.has-color {
+    border-left-width: 6px;
+}
+
+/* --- Trade Hub UI Enhancements --- */
+.trade-prop-item {
+    display: flex;
+    align-items: center;
+    padding: 8px;
+    background: rgba(0,0,0,0.2);
+    border-radius: 4px;
+    margin-bottom: 5px;
+    cursor: pointer;
+    border: 1px solid rgba(255,255,255,0.1);
+}
+.trade-prop-item.selected {
+    background: rgba(59, 130, 246, 0.2);
+    border-color: #3B82F6;
+}
+

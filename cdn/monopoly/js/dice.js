@@ -48,9 +48,9 @@ export class DiceManager {
         if (speed === 'instant') animDuration = 50;
 
         if (this.die1El && this.die2El) {
-            // Thêm class lắc 3D
-            this.die1El.classList.add('rolling');
-            this.die2El.classList.add('rolling');
+            // Đặt thời gian transition theo speed
+            this.die1El.style.transition = `transform ${animDuration}ms cubic-bezier(0.2, 0.8, 0.3, 1)`;
+            this.die2El.style.transition = `transform ${animDuration}ms cubic-bezier(0.2, 0.8, 0.3, 1)`;
 
             // Hiệu ứng xoay ngẫu nhiên nhiều vòng
             const extraRotX1 = (Math.floor(Math.random() * 3) + 2) * 360;
@@ -66,12 +66,17 @@ export class DiceManager {
 
             await new Promise(resolve => setTimeout(resolve, animDuration));
 
-            this.die1El.classList.remove('rolling');
-            this.die2El.classList.remove('rolling');
+            // Vô hiệu hóa transition để reset góc quay về cơ bản mà không bị nhìn thấy
+            this.die1El.style.transition = 'none';
+            this.die2El.style.transition = 'none';
 
             // Định vị chính xác mặt hiển thị cuối cùng
             this.die1El.style.transform = `rotateX(${target1.x}deg) rotateY(${target1.y}deg)`;
             this.die2El.style.transform = `rotateX(${target2.x}deg) rotateY(${target2.y}deg)`;
+            
+            // Force reflow để áp dụng transition: none lập tức
+            void this.die1El.offsetWidth;
+            void this.die2El.offsetWidth;
         }
 
         this.isRolling = false;

@@ -273,8 +273,13 @@ export class GameEngine {
 
         this.isProcessing = false;
 
+        if (player.bankrupt) {
+            this.endTurn();
+            return;
+        }
+
         // Nếu đổ đôi và chưa bị vào tù -> Được tung tiếp
-        if (rollResult.isDouble && !player.inJail && !player.bankrupt) {
+        if (rollResult.isDouble && !player.inJail) {
             state.turnPhase = 'ROLL';
             state.addLog(`<strong>${player.name}</strong> đổ được đôi nên được quyền tung xúc xắc tiếp!`, 'info', player.id);
         } else {
@@ -446,9 +451,7 @@ export class GameEngine {
                 manageBtn.onclick = () => {
                     sound.playClick();
                     // Mở Manage Modal cho player hiện tại
-                    import('./manage.js').then(module => {
-                        module.manage.openManageModal(player.id);
-                    });
+                    manage.open(player.id);
                 };
             }
 

@@ -24,7 +24,7 @@
             <div class="setup-header">
                 <div class="logo-badge"><i class="fa-solid fa-dice"></i> MONOPOLY CLASSIC</div>
                 <h1>CỜ TỶ PHÚ VIỆT NAM</h1>
-                <p>Chọn từ 2 đến 6 người chơi, tùy chỉnh chế độ đấu với AI từ Tân Thủ đến Bậc Thầy thao túng tâm lý!</p>
+                <p>Chọn từ 2 đến 6 người chơi, tùy chỉnh chế độ đấu với AI từ Tay Mơ đến Trùm Bất Động Sản thao túng tâm lý!</p>
             </div>
 
             <!-- Danh sách người chơi trong setup -->
@@ -199,11 +199,11 @@
         </div>
     </div>
 
-    <!-- Modal Chi Tiết Thẻ Bìa Đất (Property Deed Modal) -->
+    <!-- Modal Chi Tiết Sổ Đỏ (Property Deed Modal) -->
     <div id="deed-modal" class="modal-overlay">
         <div class="modal-dialog">
             <div class="modal-header">
-                <h3><i class="fa-solid fa-file-contract" style="color: #F59E0B;"></i> Chi Tiết Bìa Đất <span class="modal-drag-hint">(Kéo để di chuyển)</span></h3>
+                <h3><i class="fa-solid fa-file-contract" style="color: #F59E0B;"></i> Chi Tiết Sổ Đỏ <span class="modal-drag-hint">(Kéo để di chuyển)</span></h3>
                 <button id="deed-modal-close-btn" class="modal-close-btn"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <div class="modal-body" style="padding: 16px;">
@@ -269,41 +269,72 @@
                 <h3><i class="fa-solid fa-handshake" style="color: #8B5CF6;"></i> Trung Tâm Giao Dịch Tài Sản <span class="modal-drag-hint">(Kéo để di chuyển)</span></h3>
                 <button class="modal-close-btn modal-close-trigger"><i class="fa-solid fa-xmark"></i></button>
             </div>
-            <div class="modal-body">
-                <div style="margin-bottom: 14px; display: flex; align-items: center; gap: 10px;">
-                    <label style="font-size: 13px; font-weight: 700; color: var(--text-secondary);">Giao dịch với:</label>
-                    <select id="trade-receiver-select" style="flex: 1;"></select>
-                </div>
-                <div class="trade-columns-grid">
-                    <!-- Bên đề xuất (Sender) -->
-                    <div class="trade-col">
-                        <div class="trade-col-header">
-                            <span id="trade-sender-name" class="trade-party-name">Bạn</span>
-                            <span id="trade-sender-balance" class="trade-party-balance">$1500</span>
-                        </div>
-                        <div class="trade-cash-field">
-                            <label>Tiền mặt bạn đưa ra ($):</label>
-                            <input type="number" id="trade-sender-cash" min="0" value="0">
-                        </div>
-                        <label style="font-size: 11px; color: var(--text-muted); text-transform: uppercase;">Bất động sản bạn chuyển đi:</label>
-                        <div id="trade-sender-props" class="trade-props-box"></div>
+            <div class="modal-body" style="padding: 0;">
+                <!-- Màn hình 1: Chọn đối tác giao dịch -->
+                <div id="trade-player-selection-screen" style="padding: 20px;">
+                    <h4 style="color: #FFF; margin-bottom: 15px; font-size: 15px;">Chọn đối tác để giao dịch:</h4>
+                    <div id="trade-partners-list" style="display: flex; flex-direction: column; gap: 10px;">
+                        <!-- Các nút chọn đối tác sẽ được js/trade.js render ở đây -->
                     </div>
-                    <!-- Bên nhận đề xuất (Receiver) -->
-                    <div class="trade-col">
-                        <div class="trade-col-header">
-                            <span id="trade-receiver-name" class="trade-party-name">Đối tác</span>
-                            <span id="trade-receiver-balance" class="trade-party-balance">$1500</span>
+                </div>
+
+                <!-- Màn hình 2: Thương lượng giao dịch -->
+                <div id="trade-negotiation-screen" style="display: none; padding: 20px;">
+                    <div style="margin-bottom: 15px; display: flex; align-items: center; justify-content: space-between;">
+                        <button id="trade-back-to-selection" class="btn btn-sm btn-secondary"><i class="fa-solid fa-arrow-left"></i> Chọn người khác</button>
+                        <div style="font-size: 12px; color: var(--text-muted);">
+                            Bước nhảy tiền: 
+                            <select id="trade-cash-step" style="padding: 4px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.2); color: #fff; border-radius: 4px;">
+                                <option value="5">$5</option>
+                                <option value="10">$10</option>
+                                <option value="20">$20</option>
+                                <option value="50" selected>$50</option>
+                                <option value="100">$100</option>
+                                <option value="200">$200</option>
+                                <option value="500">$500</option>
+                                <option value="1000">$1000</option>
+                            </select>
                         </div>
-                        <div class="trade-cash-field">
-                            <label>Tiền mặt bạn muốn nhận ($):</label>
-                            <input type="number" id="trade-receiver-cash" min="0" value="0">
+                    </div>
+                    <div class="trade-columns-grid">
+                        <!-- Bên đề xuất (Sender) -->
+                        <div class="trade-col">
+                            <div class="trade-col-header">
+                                <span id="trade-sender-name" class="trade-party-name">Bạn</span>
+                                <span id="trade-sender-balance" class="trade-party-balance">$1500</span>
+                            </div>
+                            <div class="trade-cash-field">
+                                <label>Tiền mặt bạn đưa ra ($):</label>
+                                <div class="cash-input-group" style="display: flex; align-items: center; gap: 5px;">
+                                    <button class="btn-cash-adjust btn btn-sm btn-secondary" data-target="sender" data-sign="-1"><i class="fa-solid fa-minus"></i></button>
+                                    <input type="number" id="trade-sender-cash" min="0" value="0" style="flex: 1; text-align: center;">
+                                    <button class="btn-cash-adjust btn btn-sm btn-secondary" data-target="sender" data-sign="1"><i class="fa-solid fa-plus"></i></button>
+                                </div>
+                            </div>
+                            <label style="font-size: 11px; color: var(--text-muted); text-transform: uppercase;">Bất động sản bạn chuyển đi:</label>
+                            <div id="trade-sender-props" class="trade-props-box"></div>
                         </div>
-                        <label style="font-size: 11px; color: var(--text-muted); text-transform: uppercase;">Bất động sản bạn muốn nhận:</label>
-                        <div id="trade-receiver-props" class="trade-props-box"></div>
+                        <!-- Bên nhận đề xuất (Receiver) -->
+                        <div class="trade-col">
+                            <div class="trade-col-header">
+                                <span id="trade-receiver-name" class="trade-party-name">Đối tác</span>
+                                <span id="trade-receiver-balance" class="trade-party-balance">$1500</span>
+                            </div>
+                            <div class="trade-cash-field">
+                                <label>Tiền mặt bạn muốn nhận ($):</label>
+                                <div class="cash-input-group" style="display: flex; align-items: center; gap: 5px;">
+                                    <button class="btn-cash-adjust btn btn-sm btn-secondary" data-target="receiver" data-sign="-1"><i class="fa-solid fa-minus"></i></button>
+                                    <input type="number" id="trade-receiver-cash" min="0" value="0" style="flex: 1; text-align: center;">
+                                    <button class="btn-cash-adjust btn btn-sm btn-secondary" data-target="receiver" data-sign="1"><i class="fa-solid fa-plus"></i></button>
+                                </div>
+                            </div>
+                            <label style="font-size: 11px; color: var(--text-muted); text-transform: uppercase;">Bất động sản bạn muốn nhận:</label>
+                            <div id="trade-receiver-props" class="trade-props-box"></div>
+                        </div>
                     </div>
                 </div>
             </div>
-            <div class="modal-footer">
+            <div class="modal-footer" id="trade-modal-footer" style="display: none;">
                 <button class="btn btn-secondary modal-close-trigger">Hủy Bỏ</button>
                 <button id="trade-submit-btn" class="btn btn-primary"><i class="fa-solid fa-paper-plane"></i> Gửi Đề Xuất Giao Dịch</button>
             </div>
@@ -365,10 +396,10 @@
 
                 <h4 style="color: #FFF; margin-bottom: 6px;">3. Các Cấp Độ AI Đối Thủ</h4>
                 <ul style="margin-left: 20px;">
-                    <li><strong>Easy (Tân thủ):</strong> Quyết định ngẫu nhiên, mua bừa bãi, không có chiến thuật dự phòng.</li>
-                    <li><strong>Normal (Tiêu chuẩn):</strong> Mua và xây dựng khi đủ ngân sách, giao dịch theo giá trị sòng phẳng.</li>
-                    <li><strong>Hard (Chiến lược gia):</strong> Ưu tiên nhóm màu vàng (Cam, Đỏ, Ga Xe Lửa), xây 3 nhà thần tốc, quản lý quỹ rủi ro chặt chẽ.</li>
-                    <li><strong>Very Hard (Bậc thầy):</strong> Phân tích xác suất dẫm ô, chủ động đưa đề nghị bẫy giao dịch có lợi, tạo khan hiếm nhà và ép đối thủ phá sản.</li>
+                    <li><strong>Easy (Tay mơ):</strong> Quyết định ngẫu nhiên, mua bừa bãi, không có chiến thuật dự phòng.</li>
+                    <li><strong>Normal (Dân thường):</strong> Mua và xây dựng khi đủ ngân sách, giao dịch theo giá trị sòng phẳng.</li>
+                    <li><strong>Hard (Cò đất):</strong> Ưu tiên nhóm màu vàng (Cam, Đỏ, Ga Xe Lửa), xây 3 nhà thần tốc, quản lý quỹ rủi ro chặt chẽ.</li>
+                    <li><strong>Very Hard (Trùm bất động sản):</strong> Phân tích xác suất dẫm ô, chủ động đưa đề nghị bẫy giao dịch có lợi, tạo khan hiếm nhà và ép đối thủ phá sản.</li>
                 </ul>
             </div>
             <div class="modal-footer">

@@ -136,6 +136,7 @@ export class AIController {
         if (player.bankrupt) {
             this.isExecuting = false;
             state.isAiProcessing = false;
+            gameEngine.endTurn();
             return;
         }
 

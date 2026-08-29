@@ -5,6 +5,7 @@ import { state } from './state.js';
 import { sound } from './audio.js';
 import { board } from './board.js';
 import { AIEvaluator } from './ai/aiEvaluator.js';
+import { COLOR_GROUPS } from './data/boardData.js';
 
 export class TradeManager {
     constructor() {
@@ -27,21 +28,12 @@ export class TradeManager {
         if (!this.tradeModalEl) this.init();
 
         this.senderId = (fromPlayerId !== null) ? fromPlayerId : state.currentTurnPlayerId;
-        
-        // Chọn đối tác giao dịch mặc định là người chơi còn sống khác
-        const otherPlayers = state.players.filter(p => p.id !== this.senderId && !p.bankrupt);
-        if (otherPlayers.length === 0) {
-            this.showComicMessage(state.getPlayer(this.senderId), 'Không còn người chơi nào khác trên bàn cờ để giao dịch!', 'info');
-            return;
-        }
-
-        this.receiverId = otherPlayers[0].id;
         this.offeredCash = 0;
         this.requestedCash = 0;
         this.offeredPropertyIds.clear();
         this.requestedPropertyIds.clear();
 
-        this.render();
+        this.showSelectionScreen();
         if (this.tradeModalEl) this.tradeModalEl.classList.add('active');
     }
 
@@ -49,45 +41,99 @@ export class TradeManager {
         if (this.tradeModalEl) this.tradeModalEl.classList.remove('active');
     }
 
-    render() {
-        const sender = state.getPlayer(this.senderId);
-        const receiver = state.getPlayer(this.receiverId);
-        if (!sender || !receiver) return;
+    showSelectionScreen() {
+        const selScreen = document.getElementById('trade-player-selection-screen');
+        const negScreen = document.getElementById('trade-negotiation-screen');
+        const footer = document.getElementById('trade-modal-footer');
+        
+        selScreen.style.display = 'block';
+        negScreen.style.display = 'none';
+        footer.style.display = 'none';
 
-        // Cập nhật Selector chọn đối tác
-        const receiverSelectEl = document.getElementById('trade-receiver-select');
-        if (receiverSelectEl) {
-            receiverSelectEl.innerHTML = '';
-            state.players.forEach(p => {
-                if (p.id !== this.senderId && !p.bankrupt) {
-                    const opt = document.createElement('option');
-                    opt.value = p.id;
-                    opt.textContent = `${p.name} ${p.isAI ? `(AI - ${p.difficulty.toUpperCase()})` : '(Người)'} - $${p.money}`;
-                    if (p.id === this.receiverId) opt.selected = true;
-                    receiverSelectEl.appendChild(opt);
-                }
-            });
+        const listEl = document.getElementById('trade-partners-list');
+        listEl.innerHTML = '';
 
-            receiverSelectEl.onchange = (e) => {
-                this.receiverId = parseInt(e.target.value, 10);
+        const otherPlayers = state.players.filter(p => p.id !== this.senderId && !p.bankrupt);
+        if (otherPlayers.length === 0) {
+            listEl.innerHTML = '<div style="color: #fff;">Không còn đối tác để giao dịch.</div>';
+            return;
+        }
+
+        otherPlayers.forEach(p => {
+            const props = state.getPlayerProperties(p.id);
+            const btn = document.createElement('button');
+            btn.className = 'trade-partner-btn';
+            btn.innerHTML = `
+                <div class="trade-partner-token" style="background-color: ${p.token.color}">
+                    <i class="${p.token.icon}"></i>
+                </div>
+                <div class="trade-partner-info">
+                    <div class="trade-partner-name">${p.name} ${p.isAI ? `(AI - ${p.difficulty.toUpperCase()})` : ''}</div>
+                    <div class="trade-partner-stats">Ngân sách: <strong>$${p.money}</strong> • Sở hữu: <strong>${props.length} BĐS</strong></div>
+                </div>
+            `;
+            btn.onclick = () => {
+                sound.playClick();
+                this.receiverId = p.id;
                 this.requestedCash = 0;
                 this.requestedPropertyIds.clear();
-                this.render();
+                this.showNegotiationScreen();
+            };
+            listEl.appendChild(btn);
+        });
+    }
+
+    showNegotiationScreen() {
+        const selScreen = document.getElementById('trade-player-selection-screen');
+        const negScreen = document.getElementById('trade-negotiation-screen');
+        const footer = document.getElementById('trade-modal-footer');
+        
+        selScreen.style.display = 'none';
+        negScreen.style.display = 'block';
+        footer.style.display = 'flex';
+
+        const backBtn = document.getElementById('trade-back-to-selection');
+        if (backBtn) {
+            backBtn.onclick = () => {
+                sound.playClick();
+                this.showSelectionScreen();
             };
         }
 
-        // Cập nhật thông tin Sender (Bên Đề Xuất)
-        const senderNameEl = document.getElementById('trade-sender-name');
-        const senderBalanceEl = document.getElementById('trade-sender-balance');
-        const senderCashInput = document.getElementById('trade-sender-cash');
-        const senderPropsList = document.getElementById('trade-sender-props');
+        this.bindCashAdjustButtons();
+        this.renderNegotiation();
+    }
 
-        if (senderNameEl) senderNameEl.textContent = sender.name;
-        if (senderBalanceEl) senderBalanceEl.textContent = `$${sender.money}`;
-        if (senderCashInput) {
-            senderCashInput.max = sender.money;
-            senderCashInput.value = this.offeredCash;
-            senderCashInput.oninput = (e) => {
+    bindCashAdjustButtons() {
+        const adjustBtns = document.querySelectorAll('.btn-cash-adjust');
+        adjustBtns.forEach(btn => {
+            btn.onclick = (e) => {
+                const target = e.currentTarget.getAttribute('data-target');
+                const sign = parseInt(e.currentTarget.getAttribute('data-sign'), 10);
+                const step = parseInt(document.getElementById('trade-cash-step').value, 10);
+                const sender = state.getPlayer(this.senderId);
+                const receiver = state.getPlayer(this.receiverId);
+                
+                if (target === 'sender') {
+                    let newVal = this.offeredCash + (sign * step);
+                    if (newVal < 0) newVal = 0;
+                    if (newVal > sender.money) newVal = sender.money;
+                    this.offeredCash = newVal;
+                } else if (target === 'receiver') {
+                    let newVal = this.requestedCash + (sign * step);
+                    if (newVal < 0) newVal = 0;
+                    if (newVal > receiver.money) newVal = receiver.money;
+                    this.requestedCash = newVal;
+                }
+                this.renderNegotiation();
+            };
+        });
+        
+        // Also bind the direct input change
+        const senderInput = document.getElementById('trade-sender-cash');
+        if (senderInput) {
+            senderInput.oninput = (e) => {
+                const sender = state.getPlayer(this.senderId);
                 let val = parseInt(e.target.value, 10) || 0;
                 if (val < 0) val = 0;
                 if (val > sender.money) val = sender.money;
@@ -95,51 +141,10 @@ export class TradeManager {
                 e.target.value = val;
             };
         }
-
-        if (senderPropsList) {
-            senderPropsList.innerHTML = '';
-            const senderOwned = state.getPlayerProperties(sender.id);
-            // Chỉ cho phép giao dịch bất động sản không có nhà trên cả nhóm màu
-            const tradableProps = senderOwned.filter(p => p.houses === 0);
-
-            if (tradableProps.length === 0) {
-                senderPropsList.innerHTML = '<div class="no-props" style="padding: 10px; font-size: 12px; color: var(--text-muted); text-align: center;">Không có tài sản hợp lệ</div>';
-            } else {
-                tradableProps.forEach(prop => {
-                    const isSelected = this.offeredPropertyIds.has(prop.id);
-                    const item = document.createElement('div');
-                    item.className = `trade-prop-card ${isSelected ? 'selected' : ''}`;
-                    item.innerHTML = `
-                        <input type="checkbox" ${isSelected ? 'checked' : ''}>
-                        <span class="prop-tag-dot" style="background-color: ${prop.color || '#4B5563'};"></span>
-                        <span class="prop-title">${prop.name}</span>
-                        <span class="prop-val">$${prop.price}</span>
-                    `;
-                    item.onclick = () => {
-                        if (this.offeredPropertyIds.has(prop.id)) {
-                            this.offeredPropertyIds.delete(prop.id);
-                        } else {
-                            this.offeredPropertyIds.add(prop.id);
-                        }
-                        this.render();
-                    };
-                    senderPropsList.appendChild(item);
-                });
-            }
-        }
-
-        // Cập nhật thông tin Receiver (Bên Nhận Đề Xuất)
-        const receiverNameEl = document.getElementById('trade-receiver-name');
-        const receiverBalanceEl = document.getElementById('trade-receiver-balance');
-        const receiverCashInput = document.getElementById('trade-receiver-cash');
-        const receiverPropsList = document.getElementById('trade-receiver-props');
-
-        if (receiverNameEl) receiverNameEl.textContent = receiver.name;
-        if (receiverBalanceEl) receiverBalanceEl.textContent = `$${receiver.money}`;
-        if (receiverCashInput) {
-            receiverCashInput.max = receiver.money;
-            receiverCashInput.value = this.requestedCash;
-            receiverCashInput.oninput = (e) => {
+        const receiverInput = document.getElementById('trade-receiver-cash');
+        if (receiverInput) {
+            receiverInput.oninput = (e) => {
+                const receiver = state.getPlayer(this.receiverId);
                 let val = parseInt(e.target.value, 10) || 0;
                 if (val < 0) val = 0;
                 if (val > receiver.money) val = receiver.money;
@@ -147,43 +152,66 @@ export class TradeManager {
                 e.target.value = val;
             };
         }
+    }
 
-        if (receiverPropsList) {
-            receiverPropsList.innerHTML = '';
-            const receiverOwned = state.getPlayerProperties(receiver.id);
-            const tradableProps = receiverOwned.filter(p => p.houses === 0);
+    renderNegotiation() {
+        const sender = state.getPlayer(this.senderId);
+        const receiver = state.getPlayer(this.receiverId);
+        if (!sender || !receiver) return;
 
-            if (tradableProps.length === 0) {
-                receiverPropsList.innerHTML = '<div class="no-props" style="padding: 10px; font-size: 12px; color: var(--text-muted); text-align: center;">Không có tài sản hợp lệ</div>';
-            } else {
-                tradableProps.forEach(prop => {
-                    const isSelected = this.requestedPropertyIds.has(prop.id);
-                    const item = document.createElement('div');
-                    item.className = `trade-prop-card ${isSelected ? 'selected' : ''}`;
-                    item.innerHTML = `
-                        <input type="checkbox" ${isSelected ? 'checked' : ''}>
-                        <span class="prop-tag-dot" style="background-color: ${prop.color || '#4B5563'};"></span>
-                        <span class="prop-title">${prop.name}</span>
-                        <span class="prop-val">$${prop.price}</span>
-                    `;
-                    item.onclick = () => {
-                        if (this.requestedPropertyIds.has(prop.id)) {
-                            this.requestedPropertyIds.delete(prop.id);
-                        } else {
-                            this.requestedPropertyIds.add(prop.id);
-                        }
-                        this.render();
-                    };
-                    receiverPropsList.appendChild(item);
-                });
-            }
-        }
+        document.getElementById('trade-sender-name').textContent = sender.name;
+        document.getElementById('trade-sender-balance').textContent = `$${sender.money}`;
+        document.getElementById('trade-sender-cash').value = this.offeredCash;
 
-        // Nút gửi đề xuất
+        document.getElementById('trade-receiver-name').textContent = receiver.name;
+        document.getElementById('trade-receiver-balance').textContent = `$${receiver.money}`;
+        document.getElementById('trade-receiver-cash').value = this.requestedCash;
+
+        this.renderPropsList(sender, 'trade-sender-props', this.offeredPropertyIds);
+        this.renderPropsList(receiver, 'trade-receiver-props', this.requestedPropertyIds);
+
         const submitBtn = document.getElementById('trade-submit-btn');
-        if (submitBtn) {
-            submitBtn.onclick = () => this.submitTradeOffer();
+        if (submitBtn) submitBtn.onclick = () => this.submitTradeOffer();
+    }
+
+    renderPropsList(player, containerId, selectedSet) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+        container.innerHTML = '';
+        
+        const owned = state.getPlayerProperties(player.id);
+        const tradableProps = owned.filter(p => p.houses === 0);
+
+        if (tradableProps.length === 0) {
+            container.innerHTML = '<div class="no-props" style="padding: 10px; font-size: 12px; color: var(--text-muted); text-align: center;">Không có tài sản hợp lệ</div>';
+            return;
         }
+
+        tradableProps.forEach(prop => {
+            const isSelected = selectedSet.has(prop.id);
+            const item = document.createElement('div');
+            item.className = `trade-prop-item ${isSelected ? 'selected' : ''}`;
+            const groupInfo = COLOR_GROUPS ? COLOR_GROUPS[prop.group] : null;
+            if (groupInfo && prop.group !== 'railroad' && prop.group !== 'utility') {
+                item.classList.add('has-color');
+                item.style.borderLeftColor = groupInfo.hex;
+            }
+            
+            item.innerHTML = `
+                <input type="checkbox" ${isSelected ? 'checked' : ''} style="margin-right: 10px;">
+                <div style="flex: 1; font-size: 13px;">${prop.name}</div>
+                <div style="font-weight: 700; color: #10B981;">$${prop.price}</div>
+            `;
+            item.onclick = () => {
+                if (selectedSet.has(prop.id)) {
+                    selectedSet.delete(prop.id);
+                } else {
+                    selectedSet.add(prop.id);
+                }
+                this.renderNegotiation();
+            };
+            container.appendChild(item);
+        });
     }
 
     async submitTradeOffer() {
@@ -222,7 +250,10 @@ export class TradeManager {
             } else {
                 sound.playRent();
                 state.addLog(`<strong>${receiver.name} (AI)</strong>: "${evaluation.reason}" - <strong>ĐÃ TỪ CHỐI GIAO DỊCH!</strong>`, 'danger');
-                await this.showComicMessage(receiver, `${evaluation.reason}`, 'danger');
+                await this.showComicMessage(receiver, `${evaluation.reason}`, 'danger', () => {
+                    this.tradeModalEl.classList.add('active');
+                    this.showNegotiationScreen();
+                });
             }
         } else {
             // Người nhận là Người thật -> Hiển thị Comic Speech Bubble để xác nhận
@@ -299,7 +330,7 @@ export class TradeManager {
     }
 
     // Hiển thị Comic Speech Bubble thông điệp của nhân vật
-    showComicMessage(player, messageText, type = 'info') {
+    showComicMessage(player, messageText, type = 'info', onRetry = null) {
         return new Promise(resolve => {
             if (!this.comicBubbleEl) this.init();
 
@@ -323,12 +354,26 @@ export class TradeManager {
             }
 
             if (btnRow) {
-                btnRow.innerHTML = `<button id="comic-btn-ok" class="comic-btn comic-btn-ok">Đã Hiểu</button>`;
+                let btnsHtml = `<button id="comic-btn-ok" class="comic-btn comic-btn-ok">Đã Hiểu</button>`;
+                if (onRetry) {
+                    btnsHtml = `<button id="comic-btn-retry" class="comic-btn comic-btn-ok" style="background-color: #3B82F6; color: white;">Đề xuất deal khác</button>` + btnsHtml;
+                }
+                btnRow.innerHTML = btnsHtml;
+                
                 document.getElementById('comic-btn-ok').onclick = () => {
                     sound.playClick();
                     this.comicBubbleEl.classList.remove('active');
-                    resolve();
+                    resolve(false);
                 };
+                
+                if (onRetry) {
+                    document.getElementById('comic-btn-retry').onclick = () => {
+                        sound.playClick();
+                        this.comicBubbleEl.classList.remove('active');
+                        onRetry();
+                        resolve(true);
+                    };
+                }
             }
 
             this.comicBubbleEl.classList.add('active');

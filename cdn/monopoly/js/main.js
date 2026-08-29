@@ -10,9 +10,9 @@ class App {
     constructor() {
         this.playerConfigs = [
             { name: 'Người chơi 1', isAI: false, difficulty: 'normal', token: TOKEN_CONFIGS[0] },
-            { name: 'Bot Cao Thủ', isAI: true, difficulty: 'hard', token: TOKEN_CONFIGS[1] },
-            { name: 'Bot Tân Thủ', isAI: true, difficulty: 'easy', token: TOKEN_CONFIGS[2] },
-            { name: 'Bot Bậc Thầy', isAI: true, difficulty: 'very_hard', token: TOKEN_CONFIGS[3] }
+            { name: 'Bot Cò Đất', isAI: true, difficulty: 'hard', token: TOKEN_CONFIGS[1] },
+            { name: 'Bot Tay Mơ', isAI: true, difficulty: 'easy', token: TOKEN_CONFIGS[2] },
+            { name: 'Bot Trùm BĐS', isAI: true, difficulty: 'very_hard', token: TOKEN_CONFIGS[3] }
         ];
     }
 
@@ -64,10 +64,10 @@ class App {
                 <div class="setup-field diff-field ${!p.isAI ? 'disabled-field' : ''}">
                     <label>Cấp độ AI</label>
                     <select class="select-player-diff" data-idx="${idx}" ${!p.isAI ? 'disabled' : ''}>
-                        <option value="easy" ${p.difficulty === 'easy' ? 'selected' : ''}>🟢 Easy (Tân thủ)</option>
-                        <option value="normal" ${p.difficulty === 'normal' ? 'selected' : ''}>🟡 Normal (Vừa)</option>
-                        <option value="hard" ${p.difficulty === 'hard' ? 'selected' : ''}>🔴 Hard (Chiến lược)</option>
-                        <option value="very_hard" ${p.difficulty === 'very_hard' ? 'selected' : ''}>🟣 Very Hard (Bậc thầy)</option>
+                        <option value="easy" ${p.difficulty === 'easy' ? 'selected' : ''}>🟢 Easy (Tay mơ)</option>
+                        <option value="normal" ${p.difficulty === 'normal' ? 'selected' : ''}>🟡 Normal (Dân thường)</option>
+                        <option value="hard" ${p.difficulty === 'hard' ? 'selected' : ''}>🔴 Hard (Cò đất)</option>
+                        <option value="very_hard" ${p.difficulty === 'very_hard' ? 'selected' : ''}>🟣 Very Hard (Trùm bất động sản)</option>
                     </select>
                 </div>
                 <div class="setup-actions">

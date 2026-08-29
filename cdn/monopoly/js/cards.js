@@ -73,14 +73,12 @@ export class CardManager {
             }
 
             const activePlayer = state.getActivePlayer();
-            // Nếu là lượt của AI và chế độ không phải xem chậm, tự động bấm OK sau 1.2s
+            // Nếu là lượt của AI, tự động đóng sau delay
             if (activePlayer.isAI) {
                 let autoCloseDelay = (state.gameSpeed === 'instant') ? 100 : (state.gameSpeed === 'fast' ? 600 : 1300);
                 setTimeout(() => {
-                    if (this.cardModalEl && this.cardModalEl.classList.contains('active')) {
-                        this.cardModalEl.classList.remove('active');
-                        resolve();
-                    }
+                    if (this.cardModalEl) this.cardModalEl.classList.remove('active');
+                    resolve();
                 }, autoCloseDelay);
             } else {
                 const handler = () => {
