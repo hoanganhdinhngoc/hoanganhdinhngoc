@@ -540,14 +540,28 @@ export class GameEngine {
 
     autoLiquidateForAI(player, requiredAmount) {
         const owned = state.getPlayerProperties(player.id);
-        for (const prop of owned) {
-            while (prop.houses > 0 && player.money < requiredAmount) {
-                manage.sellHouse(player.id, prop.id);
+        
+        // 1. Bán nhà/khách sạn một cách đồng đều cho đến khi đủ tiền hoặc hết nhà
+        let madeChanges = true;
+        while (madeChanges && player.money < requiredAmount) {
+            madeChanges = false;
+            let houseProps = owned.filter(p => p.houses > 0);
+            for (const prop of houseProps) {
+                if (player.money >= requiredAmount) break;
+                // Nếu bán thành công (thỏa mãn luật bán đồng đều), lặp lại từ đầu để tiếp tục bán
+                if (manage.sellHouse(player.id, prop.id)) {
+                    madeChanges = true;
+                    break;
+                }
             }
         }
-        for (const prop of owned) {
-            if (!prop.isMortgaged && player.money < requiredAmount) {
-                manage.mortgageProperty(player.id, prop.id);
+
+        // 2. Thế chấp đất nếu vẫn còn thiếu tiền
+        if (player.money < requiredAmount) {
+            for (const prop of owned) {
+                if (!prop.isMortgaged && player.money < requiredAmount) {
+                    manage.mortgageProperty(player.id, prop.id);
+                }
             }
         }
     }

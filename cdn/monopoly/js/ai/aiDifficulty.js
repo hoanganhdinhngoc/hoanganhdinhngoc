@@ -73,34 +73,42 @@ export class AIDifficulty {
 
         const reserve = AIEvaluator.getRequiredCashReserve(player.id, player.difficulty);
         let simulatedMoney = player.money;
+        
+        // Tạo map để theo dõi số nhà mô phỏng nhằm tránh lặp vô tận
+        const simulatedHouses = {};
+        for (const tileId of owned.map(p => p.id)) {
+            simulatedHouses[tileId] = state.properties[tileId].houses;
+        }
 
         for (const mono of monopolies) {
             const groupInfo = COLOR_GROUPS[mono.groupKey];
             const houseCost = groupInfo.houseCost;
 
-            // Lặp các vòng xây nhà đồng đều
             let continueBuilding = true;
             while (continueBuilding) {
                 continueBuilding = false;
 
-                // Mục tiêu số nhà tối đa cần xây theo cấp độ
                 let targetMaxHouses = 5;
                 if (player.difficulty === 'easy') {
-                    targetMaxHouses = Math.floor(Math.random() * 3) + 1; // Xây lung tung 1-3 nhà
+                    targetMaxHouses = Math.floor(Math.random() * 3) + 1;
                 } else if (player.difficulty === 'hard' || player.difficulty === 'very_hard') {
-                    // Cấp độ khó: Ưu tiên xây nhanh 3 nhà trên mỗi ô (Điểm bùng nổ ROI tốt nhất của Monopoly)
-                    // Sau đó mới nâng tiếp lên 4 nhà và Khách sạn
                     targetMaxHouses = 5;
                 }
 
                 for (const tileId of mono.tileIds) {
                     const prop = state.properties[tileId];
-                    if (!prop || prop.houses >= targetMaxHouses || prop.isMortgaged) continue;
+                    if (!prop || simulatedHouses[tileId] >= targetMaxHouses || prop.isMortgaged) continue;
 
                     if (simulatedMoney - houseCost >= reserve) {
-                        const canBuild = manage.canBuildHouse(player.id, tileId);
-                        if (canBuild.allowed) {
+                        // Kiểm tra luật xây đồng đều bằng dữ liệu mô phỏng
+                        let minHouses = 5;
+                        mono.tileIds.forEach(id => {
+                            if (simulatedHouses[id] < minHouses) minHouses = simulatedHouses[id];
+                        });
+                        
+                        if (simulatedHouses[tileId] === minHouses) {
                             buildPlans.push(tileId);
+                            simulatedHouses[tileId]++;
                             simulatedMoney -= houseCost;
                             continueBuilding = true;
                         }
