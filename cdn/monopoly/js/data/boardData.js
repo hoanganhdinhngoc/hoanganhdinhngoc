@@ -73,7 +73,7 @@ export const BOARD_TILES = [
         group: 'SPECIAL',
         taxAmount: 200,
         icon: 'fa-solid fa-receipt',
-        description: 'Nộp phạt thuế $200 cho Ngân Hàng.',
+        description: 'Nộp thuế thu nhập $200.',
         grid: { row: 11, col: 7 }
     },
     // 5: Reading Railroad
@@ -514,7 +514,7 @@ export const BOARD_TILES = [
         group: 'SPECIAL',
         taxAmount: 100,
         icon: 'fa-solid fa-gem',
-        description: 'Nộp phạt thuế $100 cho Ngân Hàng.',
+        description: 'Nộp thuế xa xỉ $100.',
         grid: { row: 9, col: 11 }
     },
     // 39: Boardwalk

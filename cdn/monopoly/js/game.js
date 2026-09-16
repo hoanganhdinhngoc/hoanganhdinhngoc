@@ -380,9 +380,9 @@ export class GameEngine {
 
             case 'TAX': {
                 sound.playRent();
-                state.addLog(`<strong>${player.name}</strong> phải nộp thuế $${tile.taxAmount} cho Ngân Hàng.`, 'danger', player.id);
+                state.addLog(`<strong>${player.name}</strong> phải nộp thuế $${tile.taxAmount}.`, 'danger', player.id);
                 if (!player.isAI) {
-                    await this.showGameAlert('NỘP THUẾ', `Bạn đã đáp xuống ô <strong>${tile.name}</strong> và phải nộp phạt <strong>-$${tile.taxAmount}</strong> cho Ngân Hàng!`, 'fa-solid fa-receipt', 'danger');
+                    await this.showGameAlert('NỘP THUẾ', `Bạn đã đáp xuống ô <strong>${tile.name}</strong> và phải nộp <strong>-$${tile.taxAmount}</strong>!`, 'fa-solid fa-receipt', 'danger');
                 }
                 await this.deductMoneyOrHandleDebt(player, tile.taxAmount, null);
                 break;
