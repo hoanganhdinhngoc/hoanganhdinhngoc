@@ -57,7 +57,10 @@ export class GameEngine {
             this.actionButtons.leaveJailBtn.onclick = () => this.handleHumanLeaveJail();
         }
 
-        window.addEventListener('monopoly:hud_update', () => this.updateHUD());
+        if (!this._hudListenerBound) {
+            window.addEventListener('monopoly:hud_update', () => this.updateHUD());
+            this._hudListenerBound = true;
+        }
     }
 
     // Khởi tạo tính năng kéo thả (Draggable) cho tất cả các modal hộp thoại
@@ -158,6 +161,32 @@ export class GameEngine {
             board.updatePlayerTokens();
             board.updateAllTileOwnership();
             this.updateHUD();
+            
+            // Xóa log cũ ở DOM và vẽ lại log từ state
+            const logBox = document.getElementById('game-logs-container');
+            if (logBox) {
+                logBox.innerHTML = '';
+                // Vẽ ngược từ dưới lên vì logBox.prepend hoặc append?
+                // Sự kiện 'monopoly:log' sẽ prepend. Ở đây ta vẽ lại.
+                const reversedLogs = [...state.gameLogs].reverse();
+                reversedLogs.forEach(log => {
+                    let iconClass = 'fa-solid fa-info-circle';
+                    if (log.type === 'success') iconClass = 'fa-solid fa-circle-check';
+                    else if (log.type === 'danger') iconClass = 'fa-solid fa-triangle-exclamation';
+                    else if (log.type === 'warning') iconClass = 'fa-solid fa-bell';
+                    else if (log.type === 'trade') iconClass = 'fa-solid fa-handshake';
+
+                    const item = document.createElement('div');
+                    item.className = `log-item log-type-${log.type}`;
+                    item.innerHTML = `
+                        <span class="log-time">${log.time}</span>
+                        <i class="${iconClass} log-icon"></i>
+                        <span class="log-text">${log.text}</span>
+                    `;
+                    logBox.prepend(item);
+                });
+            }
+
             this.checkTurnStart();
             state.addLog('Đã khôi phục trò chơi từ lần lưu trước!', 'success');
             return true;
@@ -873,6 +902,13 @@ export class GameEngine {
                 victoryModalEl.classList.remove('active');
                 document.getElementById('game-screen').classList.add('hidden');
                 document.getElementById('setup-screen').classList.remove('hidden');
+                
+                // Trở về menu thì reset nhạc và dọn dẹp log
+                sound.stopBGM();
+                sound.playMenuBGM();
+                
+                const logBox = document.getElementById('game-logs-container');
+                if (logBox) logBox.innerHTML = '';
             };
         }
 

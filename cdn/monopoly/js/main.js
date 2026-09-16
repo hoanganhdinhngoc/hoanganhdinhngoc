@@ -141,8 +141,13 @@ class App {
         const startBtn = document.getElementById('btn-start-game');
         if (startBtn) {
             startBtn.onclick = () => {
-                sound.playBuy();
+                sound.playClick();
                 sound.playGameBGM();
+                
+                // Đảm bảo clear log DOM cũ nếu có
+                const logBox = document.getElementById('game-logs-container');
+                if (logBox) logBox.innerHTML = '';
+                
                 document.getElementById('setup-screen').classList.add('hidden');
                 document.getElementById('game-screen').classList.remove('hidden');
                 game.init();

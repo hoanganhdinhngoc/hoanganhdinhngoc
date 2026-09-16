@@ -32,9 +32,8 @@ export class DiceManager {
         if (this.isRolling) return null;
         this.isRolling = true;
 
-        if (!this.die1El || !this.die2El) {
-            this.initElements();
-        }
+        // Luôn cập nhật lại DOM Element phòng trường hợp bàn cờ bị render lại khi chơi ván mới
+        this.initElements();
 
         const die1 = Math.floor(Math.random() * 6) + 1;
         const die2 = Math.floor(Math.random() * 6) + 1;

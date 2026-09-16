@@ -81,12 +81,14 @@ class AudioManager {
     playMenuBGM() {
         this.gameBGM.pause();
         this.gameBGM.currentTime = 0;
+        this.menuBGM.currentTime = 0;
         this.menuBGM.play().catch(e => console.warn("Autoplay prevented:", e));
     }
     
     playGameBGM() {
         this.menuBGM.pause();
         this.menuBGM.currentTime = 0;
+        this.gameBGM.currentTime = 0;
         this.gameBGM.play().catch(e => console.warn("Autoplay prevented:", e));
     }
     

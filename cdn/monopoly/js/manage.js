@@ -63,13 +63,20 @@ export class PropertyManager {
             const groupInfo = COLOR_GROUPS[groupKey] || { name: groupKey, hex: '#4B5563', houseCost: 0 };
             const groupStatus = state.getColorGroupStatus(groupKey);
             const isFullSet = (groupStatus.isMonopoly && groupStatus.ownerId === player.id);
+            const isBuildable = (groupKey !== 'RAILROAD' && groupKey !== 'UTILITY' && groupKey !== 'SPECIAL');
+            const hasLimitWarning = isBuildable && (state.bank.availableHouses <= 0 || state.bank.availableHotels <= 0);
+
+            const limitWarningHtml = hasLimitWarning ? '<span class="limit-warning-tag" style="background-color: #EF4444; color: white; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 600;"><i class="fa-solid fa-triangle-exclamation"></i> Đã đạt giới hạn nhà/ khách sạn, không thể xây thêm</span>' : '';
+            const monopolyHtml = '<span class="monopoly-tag"><i class="fa-solid fa-crown"></i> ĐỘC QUYỀN (x2 TIỀN THUÊ / ĐƯỢC XÂY NHÀ)</span>';
+
+            const tagsContainer = isFullSet ? `<div style="display: flex; align-items: center; gap: 8px;">${limitWarningHtml}${monopolyHtml}</div>` : '';
 
             const groupContainer = document.createElement('div');
             groupContainer.className = 'property-group-card';
             groupContainer.innerHTML = `
                 <div class="group-header" style="border-left: 6px solid ${groupInfo.hex};">
                     <span class="group-name">${groupInfo.name} (${groupStatus.count}/${groupStatus.total})</span>
-                    ${isFullSet ? '<span class="monopoly-tag"><i class="fa-solid fa-crown"></i> ĐỘC QUYỀN (x2 THUÊ / ĐƯỢC XÂY)</span>' : ''}
+                    ${tagsContainer}
                 </div>
                 <div class="group-items-list" id="group-items-${groupKey}"></div>
             `;
