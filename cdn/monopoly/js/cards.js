@@ -16,7 +16,7 @@ export class CardManager {
     }
 
     // Rút thẻ từ bộ Chance hoặc Chest
-    async drawCard(type, playerId, onTileActionNeeded = null) {
+    async drawCard(type, playerId, onTileActionNeeded = null, onDeductMoneyNeeded = null) {
         sound.playCardDraw();
         const player = state.getPlayer(playerId);
 
@@ -97,17 +97,13 @@ export class CardManager {
             case 'ADVANCE_TO': {
                 const oldPos = player.position;
                 const targetPos = card.tileId;
-                // Kiểm tra có đi qua GO không
+                // Kiểm tra có đi qua GO không (nếu đáp trúng GO thì nhận thưởng ở handleTileLanding)
                 if (targetPos < oldPos && targetPos !== 0) {
                     player.money += 200;
                     sound.playBuy();
                     state.addLog(`<strong>${player.name}</strong> đi qua ô Bắt Đầu (GO) và nhận $200!`, 'success', player.id);
-                } else if (targetPos === 0) {
-                    player.money += 200;
-                    sound.playBuy();
-                    state.addLog(`<strong>${player.name}</strong> về đích ô Bắt Đầu (GO) và nhận $200!`, 'success', player.id);
                 }
-
+                
                 await board.animatePlayerMove(player.id, oldPos, targetPos, state.gameSpeed);
                 if (onTileActionNeeded) {
                     await onTileActionNeeded(player, targetPos);
@@ -161,21 +157,30 @@ export class CardManager {
             }
 
             case 'PAY_MONEY': {
-                player.money -= card.amount;
                 sound.playRent();
                 state.addLog(`<strong>${player.name}</strong> phải nộp $${card.amount} cho Ngân Hàng.`, 'danger', player.id);
+                if (onDeductMoneyNeeded) {
+                    await onDeductMoneyNeeded(player, card.amount, null);
+                } else {
+                    player.money -= card.amount;
+                }
                 break;
             }
 
             case 'COLLECT_FROM_EACH': {
                 let totalCollected = 0;
-                state.players.forEach(p => {
+                for (const p of state.players) {
                     if (p.id !== player.id && !p.bankrupt) {
-                        p.money -= card.amount;
-                        totalCollected += card.amount;
+                        if (onDeductMoneyNeeded) {
+                            await onDeductMoneyNeeded(p, card.amount, player);
+                            totalCollected += card.amount;
+                        } else {
+                            p.money -= card.amount;
+                            player.money += card.amount;
+                            totalCollected += card.amount;
+                        }
                     }
-                });
-                player.money += totalCollected;
+                }
                 sound.playBuy();
                 state.addLog(`<strong>${player.name}</strong> nhận $${card.amount} từ mỗi người chơi (Tổng: +$${totalCollected}).`, 'success', player.id);
                 break;
@@ -183,13 +188,17 @@ export class CardManager {
 
             case 'PAY_EACH_PLAYER': {
                 let totalPaid = 0;
-                state.players.forEach(p => {
+                for (const p of state.players) {
                     if (p.id !== player.id && !p.bankrupt) {
-                        p.money += card.amount;
+                        if (onDeductMoneyNeeded) {
+                            await onDeductMoneyNeeded(player, card.amount, p);
+                        } else {
+                            player.money -= card.amount;
+                            p.money += card.amount;
+                        }
                         totalPaid += card.amount;
                     }
-                });
-                player.money -= totalPaid;
+                }
                 sound.playRent();
                 state.addLog(`<strong>${player.name}</strong> trả $${card.amount} cho mỗi người chơi (Tổng: -$${totalPaid}).`, 'danger', player.id);
                 break;
@@ -232,9 +241,13 @@ export class CardManager {
                     else if (prop.houses === 5) hotelCount += 1;
                 });
                 const totalCost = (houseCount * card.houseCost) + (hotelCount * card.hotelCost);
-                player.money -= totalCost;
                 sound.playRent();
                 state.addLog(`<strong>${player.name}</strong> trả $${totalCost} phí sửa chữa (${houseCount} nhà, ${hotelCount} khách sạn).`, 'danger', player.id);
+                if (onDeductMoneyNeeded) {
+                    await onDeductMoneyNeeded(player, totalCost, null);
+                } else {
+                    player.money -= totalCost;
+                }
                 break;
             }
         }

@@ -247,7 +247,12 @@ export class GameEngine {
             } else {
                 player.jailTurns++;
                 if (player.jailTurns >= 3) {
-                    player.money -= 50;
+                    const paid = await this.deductMoneyOrHandleDebt(player, 50, null);
+                    if (player.bankrupt) {
+                        this.isProcessing = false;
+                        this.endTurn();
+                        return;
+                    }
                     player.inJail = false;
                     player.jailTurns = 0;
                     sound.playUnjail();
@@ -288,11 +293,13 @@ export class GameEngine {
         const oldPos = player.position;
         const newPos = (oldPos + rollResult.total) % 40;
 
-        if (newPos < oldPos) {
+        if (newPos < oldPos && newPos !== 0) {
             player.money += 200;
             sound.playBuy();
             state.addLog(`<strong>${player.name}</strong> đi qua ô Bắt Đầu (GO) và nhận $200!`, 'success', player.id);
-            await this.showGameAlert('QUA Ô BẮT ĐẦU (GO)!', `Bạn vừa hoàn thành một vòng bàn cờ và nhận <strong>+$200</strong> từ Ngân Hàng!`, 'fa-solid fa-money-bill-trend-up', 'success');
+            if (!player.isAI) {
+                await this.showGameAlert('QUA Ô BẮT ĐẦU (GO)!', `Bạn vừa hoàn thành một vòng bàn cờ và nhận <strong>+$200</strong> từ Ngân Hàng!`, 'fa-solid fa-money-bill-trend-up', 'success');
+            }
         }
 
         await board.animatePlayerMove(player.id, oldPos, newPos, state.gameSpeed);
@@ -382,12 +389,22 @@ export class GameEngine {
             }
 
             case 'CHANCE': {
-                await cards.drawCard('CHANCE', player.id, (p, tPos, opt) => this.handleTileLanding(p, tPos, opt));
+                await cards.drawCard(
+                    'CHANCE', 
+                    player.id, 
+                    (p, tPos, opt) => this.handleTileLanding(p, tPos, opt),
+                    (p, amt, cred) => this.deductMoneyOrHandleDebt(p, amt, cred)
+                );
                 break;
             }
 
             case 'CHEST': {
-                await cards.drawCard('CHEST', player.id, (p, tPos, opt) => this.handleTileLanding(p, tPos, opt));
+                await cards.drawCard(
+                    'CHEST', 
+                    player.id, 
+                    (p, tPos, opt) => this.handleTileLanding(p, tPos, opt),
+                    (p, amt, cred) => this.deductMoneyOrHandleDebt(p, amt, cred)
+                );
                 break;
             }
 
@@ -405,7 +422,15 @@ export class GameEngine {
                 break;
             }
 
-            case 'GO':
+            case 'GO': {
+                player.money += 400;
+                sound.playBuy();
+                state.addLog(`<strong>${player.name}</strong> đáp trúng đích ô Bắt Đầu (GO) và nhận thưởng đặc biệt $400!`, 'success', player.id);
+                if (!player.isAI) {
+                    await this.showGameAlert('TRÚNG ĐÍCH (GO)!', `Tuyệt vời! Bạn đáp chính xác vào ô Bắt Đầu (GO) và được thưởng gấp đôi <strong>+$400</strong> từ Ngân Hàng!`, 'fa-solid fa-gift', 'success');
+                }
+                break;
+            }
             case 'JAIL':
             case 'PARKING':
                 break;

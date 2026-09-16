@@ -81,7 +81,13 @@ export class AIController {
                 state.addLog(`<strong>${player.name} (AI)</strong> đã đổ được xúc xắc ĐÔI (${rollResult.die1}-${rollResult.die2}) và thoát khỏi Tù!`, 'success', player.id);
             } else if (player.jailTurns >= 3) {
                 // Đã hết 3 lượt thử, bắt buộc nộp $50 và được đi
-                player.money -= 50;
+                const paid = await gameEngine.deductMoneyOrHandleDebt(player, 50, null);
+                if (player.bankrupt) {
+                    this.isExecuting = false;
+                    state.isAiProcessing = false;
+                    gameEngine.endTurn();
+                    return;
+                }
                 player.inJail = false;
                 player.jailTurns = 0;
                 sound.playUnjail();
@@ -122,7 +128,7 @@ export class AIController {
         const newPos = (oldPos + rollResult.total) % 40;
 
         // Đi qua ô GO
-        if (newPos < oldPos) {
+        if (newPos < oldPos && newPos !== 0) {
             player.money += 200;
             sound.playBuy();
             state.addLog(`<strong>${player.name} (AI)</strong> đi qua ô Bắt Đầu (GO) và nhận $200!`, 'success', player.id);
