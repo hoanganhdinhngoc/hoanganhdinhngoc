@@ -24,7 +24,7 @@ export const BOARD_TILES = [
         group: 'SPECIAL',
         color: '#E0E7FF',
         icon: 'fa-solid fa-arrow-right',
-        description: 'Nhận $200 khi đi qua hoặc đáp trúng ô này.',
+        description: 'Nhận $200 khi đi qua, nhưng sẽ nhận $400 nếu đáp trúng đích ô này.',
         grid: { row: 11, col: 11 }
     },
     // 1: Mediterranean Avenue

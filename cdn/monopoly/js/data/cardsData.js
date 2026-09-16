@@ -5,7 +5,7 @@ export const CHANCE_CARDS = [
     {
         id: 'chance_1',
         title: 'Tiến về Bắt Đầu (GO)',
-        text: 'Tiến thẳng về ô Bắt Đầu (GO). Nhận ngay $200.',
+        text: 'Tiến thẳng về đích ô Bắt Đầu (GO) và nhận phần thưởng đặc biệt $400!',
         action: 'ADVANCE_TO',
         tileId: 0
     },
@@ -117,7 +117,7 @@ export const COMMUNITY_CHEST_CARDS = [
     {
         id: 'chest_1',
         title: 'Tiến về Bắt Đầu (GO)',
-        text: 'Tiến thẳng về ô Bắt Đầu (GO). Nhận $200.',
+        text: 'Tiến thẳng về đích ô Bắt Đầu (GO) và nhận phần thưởng đặc biệt $400!',
         action: 'ADVANCE_TO',
         tileId: 0
     },

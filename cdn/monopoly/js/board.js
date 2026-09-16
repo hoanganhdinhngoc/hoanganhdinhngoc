@@ -138,7 +138,7 @@ export class BoardRenderer {
         } else if (tile.type === 'GO') {
             innerHTML = `
                 <div class="corner-content go-corner">
-                    <div class="go-label">THU $200 KHI ĐI QUA</div>
+                    <div class="go-label"></div>
                     <div class="go-title">BẮT ĐẦU</div>
                     <i class="fa-solid fa-arrow-left go-arrow"></i>
                 </div>
