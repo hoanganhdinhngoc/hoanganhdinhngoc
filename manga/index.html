@@ -225,17 +225,31 @@
         .click-zone {
             position:absolute; top:0; width:22%; height:100%;
             cursor:pointer; z-index:10; display:flex; align-items:center;
-            opacity:0; transition:opacity .2s;
+            opacity:0; transition:opacity .25s ease-out;
         }
-        .click-zone:hover { opacity:1; }
-        .click-zone-left  { left:0;  justify-content:flex-start; padding-left:10px; }
-        .click-zone-right { right:0; justify-content:flex-end;   padding-right:10px; }
+        /* Hover only on real pointer devices (desktop) — prevent sticky-hover on mobile touch */
+        @media (hover:hover) and (pointer:fine) {
+            .click-zone:hover { opacity:1; }
+        }
+        .click-zone-left  { left:0;  justify-content:flex-start; padding-left:16px; }
+        .click-zone-right { right:0; justify-content:flex-end;   padding-right:16px; }
         .click-zone-arrow {
-            width:44px; height:44px; background:var(--nier-overlay);
-            border:2px solid var(--nier-dark);
-            display:flex; align-items:center; justify-content:center;
-            color:var(--nier-text-invert); font-size:16px;
+            font-size:34px;
+            color:rgba(75,67,64,.45);
+            /* Dual halo: light outline for dark panels, subtle shadow for light panels */
+            text-shadow: 0 0 10px rgba(255,255,255,.65), 0 1px 4px rgba(0,0,0,.25);
         }
+        [data-theme="dark"] .click-zone-arrow {
+            color:rgba(211,206,187,.45);
+            text-shadow: 0 0 10px rgba(0,0,0,.7), 0 1px 4px rgba(255,255,255,.1);
+        }
+        /* Flash animation: brief pop then fade — triggered by JS on tap */
+        @keyframes czFlash {
+            0%   { opacity:.8; }
+            55%  { opacity:.55; }
+            100% { opacity:0; }
+        }
+        .click-zone.cz-flash { animation:czFlash .45s ease-out forwards; }
 
         /* READER — SCROLL MODE */
         .reader-scroll-wrap {
@@ -901,8 +915,17 @@
     // Buttons
     document.getElementById('btn-next-page').addEventListener('click', () => { if (readerMode === 'flip') goPage(1); });
     document.getElementById('btn-prev-page').addEventListener('click', () => { if (readerMode === 'flip') goPage(-1); });
-    document.getElementById('cz-right').addEventListener('click', () => { if (readerMode === 'flip') goPage(1); });
-    document.getElementById('cz-left').addEventListener('click',  () => { if (readerMode === 'flip') goPage(-1); });
+
+    // Flash a click zone briefly on tap then fade — gives touch feedback without lingering overlay
+    function flashZone(id) {
+        const el = document.getElementById(id);
+        el.classList.remove('cz-flash');
+        void el.offsetWidth; // force reflow so animation restarts each tap
+        el.classList.add('cz-flash');
+        el.addEventListener('animationend', () => el.classList.remove('cz-flash'), { once: true });
+    }
+    document.getElementById('cz-right').addEventListener('click', () => { if (readerMode === 'flip') { flashZone('cz-right'); goPage(1); } });
+    document.getElementById('cz-left').addEventListener('click',  () => { if (readerMode === 'flip') { flashZone('cz-left');  goPage(-1); } });
 
     // Page input
     document.getElementById('reader-page-input').addEventListener('change', async e => {
