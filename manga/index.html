@@ -97,7 +97,7 @@
             background:var(--nier-input-bg); color:var(--nier-dark);
             outline:none; width:220px; transition:all .3s;
         }
-        .search-input::placeholder { opacity:.5; font-weight:400; }
+        .search-input::placeholder { opacity:.72; font-weight:400; }
         .search-input:focus { background:rgba(100,98,86,.25); }
         .search-clear-btn {
             position:absolute; right:8px; top:50%; transform:translateY(-50%);
@@ -160,7 +160,7 @@
             overflow:hidden; text-overflow:ellipsis;
             display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;
         }
-        .pub-card-meta { font-size:10px; opacity:.6; margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .pub-card-meta { font-size:10px; opacity:.78; margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 
         /* CHAPTER */
         .chapter-header { margin-bottom:24px; display:flex; align-items:flex-start; gap:20px; }
@@ -238,7 +238,8 @@
 
         /* READER — SCROLL MODE */
         .reader-scroll-wrap {
-            width:100%; height:100%; overflow-y:auto; overflow-x:hidden;
+            position:absolute; inset:0;
+            overflow-y:auto; overflow-x:hidden;
             display:none; flex-direction:column; align-items:center;
             padding:24px 16px 48px; gap:16px;
         }
@@ -306,7 +307,7 @@
         @media (max-width:768px) {
             .top-bar { flex-wrap:wrap; padding:8px 12px; gap:8px; }
             .top-bar-left { flex:1 1 auto; }
-            .top-bar-center { flex:1 1 100%; order:3; }
+            .top-bar-center { flex:1 1 100%; order:3; justify-content:center; }
             .top-bar-right { flex:0 0 auto; }
             .title-main { font-size:14px; }
             .search-input { width:100%; }
@@ -321,9 +322,9 @@
             .reader-info-bar { padding:8px 12px; gap:10px; }
             .reader-chapter-display { display:none; }
             .themebutton { padding:7px 10px; font-size:12px; }
-            .mobile-sort-bar { display:flex !important; }
+            .mobile-sort-bar.lib-visible { display:flex; }
             .scroll-page-wrap { max-width:100%; }
-            .reader-scroll-wrap { padding:12px 0 40px; gap:10px; }
+            .reader-scroll-wrap { padding:10px 0 40px; gap:8px; }
         }
         .mobile-sort-bar {
             display:none; gap:6px; flex-wrap:wrap; align-items:center;
@@ -356,15 +357,11 @@
 
             <!-- Reader center: page nav + mode toggle -->
             <div class="top-bar-center" id="tc-reader" style="display:none;">
-                <div id="reader-nav-btns" style="display:flex;align-items:center;gap:6px;">
-                    <button class="themebutton" id="btn-prev-page"><i class="fas fa-chevron-left"></i></button>
-                    <div style="display:flex;align-items:center;gap:6px;">
-                        <input type="number" id="reader-page-input" class="reader-page-input" value="1" min="1">
-                        <span style="opacity:.4;">/</span>
-                        <span id="reader-page-total" style="font-weight:bold;">--</span>
-                    </div>
-                    <button class="themebutton" id="btn-next-page"><i class="fas fa-chevron-right"></i></button>
-                </div>
+                <button class="themebutton" id="btn-prev-page"><i class="fas fa-chevron-left"></i></button>
+                <input type="number" id="reader-page-input" class="reader-page-input" value="1" min="1">
+                <span style="opacity:.4;">/</span>
+                <span id="reader-page-total" style="font-weight:bold;">--</span>
+                <button class="themebutton" id="btn-next-page"><i class="fas fa-chevron-right"></i></button>
                 <!-- MODE TOGGLE -->
                 <button class="themebutton" id="btn-mode-toggle" title="Switch to Scroll Mode" style="margin-left:4px;">
                     <i id="mode-icon" class="fas fa-scroll"></i>
@@ -589,7 +586,7 @@
         document.getElementById('tc-reader').style.display  = isReader ? '' : 'none';
         document.getElementById('sort-group').style.display = isLib ? '' : 'none';
         const msb = document.getElementById('mobile-sort-bar');
-        if (msb) msb.style.display = isLib ? '' : 'none';
+        if (msb) msb.classList.toggle('lib-visible', isLib);
         currentView = name;
     }
 
@@ -1053,7 +1050,9 @@
         const scrollWrap = document.getElementById('reader-scroll-wrap');
         scrollWrap.classList.toggle('active', !isFlip);
 
-        document.getElementById('reader-nav-btns').style.display = isFlip ? '' : 'none';
+        // In scroll mode hide prev/next page buttons (they're not needed)
+        document.getElementById('btn-prev-page').style.display = isFlip ? '' : 'none';
+        document.getElementById('btn-next-page').style.display = isFlip ? '' : 'none';
 
         const icon = document.getElementById('mode-icon');
         const btn  = document.getElementById('btn-mode-toggle');
