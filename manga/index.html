@@ -57,7 +57,7 @@
             background-size: 5px 5px; color: var(--nier-dark);
             overflow: hidden; transition: background-color .3s, color .3s;
         }
-        .coreSystem { width:100vw; height:100vh; display:flex; flex-direction:column;
+        .coreSystem { width:100vw; height:100vh; height:100dvh; display:flex; flex-direction:column;
             box-shadow: inset 0 0 100px 20px rgba(0,0,0,.3); }
 
         /* TOP BAR */
@@ -207,13 +207,14 @@
         /* READER — SHARED */
         .reader-main {
             flex:1; overflow:hidden; position:relative;
-            display:flex; align-items:center; justify-content:center;
+            display:flex; flex-direction:column; align-items:stretch;
         }
 
         /* READER — FLIP MODE */
         .reader-canvas-wrap {
+            flex:1; min-height:0;
             position:relative; display:flex; align-items:center; justify-content:center;
-            width:100%; height:100%;
+            overflow:hidden;
         }
         #reader-canvas {
             display:block; box-shadow:0 0 40px rgba(0,0,0,.5); background:#fff;
@@ -238,8 +239,10 @@
 
         /* READER — SCROLL MODE */
         .reader-scroll-wrap {
-            position:absolute; inset:0;
+            flex:1; min-height:0;
             overflow-y:auto; overflow-x:hidden;
+            -webkit-overflow-scrolling:touch;
+            overscroll-behavior:contain;
             display:none; flex-direction:column; align-items:center;
             padding:24px 16px 48px; gap:16px;
         }
@@ -934,11 +937,16 @@
     // READER — SCROLL MODE  (DPR-AWARE)
     // ===========================================================
     async function initScrollMode(targetPage) {
-        // Disconnect old observers
+        // Disconnect old render observer and remove old scroll listener
         if (scrollObserver) { scrollObserver.disconnect(); scrollObserver = null; }
         if (scrollTrackObs) { scrollTrackObs.disconnect(); scrollTrackObs = null; }
 
         const scrollWrap = document.getElementById('reader-scroll-wrap');
+        // Remove previous scroll listener if any
+        if (scrollWrap._scrollHandler) {
+            scrollWrap.removeEventListener('scroll', scrollWrap._scrollHandler);
+            scrollWrap._scrollHandler = null;
+        }
         scrollWrap.innerHTML = '';
         scrollWrap.scrollTop = 0;
 
@@ -968,7 +976,7 @@
             scrollWrap.appendChild(wrap);
         }
 
-        // LAZY RENDER: render pages as they approach viewport
+        // LAZY RENDER: render pages as they enter/approach viewport
         scrollObserver = new IntersectionObserver(entries => {
             entries.forEach(entry => {
                 if (entry.isIntersecting && !entry.target.dataset.rendered) {
@@ -978,26 +986,33 @@
             });
         }, { root: scrollWrap, rootMargin: '200% 0px' });
 
-        // PAGE TRACKER: update current page counter as user scrolls
-        scrollTrackObs = new IntersectionObserver(entries => {
-            // Find the entry with highest intersection ratio
-            let best = null;
-            entries.forEach(entry => {
-                if (!best || entry.intersectionRatio > best.intersectionRatio) best = entry;
-            });
-            if (best && best.intersectionRatio > 0) {
-                const pg = parseInt(best.target.dataset.page);
+        scrollWrap.querySelectorAll('.scroll-page-wrap').forEach(w => scrollObserver.observe(w));
+
+        // PAGE TRACKER: stable scroll-event based approach (like Google Drive)
+        // Finds the last page whose top edge is at/above scrollTop + small offset.
+        // Only fires when the computed page number actually changes → no jumping.
+        const updateScrollPageNum = () => {
+            const scrollTop = scrollWrap.scrollTop;
+            const pages = scrollWrap.querySelectorAll('.scroll-page-wrap');
+            let pg = 1;
+            for (const p of pages) {
+                // offsetTop is relative to scrollWrap's scroll container
+                if (p.offsetTop <= scrollTop + 40) pg = parseInt(p.dataset.page);
+                else break; // pages are in DOM order, safe to break early
+            }
+            if (pg !== currentPage) {
                 currentPage = pg;
                 document.getElementById('reader-page-input').value   = pg;
                 document.getElementById('info-page-num').textContent = pg;
-                saveBookmark(currentPub.id, currentFileIndex, pg);
+                // Debounce bookmark save — don't write on every scroll pixel
+                clearTimeout(scrollWrap._bkmTimer);
+                scrollWrap._bkmTimer = setTimeout(() =>
+                    saveBookmark(currentPub.id, currentFileIndex, pg), 800);
             }
-        }, { root: scrollWrap, threshold: [0, 0.1, 0.3, 0.5, 0.7, 1.0] });
+        };
 
-        scrollWrap.querySelectorAll('.scroll-page-wrap').forEach(w => {
-            scrollObserver.observe(w);
-            scrollTrackObs.observe(w);
-        });
+        scrollWrap._scrollHandler = updateScrollPageNum;
+        scrollWrap.addEventListener('scroll', updateScrollPageNum, { passive: true });
 
         // Scroll to target page after layout settles
         requestAnimationFrame(() => requestAnimationFrame(() => scrollToScrollPage(targetPage)));
@@ -1075,9 +1090,11 @@
         if (readerMode === 'scroll') {
             await initScrollMode(savedPage);
         } else {
-            // Switching to flip: clean up scroll observers
+            // Switching to flip: clean up scroll render observer + scroll listener
             if (scrollObserver) { scrollObserver.disconnect(); scrollObserver = null; }
             if (scrollTrackObs) { scrollTrackObs.disconnect(); scrollTrackObs = null; }
+            const sw = document.getElementById('reader-scroll-wrap');
+            if (sw._scrollHandler) { sw.removeEventListener('scroll', sw._scrollHandler); sw._scrollHandler = null; }
             document.getElementById('reader-canvas').style.opacity = '0';
             await renderFlipPage(savedPage);
             document.getElementById('reader-canvas').style.opacity = '1';
