@@ -26,10 +26,8 @@
             --nier-card-bg: rgba(216, 210, 186, 0.6);
             --nier-card-hover: rgba(100, 98, 86, 0.25);
             --nier-input-bg: rgba(100, 98, 86, 0.15);
-            --nier-border: #4b4340;
             --nier-overlay: rgba(75, 67, 64, 0.85);
         }
-
         [data-theme="dark"] {
             --nier-dark: #d3cebb;
             --nier-beige: #201e1d;
@@ -42,18 +40,13 @@
             --nier-card-bg: rgba(45, 42, 40, 0.8);
             --nier-card-hover: rgba(100, 98, 86, 0.3);
             --nier-input-bg: rgba(100, 98, 86, 0.2);
-            --nier-border: #d3cebb;
             --nier-overlay: rgba(20, 18, 17, 0.92);
         }
 
-        * {
-            box-sizing: border-box; margin: 0; padding: 0;
-            scrollbar-color: rgba(100, 98, 86, 0.8) rgba(143, 139, 122, 0.3);
-            scrollbar-width: thin;
-        }
-
-        ::-moz-selection { background: rgba(100, 98, 86, 0.8); color: var(--nier-text-invert); }
-        ::selection { background: rgba(100, 98, 86, 0.8); color: var(--nier-text-invert); }
+        * { box-sizing: border-box; margin: 0; padding: 0;
+            scrollbar-color: rgba(100,98,86,.8) rgba(143,139,122,.3); scrollbar-width: thin; }
+        ::-moz-selection { background: rgba(100,98,86,.8); color: var(--nier-text-invert); }
+        ::selection     { background: rgba(100,98,86,.8); color: var(--nier-text-invert); }
 
         body {
             font-family: 'Montserrat', sans-serif;
@@ -61,293 +54,281 @@
             background-image:
                 linear-gradient(90deg, var(--nier-bg-pattern) 30%, transparent 30%),
                 linear-gradient(var(--nier-bg-pattern) 30%, transparent 30%);
-            background-size: 5px 5px;
-            color: var(--nier-dark);
-            overflow: hidden;
-            transition: background-color 0.3s, color 0.3s;
+            background-size: 5px 5px; color: var(--nier-dark);
+            overflow: hidden; transition: background-color .3s, color .3s;
         }
+        .coreSystem { width:100vw; height:100vh; display:flex; flex-direction:column;
+            box-shadow: inset 0 0 100px 20px rgba(0,0,0,.3); }
 
-        .coreSystem {
-            width: 100vw; height: 100vh;
-            display: flex; flex-direction: column;
-            box-shadow: inset 0px 0px 100px 20px rgba(0, 0, 0, 0.3);
-        }
-
-        /* ===== TOP BAR ===== */
+        /* TOP BAR */
         .top-bar {
-            background: var(--nier-panel);
-            border-bottom: 2px solid var(--nier-dark);
-            padding: 10px 20px;
-            display: flex; align-items: center; justify-content: space-between; gap: 12px;
-            box-shadow: 0px 2px 10px rgba(0,0,0,0.2);
-            z-index: 100; flex-shrink: 0;
-            transition: background 0.3s, border-color 0.3s;
+            background: var(--nier-panel); border-bottom: 2px solid var(--nier-dark);
+            padding: 10px 20px; display:flex; align-items:center; justify-content:space-between; gap:12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,.2); z-index:100; flex-shrink:0;
+            transition: background .3s, border-color .3s;
         }
-
-        .top-bar-left { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
-        .top-bar-center { display: flex; align-items: center; gap: 10px; flex: 1; justify-content: center; }
-        .top-bar-right { display: flex; align-items: center; gap: 10px; flex: 1; justify-content: flex-end; }
-
+        .top-bar-left  { display:flex; align-items:center; gap:10px; flex:1; min-width:0; }
+        .top-bar-center{ display:flex; align-items:center; gap:8px; flex:1; justify-content:center; }
+        .top-bar-right { display:flex; align-items:center; gap:10px; flex:1; justify-content:flex-end; }
         .title-main {
-            font-size: 17px; text-shadow: 2px 2px rgba(100, 98, 86, .3);
-            text-transform: uppercase; white-space: nowrap; overflow: hidden;
-            text-overflow: ellipsis; font-weight: 700; letter-spacing: 1px;
+            font-size:17px; text-shadow:2px 2px rgba(100,98,86,.3);
+            text-transform:uppercase; white-space:nowrap; overflow:hidden;
+            text-overflow:ellipsis; font-weight:700; letter-spacing:1px;
         }
 
-        /* ===== BUTTONS ===== */
+        /* BUTTONS */
         .themebutton {
-            cursor: pointer; padding: 7px 13px; font-size: 13px; font-weight: bold;
-            color: var(--nier-dark); border: 2px solid var(--nier-dark);
-            background: var(--nier-bg-btn); background-size: 200% 100%;
-            background-position: right bottom; transition: all .2s ease-out;
-            font-family: 'Montserrat', sans-serif; text-transform: uppercase;
-            display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-            white-space: nowrap; flex-shrink: 0;
+            cursor:pointer; padding:7px 13px; font-size:13px; font-weight:bold;
+            color:var(--nier-dark); border:2px solid var(--nier-dark);
+            background:var(--nier-bg-btn); background-size:200% 100%;
+            background-position:right bottom; transition:all .2s ease-out;
+            font-family:'Montserrat',sans-serif; text-transform:uppercase;
+            display:inline-flex; align-items:center; justify-content:center; gap:6px;
+            white-space:nowrap; flex-shrink:0;
         }
-        .themebutton:hover { color: var(--nier-text-invert); background-position: left bottom; }
-        .themebutton.active { color: var(--nier-text-invert); background-position: left bottom; }
+        .themebutton:hover { color:var(--nier-text-invert); background-position:left bottom; }
+        .themebutton.active{ color:var(--nier-text-invert); background-position:left bottom; }
 
-        /* ===== SEARCH ===== */
-        .search-wrap { position: relative; }
+        /* SEARCH */
+        .search-wrap { position:relative; }
         .search-input {
-            padding: 7px 36px 7px 12px; font-family: 'Montserrat', sans-serif; font-size: 13px;
-            font-weight: bold; border: 2px solid var(--nier-dark);
-            background: var(--nier-input-bg); color: var(--nier-dark);
-            outline: none; width: 220px; transition: all 0.3s;
+            padding:7px 36px 7px 12px; font-family:'Montserrat',sans-serif; font-size:13px;
+            font-weight:bold; border:2px solid var(--nier-dark);
+            background:var(--nier-input-bg); color:var(--nier-dark);
+            outline:none; width:220px; transition:all .3s;
         }
-        .search-input::placeholder { opacity: 0.5; font-weight: 400; }
-        .search-input:focus { background: rgba(100, 98, 86, 0.25); }
+        .search-input::placeholder { opacity:.5; font-weight:400; }
+        .search-input:focus { background:rgba(100,98,86,.25); }
         .search-clear-btn {
-            position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
-            cursor: pointer; opacity: 0.5; font-size: 12px; transition: opacity 0.2s;
-            display: none; background: none; border: none; color: var(--nier-dark);
+            position:absolute; right:8px; top:50%; transform:translateY(-50%);
+            cursor:pointer; opacity:.5; font-size:12px; transition:opacity .2s;
+            display:none; background:none; border:none; color:var(--nier-dark);
         }
-        .search-clear-btn:hover { opacity: 1; }
+        .search-clear-btn:hover { opacity:1; }
         .search-dropdown {
-            position: absolute; top: calc(100% + 4px); left: 0; min-width: 280px;
-            background: var(--nier-panel-solid); border: 2px solid var(--nier-dark);
-            z-index: 200; display: none; box-shadow: 4px 4px 0px var(--nier-shadow);
-            max-height: 260px; overflow-y: auto;
+            position:absolute; top:calc(100% + 4px); left:0; min-width:280px;
+            background:var(--nier-panel-solid); border:2px solid var(--nier-dark);
+            z-index:200; display:none; box-shadow:4px 4px 0 var(--nier-shadow);
+            max-height:260px; overflow-y:auto;
         }
         .search-suggestion {
-            padding: 10px 14px; cursor: pointer; font-size: 13px; font-weight: bold;
-            border-bottom: 1px solid rgba(100,98,86,0.2);
-            display: flex; align-items: center; gap: 8px; transition: background 0.15s;
+            padding:10px 14px; cursor:pointer; font-size:13px; font-weight:bold;
+            border-bottom:1px solid rgba(100,98,86,.2);
+            display:flex; align-items:center; gap:8px; transition:background .15s;
         }
-        .search-suggestion:last-child { border-bottom: none; }
-        .search-suggestion:hover { background: var(--nier-highlight); color: var(--nier-text-invert); }
-        .search-suggestion .sug-label { font-size: 10px; opacity: 0.6; text-transform: uppercase; letter-spacing: 1px; flex-shrink:0; }
+        .search-suggestion:last-child { border-bottom:none; }
+        .search-suggestion:hover { background:var(--nier-highlight); color:var(--nier-text-invert); }
+        .search-suggestion .sug-label { font-size:10px; opacity:.6; text-transform:uppercase; letter-spacing:1px; flex-shrink:0; }
 
-        .sort-group { display: flex; align-items: center; gap: 6px; }
-        .sort-label { font-size: 11px; font-weight: bold; opacity: 0.6; text-transform: uppercase; letter-spacing: 1px; }
+        .sort-group { display:flex; align-items:center; gap:6px; }
+        .sort-label  { font-size:11px; font-weight:bold; opacity:.6; text-transform:uppercase; letter-spacing:1px; }
 
-        /* ===== VIEW CONTAINER ===== */
-        .view-container { flex: 1; overflow: hidden; position: relative; }
-
+        /* VIEW CONTAINER */
+        .view-container { flex:1; overflow:hidden; position:relative; }
         .library-view, .chapter-view {
-            position: absolute; inset: 0;
-            overflow-y: auto; padding: 30px;
-            transition: opacity 0.25s, transform 0.25s;
+            position:absolute; inset:0; overflow-y:auto; padding:30px;
+            transition:opacity .25s, transform .25s;
         }
-        .library-view.hidden, .chapter-view.hidden, .reader-view.hidden {
-            opacity: 0; pointer-events: none; transform: scale(0.98);
+        .library-view.hidden,.chapter-view.hidden,.reader-view.hidden {
+            opacity:0; pointer-events:none; transform:scale(.98);
         }
-        .reader-view {
-            position: absolute; inset: 0;
-            transition: opacity 0.25s;
-            display: flex; flex-direction: column;
-        }
+        .reader-view { position:absolute; inset:0; transition:opacity .25s; display:flex; flex-direction:column; }
 
-        /* ===== GRIDS ===== */
+        /* LIBRARY GRID */
         .grid-publication {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-            gap: 20px; position: relative; min-height: 200px;
+            display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr));
+            gap:20px; position:relative; min-height:200px;
         }
-
         .pub-card {
-            cursor: pointer; border: 2px solid transparent;
-            background: var(--nier-card-bg);
-            transition: all 0.2s; padding: 8px; text-align: center;
-            display: flex; flex-direction: column;
+            cursor:pointer; border:2px solid transparent; background:var(--nier-card-bg);
+            transition:all .2s; padding:8px; text-align:center; display:flex; flex-direction:column;
         }
         .pub-card:hover {
-            border-color: var(--nier-dark); background: var(--nier-card-hover);
-            transform: translateY(-3px); box-shadow: 4px 4px 0 var(--nier-shadow);
+            border-color:var(--nier-dark); background:var(--nier-card-hover);
+            transform:translateY(-3px); box-shadow:4px 4px 0 var(--nier-shadow);
         }
         .pub-card img {
-            width: 100%; aspect-ratio: 3/4; object-fit: cover;
-            display: block; box-shadow: 0 2px 8px var(--nier-shadow);
-            background: rgba(100,98,86,0.2);
+            width:100%; aspect-ratio:3/4; object-fit:cover;
+            display:block; box-shadow:0 2px 8px var(--nier-shadow); background:rgba(100,98,86,.2);
         }
         .pub-card-thumb-placeholder {
-            width: 100%; aspect-ratio: 3/4; background: rgba(100,98,86,0.2);
-            display: flex; align-items: center; justify-content: center;
-            font-size: 40px; opacity: 0.3;
+            width:100%; aspect-ratio:3/4; background:rgba(100,98,86,.2);
+            display:flex; align-items:center; justify-content:center; font-size:40px; opacity:.3;
         }
         .pub-card-title {
-            margin-top: 8px; font-size: 12px; font-weight: 700;
-            text-transform: uppercase; letter-spacing: 0.5px;
-            overflow: hidden; text-overflow: ellipsis;
-            display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+            margin-top:8px; font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.5px;
+            overflow:hidden; text-overflow:ellipsis;
+            display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;
         }
-        .pub-card-meta {
-            font-size: 10px; opacity: 0.6; margin-top: 3px;
-            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-        }
+        .pub-card-meta { font-size:10px; opacity:.6; margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 
-        .chapter-header { margin-bottom: 24px; display: flex; align-items: flex-start; gap: 20px; }
-        .chapter-pub-thumb { width: 80px; flex-shrink: 0; }
-        .chapter-pub-thumb img { width: 100%; display: block; box-shadow: 0 2px 8px var(--nier-shadow); }
-        .chapter-pub-info { flex: 1; min-width: 0; }
-        .chapter-pub-title { font-size: 22px; font-weight: 700; text-transform: uppercase; margin-bottom: 4px; }
-        .chapter-pub-author { font-size: 13px; opacity: 0.7; }
-        .chapter-pub-year { font-size: 12px; opacity: 0.5; margin-top: 2px; }
-        .chapter-count { font-size: 12px; opacity: 0.6; margin-top: 8px; }
+        /* CHAPTER */
+        .chapter-header { margin-bottom:24px; display:flex; align-items:flex-start; gap:20px; }
+        .chapter-pub-thumb { width:80px; flex-shrink:0; }
+        .chapter-pub-thumb img { width:100%; display:block; box-shadow:0 2px 8px var(--nier-shadow); }
+        .chapter-pub-info { flex:1; min-width:0; }
+        .chapter-pub-title { font-size:22px; font-weight:700; text-transform:uppercase; margin-bottom:4px; }
+        .chapter-pub-author { font-size:13px; opacity:.7; }
+        .chapter-pub-year   { font-size:12px; opacity:.5; margin-top:2px; }
+        .chapter-count { font-size:12px; opacity:.6; margin-top:8px; }
         .chapter-resume-hint {
-            margin-top: 12px; padding: 8px 12px;
-            background: var(--nier-input-bg); border-left: 3px solid var(--nier-dark);
-            font-size: 12px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px;
-            cursor: pointer; transition: background 0.2s; display: inline-flex; align-items: center; gap: 8px;
+            margin-top:12px; padding:8px 12px; background:var(--nier-input-bg);
+            border-left:3px solid var(--nier-dark); font-size:12px; font-weight:bold;
+            text-transform:uppercase; letter-spacing:.5px; cursor:pointer;
+            transition:background .2s; display:inline-flex; align-items:center; gap:8px;
         }
-        .chapter-resume-hint:hover { background: var(--nier-card-hover); }
+        .chapter-resume-hint:hover { background:var(--nier-card-hover); }
 
-        .grid-chapters {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
-            gap: 16px;
-        }
+        .grid-chapters { display:grid; grid-template-columns:repeat(auto-fill,minmax(130px,1fr)); gap:16px; }
         .chapter-card {
-            cursor: pointer; border: 2px solid transparent;
-            background: var(--nier-card-bg);
-            transition: all 0.2s; padding: 6px; text-align: center;
+            cursor:pointer; border:2px solid transparent; background:var(--nier-card-bg);
+            transition:all .2s; padding:6px; text-align:center;
         }
         .chapter-card:hover {
-            border-color: var(--nier-dark); background: var(--nier-card-hover);
-            transform: translateY(-2px); box-shadow: 3px 3px 0 var(--nier-shadow);
+            border-color:var(--nier-dark); background:var(--nier-card-hover);
+            transform:translateY(-2px); box-shadow:3px 3px 0 var(--nier-shadow);
         }
         .chapter-card canvas {
-            width: 100%; display: block;
-            box-shadow: 0 2px 5px var(--nier-shadow); background: #fff;
+            width:100%; display:block; box-shadow:0 2px 5px var(--nier-shadow); background:#fff;
         }
         .chapter-card-loading {
-            width: 100%; aspect-ratio: 3/4; background: rgba(100,98,86,0.15);
-            display: flex; align-items: center; justify-content: center;
-            font-size: 10px; font-weight: bold; opacity: 0.5; text-transform: uppercase;
+            width:100%; aspect-ratio:3/4; background:rgba(100,98,86,.15);
+            display:flex; align-items:center; justify-content:center;
+            font-size:10px; font-weight:bold; opacity:.5; text-transform:uppercase;
         }
         .chapter-card-name {
-            margin-top: 6px; font-size: 11px; font-weight: 700;
-            text-transform: uppercase; letter-spacing: 0.3px;
-            overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+            margin-top:6px; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.3px;
+            overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
         }
-        .chapter-card-num { font-size: 10px; opacity: 0.5; margin-top: 2px; }
-        .chapter-card.bookmarked { border-color: rgba(100,98,86,0.6); }
-        .chapter-bookmark-badge {
-            font-size: 9px; font-weight: bold; text-transform: uppercase;
-            letter-spacing: 0.5px; margin-top: 4px; opacity: 0.7;
+        .chapter-card-num { font-size:10px; opacity:.5; margin-top:2px; }
+        .chapter-card.bookmarked { border-color:rgba(100,98,86,.6); }
+        .chapter-bookmark-badge { font-size:9px; font-weight:bold; text-transform:uppercase; letter-spacing:.5px; margin-top:4px; opacity:.7; }
+
+        /* READER — SHARED */
+        .reader-main {
+            flex:1; overflow:hidden; position:relative;
+            display:flex; align-items:center; justify-content:center;
         }
 
-        /* ===== READER ===== */
-        .reader-main {
-            flex: 1; overflow: hidden; position: relative;
-            display: flex; align-items: center; justify-content: center;
-        }
+        /* READER — FLIP MODE */
         .reader-canvas-wrap {
-            position: relative; display: flex; align-items: center; justify-content: center;
-            width: 100%; height: 100%;
+            position:relative; display:flex; align-items:center; justify-content:center;
+            width:100%; height:100%;
         }
         #reader-canvas {
-            max-width: 100%; max-height: 100%; display: block;
-            box-shadow: 0 0 40px rgba(0,0,0,0.5); transition: opacity 0.12s; background: #fff;
+            display:block; box-shadow:0 0 40px rgba(0,0,0,.5); background:#fff;
+            transition:opacity .12s;
+            /* size set dynamically via JS (DPR-aware) */
         }
-        #reader-canvas.fading { opacity: 0; }
-
+        #reader-canvas.fading { opacity:0; }
         .click-zone {
-            position: absolute; top: 0; width: 22%; height: 100%;
-            cursor: pointer; z-index: 10; display: flex; align-items: center;
-            opacity: 0; transition: opacity 0.2s;
+            position:absolute; top:0; width:22%; height:100%;
+            cursor:pointer; z-index:10; display:flex; align-items:center;
+            opacity:0; transition:opacity .2s;
         }
-        .click-zone:hover { opacity: 1; }
-        .click-zone-left { left: 0; justify-content: flex-start; padding-left: 10px; }
-        .click-zone-right { right: 0; justify-content: flex-end; padding-right: 10px; }
+        .click-zone:hover { opacity:1; }
+        .click-zone-left  { left:0;  justify-content:flex-start; padding-left:10px; }
+        .click-zone-right { right:0; justify-content:flex-end;   padding-right:10px; }
         .click-zone-arrow {
-            width: 44px; height: 44px; background: var(--nier-overlay);
-            border: 2px solid var(--nier-dark);
-            display: flex; align-items: center; justify-content: center;
-            color: var(--nier-text-invert); font-size: 16px;
+            width:44px; height:44px; background:var(--nier-overlay);
+            border:2px solid var(--nier-dark);
+            display:flex; align-items:center; justify-content:center;
+            color:var(--nier-text-invert); font-size:16px;
         }
 
+        /* READER — SCROLL MODE */
+        .reader-scroll-wrap {
+            width:100%; height:100%; overflow-y:auto; overflow-x:hidden;
+            display:none; flex-direction:column; align-items:center;
+            padding:24px 16px 48px; gap:16px;
+        }
+        .reader-scroll-wrap.active { display:flex; }
+        .scroll-page-wrap {
+            background:#fff; box-shadow:0 4px 20px rgba(0,0,0,.4);
+            position:relative; flex-shrink:0;
+            width:100%; max-width:960px;
+        }
+        .scroll-page-wrap canvas {
+            display:block; width:100%; height:auto;
+        }
+        .scroll-page-placeholder {
+            width:100%; display:flex; align-items:center; justify-content:center;
+            background:rgba(100,98,86,.08); opacity:.5;
+        }
+
+        /* READER — INFO BAR */
         .reader-info-bar {
-            background: var(--nier-panel); border-top: 2px solid var(--nier-dark);
-            padding: 8px 20px; display: flex; align-items: center; justify-content: center;
-            gap: 16px; flex-shrink: 0; font-size: 13px; font-weight: bold;
-            text-transform: uppercase; letter-spacing: 1px;
-            transition: background 0.3s, border-color 0.3s;
+            background:var(--nier-panel); border-top:2px solid var(--nier-dark);
+            padding:8px 20px; display:flex; align-items:center; justify-content:center;
+            gap:16px; flex-shrink:0; font-size:13px; font-weight:bold;
+            text-transform:uppercase; letter-spacing:1px;
+            transition:background .3s, border-color .3s;
         }
-        .reader-chapter-display { opacity: 0.65; font-size: 11px; }
+        .reader-chapter-display { opacity:.65; font-size:11px; }
         .reader-page-input {
-            width: 52px; padding: 4px 6px; text-align: center;
-            font-family: 'Montserrat', sans-serif; font-size: 13px; font-weight: bold;
-            border: 2px solid var(--nier-dark); background: var(--nier-input-bg);
-            color: var(--nier-dark); outline: none;
+            width:52px; padding:4px 6px; text-align:center;
+            font-family:'Montserrat',sans-serif; font-size:13px; font-weight:bold;
+            border:2px solid var(--nier-dark); background:var(--nier-input-bg);
+            color:var(--nier-dark); outline:none;
         }
 
-        /* ===== LOADING / EMPTY ===== */
+        /* LOADING / EMPTY */
         .loading-overlay {
-            position: absolute; inset: 0;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            gap: 16px; z-index: 50;
+            position:absolute; inset:0;
+            display:flex; flex-direction:column; align-items:center; justify-content:center;
+            gap:16px; z-index:50;
         }
         .loading-text {
-            font-size: 18px; font-weight: bold; text-transform: uppercase;
-            letter-spacing: 2px; text-shadow: 2px 2px rgba(100, 98, 86, .5); text-align: center;
+            font-size:18px; font-weight:bold; text-transform:uppercase;
+            letter-spacing:2px; text-shadow:2px 2px rgba(100,98,86,.5); text-align:center;
         }
-        .loading-spinner { font-size: 24px; animation: spin 1s linear infinite; }
-        @keyframes spin { to { transform: rotate(360deg); } }
+        .loading-spinner { font-size:24px; animation:spin 1s linear infinite; }
+        @keyframes spin { to { transform:rotate(360deg); } }
 
         .empty-state {
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            padding: 60px 20px; opacity: 0.5; gap: 12px; grid-column: 1/-1;
+            display:flex; flex-direction:column; align-items:center; justify-content:center;
+            padding:60px 20px; opacity:.5; gap:12px; grid-column:1/-1;
         }
-        .empty-state i { font-size: 48px; }
-        .empty-state p { font-size: 14px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; }
+        .empty-state i { font-size:48px; }
+        .empty-state p { font-size:14px; font-weight:bold; text-transform:uppercase; letter-spacing:1px; }
 
         .filter-indicator {
-            display: none; align-items: center; gap: 8px;
-            font-size: 12px; font-weight: bold; text-transform: uppercase;
-            letter-spacing: 0.5px; opacity: 0.8; margin-bottom: 20px;
-            padding: 8px 12px; border: 1px solid rgba(100,98,86,0.4);
-            background: var(--nier-input-bg);
+            display:none; align-items:center; gap:8px;
+            font-size:12px; font-weight:bold; text-transform:uppercase;
+            letter-spacing:.5px; opacity:.8; margin-bottom:20px;
+            padding:8px 12px; border:1px solid rgba(100,98,86,.4); background:var(--nier-input-bg);
         }
-        .filter-indicator.visible { display: flex; }
-        .filter-remove-btn { cursor: pointer; opacity: 0.6; transition: opacity 0.2s; margin-left: auto; }
-        .filter-remove-btn:hover { opacity: 1; }
+        .filter-indicator.visible { display:flex; }
+        .filter-remove-btn { cursor:pointer; opacity:.6; transition:opacity .2s; margin-left:auto; }
+        .filter-remove-btn:hover { opacity:1; }
 
-        /* ===== MOBILE ===== */
-        @media (max-width: 768px) {
-            .top-bar { flex-wrap: wrap; padding: 8px 12px; gap: 8px; }
-            .top-bar-left { flex: 1 1 auto; }
-            .top-bar-center { flex: 1 1 100%; order: 3; }
-            .top-bar-right { flex: 0 0 auto; }
-            .title-main { font-size: 14px; }
-            .search-input { width: 100%; }
-            .search-wrap { width: 100%; }
-            .search-dropdown { width: 100%; min-width: unset; }
-            .sort-group { display: none; }
-            .grid-publication { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 12px; }
-            .grid-chapters { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px; }
-            .library-view, .chapter-view { padding: 16px; }
-            .chapter-header { flex-direction: column; gap: 12px; }
-            .chapter-pub-title { font-size: 18px; }
-            .reader-info-bar { padding: 8px 12px; gap: 10px; }
-            .reader-chapter-display { display: none; }
-            .themebutton { padding: 7px 10px; font-size: 12px; }
-            .mobile-sort-bar { display: flex !important; }
+        /* MOBILE */
+        @media (max-width:768px) {
+            .top-bar { flex-wrap:wrap; padding:8px 12px; gap:8px; }
+            .top-bar-left { flex:1 1 auto; }
+            .top-bar-center { flex:1 1 100%; order:3; }
+            .top-bar-right { flex:0 0 auto; }
+            .title-main { font-size:14px; }
+            .search-input { width:100%; }
+            .search-wrap { width:100%; }
+            .search-dropdown { width:100%; min-width:unset; }
+            .sort-group { display:none; }
+            .grid-publication { grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); gap:12px; }
+            .grid-chapters { grid-template-columns:repeat(auto-fill,minmax(100px,1fr)); gap:10px; }
+            .library-view,.chapter-view { padding:16px; }
+            .chapter-header { flex-direction:column; gap:12px; }
+            .chapter-pub-title { font-size:18px; }
+            .reader-info-bar { padding:8px 12px; gap:10px; }
+            .reader-chapter-display { display:none; }
+            .themebutton { padding:7px 10px; font-size:12px; }
+            .mobile-sort-bar { display:flex !important; }
+            .scroll-page-wrap { max-width:100%; }
+            .reader-scroll-wrap { padding:12px 0 40px; gap:10px; }
         }
         .mobile-sort-bar {
-            display: none; gap: 6px; flex-wrap: wrap; align-items: center;
-            padding: 6px 12px; background: var(--nier-panel);
-            border-bottom: 1px solid rgba(100,98,86,0.3); flex-shrink: 0;
+            display:none; gap:6px; flex-wrap:wrap; align-items:center;
+            padding:6px 12px; background:var(--nier-panel);
+            border-bottom:1px solid rgba(100,98,86,.3); flex-shrink:0;
         }
     </style>
 </head>
@@ -357,17 +338,14 @@
     <audio id="click-sound"><source src="https://hoanganhdinhngoc.github.io/cdn/sounds/core_52.ogg" type="audio/ogg"></audio>
 
     <div class="coreSystem">
-
         <!-- TOP BAR -->
-        <div class="top-bar" id="top-bar">
+        <div class="top-bar">
             <div class="top-bar-left">
-                <button class="themebutton" id="btn-back" style="display:none;" title="Back">
-                    <i class="fas fa-arrow-left"></i>
-                </button>
+                <button class="themebutton" id="btn-back" style="display:none;"><i class="fas fa-arrow-left"></i></button>
                 <h1 class="title-main" id="title-main">Manga Library</h1>
             </div>
 
-            <!-- Library: search -->
+            <!-- Library center: search -->
             <div class="top-bar-center" id="tc-library">
                 <div class="search-wrap">
                     <input type="text" id="search-input" class="search-input" placeholder="Search titles, authors, year...">
@@ -376,15 +354,21 @@
                 </div>
             </div>
 
-            <!-- Reader: page nav -->
+            <!-- Reader center: page nav + mode toggle -->
             <div class="top-bar-center" id="tc-reader" style="display:none;">
-                <button class="themebutton" id="btn-prev-page"><i class="fas fa-chevron-left"></i></button>
-                <div style="display:flex;align-items:center;gap:6px;">
-                    <input type="number" id="reader-page-input" class="reader-page-input" value="1" min="1">
-                    <span style="opacity:0.4;">/</span>
-                    <span id="reader-page-total" style="font-weight:bold;">--</span>
+                <div id="reader-nav-btns" style="display:flex;align-items:center;gap:6px;">
+                    <button class="themebutton" id="btn-prev-page"><i class="fas fa-chevron-left"></i></button>
+                    <div style="display:flex;align-items:center;gap:6px;">
+                        <input type="number" id="reader-page-input" class="reader-page-input" value="1" min="1">
+                        <span style="opacity:.4;">/</span>
+                        <span id="reader-page-total" style="font-weight:bold;">--</span>
+                    </div>
+                    <button class="themebutton" id="btn-next-page"><i class="fas fa-chevron-right"></i></button>
                 </div>
-                <button class="themebutton" id="btn-next-page"><i class="fas fa-chevron-right"></i></button>
+                <!-- MODE TOGGLE -->
+                <button class="themebutton" id="btn-mode-toggle" title="Switch to Scroll Mode" style="margin-left:4px;">
+                    <i id="mode-icon" class="fas fa-scroll"></i>
+                </button>
             </div>
 
             <div class="top-bar-right">
@@ -408,10 +392,10 @@
             <button class="themebutton" data-sort="year">Year</button>
         </div>
 
-        <!-- VIEW CONTAINER -->
+        <!-- VIEWS -->
         <div class="view-container">
 
-            <!-- LIBRARY VIEW -->
+            <!-- LIBRARY -->
             <div class="library-view" id="library-view">
                 <div class="filter-indicator" id="filter-indicator">
                     <i class="fas fa-filter"></i>
@@ -426,16 +410,18 @@
                 </div>
             </div>
 
-            <!-- CHAPTER VIEW -->
+            <!-- CHAPTER -->
             <div class="chapter-view hidden" id="chapter-view">
                 <div class="chapter-header" id="chapter-header"></div>
                 <div class="grid-chapters" id="grid-chapters"></div>
             </div>
 
-            <!-- READER VIEW -->
+            <!-- READER -->
             <div class="reader-view hidden" id="reader-view">
                 <div class="reader-main" id="reader-main">
-                    <div class="reader-canvas-wrap">
+
+                    <!-- FLIP wrap -->
+                    <div id="reader-flip-wrap" class="reader-canvas-wrap">
                         <canvas id="reader-canvas"></canvas>
                         <div class="click-zone click-zone-left" id="cz-left">
                             <div class="click-zone-arrow"><i class="fas fa-chevron-left"></i></div>
@@ -444,28 +430,33 @@
                             <div class="click-zone-arrow"><i class="fas fa-chevron-right"></i></div>
                         </div>
                     </div>
+
+                    <!-- SCROLL wrap -->
+                    <div id="reader-scroll-wrap" class="reader-scroll-wrap"></div>
+
+                    <!-- Loading (shared) -->
                     <div class="loading-overlay" id="reader-loading" style="display:none;">
                         <i class="fas fa-circle-notch loading-spinner"></i>
                         <div class="loading-text" id="reader-loading-text">Loading...</div>
                     </div>
                 </div>
+
                 <div class="reader-info-bar">
                     <span class="reader-chapter-display" id="reader-ch-name"></span>
-                    <span class="reader-chapter-display" style="opacity:0.3;">|</span>
-                    <span style="font-size:11px;opacity:0.6;">PAGE</span>
+                    <span class="reader-chapter-display" style="opacity:.3;">|</span>
+                    <span style="font-size:11px;opacity:.6;">PAGE</span>
                     <span id="info-page-num" style="font-weight:bold;font-size:15px;"></span>
-                    <span style="opacity:0.4;">/</span>
+                    <span style="opacity:.4;">/</span>
                     <span id="info-page-total"></span>
                 </div>
             </div>
-
         </div>
     </div>
 
     <script>
-    // ==========================================================================
-    // CONFIGURATION
-    // ==========================================================================
+    // ===========================================================
+    // CONFIG
+    // ===========================================================
     const CONFIG = {
         GITHUB_OWNER:   'hoanganhdinhngoc',
         GITHUB_REPO:    'hoanganhdinhngoc',
@@ -474,22 +465,21 @@
         PREVIEW_DOMAIN: 'https://hoanganhdinhngoc.pages.dev'
     };
 
-    // ==========================================================================
+    // ===========================================================
     // PDF.js
-    // ==========================================================================
+    // ===========================================================
     const pdfjsLib = window['pdfjs-dist/build/pdf'];
     pdfjsLib.GlobalWorkerOptions.workerSrc =
         'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
-    // ==========================================================================
+    // ===========================================================
     // SOUND & THEME
-    // ==========================================================================
-    const playSnd = (id) => {
+    // ===========================================================
+    const playSnd = id => {
         const s = document.getElementById(id);
-        if (!s) return;
-        s.currentTime = 0; s.play().catch(() => {});
+        if (s) { s.currentTime = 0; s.play().catch(()=>{}); }
     };
-    $(document).on('mouseenter', '.themebutton, .pub-card, .chapter-card', () => playSnd('hover-sound'));
+    $(document).on('mouseenter', '.themebutton,.pub-card,.chapter-card', () => playSnd('hover-sound'));
 
     let isDark = false;
     document.querySelectorAll('.toggle-theme-btn').forEach(btn => {
@@ -498,14 +488,14 @@
             document.body.setAttribute('data-theme', isDark ? 'dark' : '');
             document.querySelectorAll('.theme-icon-el').forEach(i => {
                 i.classList.toggle('fa-moon', !isDark);
-                i.classList.toggle('fa-sun', isDark);
+                i.classList.toggle('fa-sun',  isDark);
             });
         });
     });
 
-    // ==========================================================================
+    // ===========================================================
     // STATE
-    // ==========================================================================
+    // ===========================================================
     let allPublications  = [];
     let currentView      = 'library';
     let currentPub       = null;
@@ -514,24 +504,27 @@
     let currentPage      = 1;
     let rendering        = false;
 
-    // ==========================================================================
+    // Reader mode: persisted in localStorage
+    let readerMode     = localStorage.getItem('manga_mode') || 'flip'; // 'flip' | 'scroll'
+    let scrollObserver = null;
+    let scrollTrackObs = null;
+
+    // ===========================================================
     // UTILS
-    // ==========================================================================
+    // ===========================================================
     function numericSort(arr) {
-        return [...arr].sort((a, b) => {
+        return [...arr].sort((a,b) => {
             const na = parseInt(a), nb = parseInt(b);
-            if (!isNaN(na) && !isNaN(nb)) return na - nb;
-            return a.localeCompare(b);
+            return (!isNaN(na) && !isNaN(nb)) ? na - nb : a.localeCompare(b);
         });
     }
-    function rawUrl(repoPath) { return CONFIG.PREVIEW_DOMAIN + '/' + repoPath; }
+    const rawUrl = path => CONFIG.PREVIEW_DOMAIN + '/' + path;
 
-    // ==========================================================================
+    // ===========================================================
     // GITHUB API
-    // ==========================================================================
+    // ===========================================================
     async function fetchLibraryData() {
-        const url = 'https://api.github.com/repos/' + CONFIG.GITHUB_OWNER + '/' + CONFIG.GITHUB_REPO +
-                    '/git/trees/' + CONFIG.BRANCH + '?recursive=1';
+        const url = `https://api.github.com/repos/${CONFIG.GITHUB_OWNER}/${CONFIG.GITHUB_REPO}/git/trees/${CONFIG.BRANCH}?recursive=1`;
         const res = await fetch(url);
         if (!res.ok) throw new Error('GitHub API ' + res.status);
         return (await res.json()).tree;
@@ -549,11 +542,9 @@
         const publications = [];
         for (const folder of pubFolders) {
             const fp = base + '/' + folder;
-            const children = tree.filter(item => {
-                if (!item.path.startsWith(fp + '/')) return false;
-                return !item.path.slice(fp.length + 1).includes('/');
-            });
-
+            const children = tree.filter(item =>
+                item.path.startsWith(fp + '/') && !item.path.slice(fp.length + 1).includes('/')
+            );
             const pdfFiles = numericSort(
                 children.filter(i => i.path.toLowerCase().endsWith('.pdf') && i.type === 'blob')
                         .map(i => i.path.slice(fp.length + 1))
@@ -579,15 +570,15 @@
                     }
                 } catch(e) {}
             }
-            publications.push({ id: folder, folderPath: fp, thumbnail, title, author, year, files: pdfFiles });
+            publications.push({ id:folder, folderPath:fp, thumbnail, title, author, year, files:pdfFiles });
         }
-        publications.sort((a, b) => a.title.localeCompare(b.title));
+        publications.sort((a,b) => a.title.localeCompare(b.title));
         return publications;
     }
 
-    // ==========================================================================
+    // ===========================================================
     // VIEW MANAGEMENT
-    // ==========================================================================
+    // ===========================================================
     function showView(name) {
         ['library','chapter','reader'].forEach(v =>
             document.getElementById(v + '-view').classList.toggle('hidden', v !== name)
@@ -622,9 +613,9 @@
         }
     }
 
-    // ==========================================================================
+    // ===========================================================
     // LIBRARY VIEW
-    // ==========================================================================
+    // ===========================================================
     let currentSort = 'title', activeFilter = null;
 
     function renderLibraryGrid(pubs) {
@@ -638,10 +629,10 @@
             const card = document.createElement('div');
             card.className = 'pub-card';
             card.innerHTML = (pub.thumbnail
-                ? '<img src="' + pub.thumbnail + '" alt="' + pub.title + '" loading="lazy">'
+                ? `<img src="${pub.thumbnail}" alt="${pub.title}" loading="lazy">`
                 : '<div class="pub-card-thumb-placeholder"><i class="fas fa-book"></i></div>')
-                + '<div class="pub-card-title">' + pub.title + '</div>'
-                + '<div class="pub-card-meta">' + [pub.author, pub.year].filter(Boolean).join(' \u00b7 ') + '</div>';
+                + `<div class="pub-card-title">${pub.title}</div>`
+                + `<div class="pub-card-meta">${[pub.author, pub.year].filter(Boolean).join(' \u00b7 ')}</div>`;
             card.addEventListener('click', () => { playSnd('click-sound'); navigateTo('chapter', pub); });
             grid.appendChild(card);
         });
@@ -657,9 +648,9 @@
                 p.year.toLowerCase().includes(t)
             );
         }
-        if (currentSort === 'author') pubs.sort((a,b) => a.author.localeCompare(b.author));
-        else if (currentSort === 'year') pubs.sort((a,b) => (parseInt(a.year)||0) - (parseInt(b.year)||0));
-        else pubs.sort((a,b) => a.title.localeCompare(b.title));
+        if (currentSort === 'author')     pubs.sort((a,b) => a.author.localeCompare(b.author));
+        else if (currentSort === 'year')  pubs.sort((a,b) => (parseInt(a.year)||0) - (parseInt(b.year)||0));
+        else                              pubs.sort((a,b) => a.title.localeCompare(b.title));
         return pubs;
     }
 
@@ -667,11 +658,9 @@
         renderLibraryGrid(getSortedFiltered());
         const ind = document.getElementById('filter-indicator');
         if (activeFilter) {
-            document.getElementById('filter-indicator-text').textContent = 'Filtering: "' + activeFilter + '"';
+            document.getElementById('filter-indicator-text').textContent = `Filtering: "${activeFilter}"`;
             ind.classList.add('visible');
-        } else {
-            ind.classList.remove('visible');
-        }
+        } else { ind.classList.remove('visible'); }
     }
 
     document.querySelectorAll('[data-sort]').forEach(btn => {
@@ -693,7 +682,6 @@
         applyLibraryDisplay();
     });
 
-    // Search
     const searchInput    = document.getElementById('search-input');
     const searchClear    = document.getElementById('search-clear');
     const searchDropdown = document.getElementById('search-dropdown');
@@ -705,19 +693,15 @@
         buildSuggestions(q);
     });
     searchInput.addEventListener('keydown', e => { if (e.key === 'Escape') searchDropdown.style.display = 'none'; });
-    searchClear.addEventListener('click', () => {
-        searchInput.value = ''; searchClear.style.display = 'none'; searchDropdown.style.display = 'none';
-    });
-    document.addEventListener('click', e => {
-        if (!e.target.closest('.search-wrap')) searchDropdown.style.display = 'none';
-    });
+    searchClear.addEventListener('click',   () => { searchInput.value = ''; searchClear.style.display = 'none'; searchDropdown.style.display = 'none'; });
+    document.addEventListener('click', e => { if (!e.target.closest('.search-wrap')) searchDropdown.style.display = 'none'; });
 
     function buildSuggestions(q) {
         const ql = q.toLowerCase(), seen = new Set(), results = [];
         allPublications.forEach(pub => {
             [[pub.title,'Title'],[pub.author,'Author'],[pub.year,'Year']].forEach(([val,label]) => {
                 if (val && val.toLowerCase().includes(ql) && !seen.has(val)) {
-                    seen.add(val); results.push({ term: val, label });
+                    seen.add(val); results.push({ term:val, label });
                 }
             });
         });
@@ -726,23 +710,21 @@
         results.slice(0,8).forEach(r => {
             const d = document.createElement('div');
             d.className = 'search-suggestion';
-            d.innerHTML = '<span class="sug-label">' + r.label + '</span> ' + r.term;
+            d.innerHTML = `<span class="sug-label">${r.label}</span> ${r.term}`;
             d.addEventListener('mouseenter', () => playSnd('hover-sound'));
             d.addEventListener('click', () => {
                 playSnd('click-sound');
-                searchInput.value = r.term;
-                searchDropdown.style.display = 'none';
-                activeFilter = r.term;
-                applyLibraryDisplay();
+                searchInput.value = r.term; searchDropdown.style.display = 'none';
+                activeFilter = r.term; applyLibraryDisplay();
             });
             searchDropdown.appendChild(d);
         });
         searchDropdown.style.display = 'block';
     }
 
-    // ==========================================================================
+    // ===========================================================
     // CHAPTER VIEW
-    // ==========================================================================
+    // ===========================================================
     let chapterObserver = null;
 
     function renderChapterView(pub) {
@@ -750,22 +732,17 @@
         const bm = loadBookmark(pub.id);
         const header = document.getElementById('chapter-header');
         header.innerHTML = (pub.thumbnail
-            ? '<div class="chapter-pub-thumb"><img src="' + pub.thumbnail + '" alt="' + pub.title + '"></div>'
+            ? `<div class="chapter-pub-thumb"><img src="${pub.thumbnail}" alt="${pub.title}"></div>`
             : '')
             + '<div class="chapter-pub-info">'
-            + '<div class="chapter-pub-title">' + pub.title + '</div>'
-            + (pub.author ? '<div class="chapter-pub-author">' + pub.author + '</div>' : '')
-            + (pub.year   ? '<div class="chapter-pub-year">'   + pub.year   + '</div>' : '')
-            + '<div class="chapter-count">' + pub.files.length + ' chapter' + (pub.files.length !== 1 ? 's' : '') + '</div>'
-            + (bm ? '<div class="chapter-resume-hint" id="resume-btn"><i class="fas fa-play"></i> Resume: Ch.'
-                + (bm.fileIndex+1) + ' \u2014 Page ' + bm.pageNum + '</div>' : '')
+            + `<div class="chapter-pub-title">${pub.title}</div>`
+            + (pub.author ? `<div class="chapter-pub-author">${pub.author}</div>` : '')
+            + (pub.year   ? `<div class="chapter-pub-year">${pub.year}</div>` : '')
+            + `<div class="chapter-count">${pub.files.length} chapter${pub.files.length !== 1 ? 's' : ''}</div>`
+            + (bm ? `<div class="chapter-resume-hint" id="resume-btn"><i class="fas fa-play"></i> Resume: Ch.${bm.fileIndex+1} \u2014 Page ${bm.pageNum}</div>` : '')
             + '</div>';
 
-        if (bm) {
-            document.getElementById('resume-btn').addEventListener('click', () => {
-                playSnd('click-sound'); openReader(pub, bm.fileIndex, bm.pageNum);
-            });
-        }
+        if (bm) document.getElementById('resume-btn').addEventListener('click', () => { playSnd('click-sound'); openReader(pub, bm.fileIndex, bm.pageNum); });
 
         const grid = document.getElementById('grid-chapters');
         grid.innerHTML = '';
@@ -784,16 +761,12 @@
             const card = document.createElement('div');
             card.className = 'chapter-card' + (bm && bm.fileIndex === idx ? ' bookmarked' : '');
             card.dataset.idx = idx;
-            const nameNoExt = file.replace(/\.pdf$/i, '');
-            card.innerHTML = '<div class="chapter-card-loading" id="cl-' + idx + '">'
-                + '<i class="fas fa-circle-notch loading-spinner"></i></div>'
-                + '<div class="chapter-card-name">' + nameNoExt + '</div>'
-                + '<div class="chapter-card-num">Chapter ' + (idx+1) + '</div>'
-                + (bm && bm.fileIndex === idx ? '<div class="chapter-bookmark-badge">&#9654; P.' + bm.pageNum + '</div>' : '');
-            card.addEventListener('click', () => {
-                playSnd('click-sound');
-                openReader(pub, idx, (bm && bm.fileIndex === idx) ? bm.pageNum : 1);
-            });
+            const nm = file.replace(/\.pdf$/i, '');
+            card.innerHTML = `<div class="chapter-card-loading" id="cl-${idx}"><i class="fas fa-circle-notch loading-spinner"></i></div>`
+                + `<div class="chapter-card-name">${nm}</div>`
+                + `<div class="chapter-card-num">Chapter ${idx+1}</div>`
+                + (bm && bm.fileIndex === idx ? `<div class="chapter-bookmark-badge">&#9654; P.${bm.pageNum}</div>` : '');
+            card.addEventListener('click', () => { playSnd('click-sound'); openReader(pub, idx, (bm && bm.fileIndex === idx) ? bm.pageNum : 1); });
             grid.appendChild(card);
             chapterObserver.observe(card);
         });
@@ -805,23 +778,32 @@
         try {
             const pdf  = await pdfjsLib.getDocument(pdfUrl).promise;
             const page = await pdf.getPage(1);
-            const vp   = page.getViewport({ scale: 0.35 });
+            const dpr  = Math.min(window.devicePixelRatio || 1, 2);
+            const vp1  = page.getViewport({ scale: 1 });
+            // Render at DPR-aware resolution for crisp thumbnails
+            const cssW = Math.max(card.clientWidth - 12, 100);
+            const renderScale = (cssW * dpr) / vp1.width;
+            const vp   = page.getViewport({ scale: renderScale });
             const cvs  = document.createElement('canvas');
-            cvs.width = vp.width; cvs.height = vp.height;
+            cvs.width  = vp.width;
+            cvs.height = vp.height;
+            cvs.style.width  = '100%';
+            cvs.style.height = 'auto';
             await page.render({ canvasContext: cvs.getContext('2d'), viewport: vp }).promise;
             if (el) el.replaceWith(cvs); else card.prepend(cvs);
         } catch(e) {
-            if (el) el.innerHTML = '<i class="fas fa-file-pdf" style="font-size:32px;opacity:0.3;"></i>';
+            if (el) el.innerHTML = '<i class="fas fa-file-pdf" style="font-size:32px;opacity:.3;"></i>';
         }
     }
 
-    // ==========================================================================
-    // READER
-    // ==========================================================================
+    // ===========================================================
+    // READER — ENTRY POINTS
+    // ===========================================================
     async function openReader(pub, fileIndex, pageNum) {
         currentPub = pub; currentFileIndex = fileIndex; currentPage = pageNum || 1;
         navigateTo('reader');
         document.getElementById('title-main').textContent = pub.title;
+        applyModeUI();
         await loadReaderFile(pub, fileIndex, currentPage);
     }
 
@@ -830,40 +812,63 @@
         document.getElementById('reader-loading').style.display = 'flex';
         document.getElementById('reader-loading-text').textContent =
             'Loading ' + pub.files[fileIndex].replace(/\.pdf$/i,'') + '...';
-        document.getElementById('reader-canvas').style.opacity = '0';
+
         try {
             currentPdfDoc = await pdfjsLib.getDocument(pdfUrl).promise;
             const total = currentPdfDoc.numPages;
             document.getElementById('reader-page-total').textContent = total;
             document.getElementById('info-page-total').textContent   = total;
             document.getElementById('reader-page-input').max         = total;
-            document.getElementById('reader-ch-name').textContent    =
-                pub.files[fileIndex].replace(/\.pdf$/i,'');
-            await renderReaderPage(Math.min(Math.max(1, targetPage), total));
+            document.getElementById('reader-ch-name').textContent    = pub.files[fileIndex].replace(/\.pdf$/i,'');
+            const pg = Math.min(Math.max(1, targetPage), total);
+
+            if (readerMode === 'flip') {
+                document.getElementById('reader-canvas').style.opacity = '0';
+                await renderFlipPage(pg);
+                document.getElementById('reader-canvas').style.opacity = '1';
+            } else {
+                await initScrollMode(pg);
+            }
         } catch(e) {
             console.error(e);
             document.getElementById('reader-loading-text').textContent = 'Error loading file.';
             return;
         }
         document.getElementById('reader-loading').style.display = 'none';
-        document.getElementById('reader-canvas').style.opacity  = '1';
     }
 
-    async function renderReaderPage(num) {
+    // ===========================================================
+    // READER — FLIP MODE  (DPR-AWARE FIX)
+    // ===========================================================
+    async function renderFlipPage(num) {
         if (rendering) return;
         rendering = true;
         const canvas = document.getElementById('reader-canvas');
         canvas.classList.add('fading');
         try {
-            const page  = await currentPdfDoc.getPage(num);
-            const wrap  = document.getElementById('reader-main');
-            const maxW  = wrap.clientWidth - 8, maxH = wrap.clientHeight - 8;
-            const vp1   = page.getViewport({ scale: 1 });
-            const scale = Math.min(maxW / vp1.width, maxH / vp1.height, 2.5);
-            const vp    = page.getViewport({ scale });
-            canvas.width = vp.width; canvas.height = vp.height;
+            const page = await currentPdfDoc.getPage(num);
+            const wrap = document.getElementById('reader-main');
+            // Use real device pixel ratio — capped at 3 for performance/memory
+            const dpr  = Math.min(window.devicePixelRatio || 1, 3);
+            const maxW = wrap.clientWidth  - 8;
+            const maxH = wrap.clientHeight - 8;
+            const vp1  = page.getViewport({ scale: 1 });
+
+            // Step 1: compute CSS scale so page fits the container
+            const cssScale = Math.min(maxW / vp1.width, maxH / vp1.height);
+            // Step 2: render at physical pixel resolution (cssScale * DPR)
+            const vp = page.getViewport({ scale: cssScale * dpr });
+
+            // Canvas internal size = physical pixels
+            canvas.width  = vp.width;
+            canvas.height = vp.height;
+            // Canvas CSS size = logical CSS pixels (browser maps DPR:1 ratio → sharp)
+            canvas.style.width  = Math.round(vp.width  / dpr) + 'px';
+            canvas.style.height = Math.round(vp.height / dpr) + 'px';
+
             await page.render({ canvasContext: canvas.getContext('2d'), viewport: vp }).promise;
             canvas.classList.remove('fading');
+
             currentPage = num;
             document.getElementById('reader-page-input').value   = num;
             document.getElementById('info-page-num').textContent = num;
@@ -883,64 +888,225 @@
             if (currentFileIndex < currentPub.files.length - 1) { currentFileIndex++; await loadReaderFile(currentPub, currentFileIndex, 1); }
             return;
         }
-        await renderReaderPage(next);
+        await renderFlipPage(next);
     }
 
+    // Keyboard (flip only)
     document.addEventListener('keydown', e => {
-        if (currentView !== 'reader') return;
+        if (currentView !== 'reader' || readerMode !== 'flip') return;
         if (e.key === 'ArrowRight') goPage(1);
         if (e.key === 'ArrowLeft')  goPage(-1);
     });
-    document.getElementById('btn-next-page').addEventListener('click', () => goPage(1));
-    document.getElementById('btn-prev-page').addEventListener('click', () => goPage(-1));
-    document.getElementById('cz-right').addEventListener('click', () => goPage(1));
-    document.getElementById('cz-left').addEventListener('click',  () => goPage(-1));
+
+    // Buttons
+    document.getElementById('btn-next-page').addEventListener('click', () => { if (readerMode === 'flip') goPage(1); });
+    document.getElementById('btn-prev-page').addEventListener('click', () => { if (readerMode === 'flip') goPage(-1); });
+    document.getElementById('cz-right').addEventListener('click', () => { if (readerMode === 'flip') goPage(1); });
+    document.getElementById('cz-left').addEventListener('click',  () => { if (readerMode === 'flip') goPage(-1); });
+
+    // Page input
     document.getElementById('reader-page-input').addEventListener('change', async e => {
         const n = parseInt(e.target.value), t = currentPdfDoc ? currentPdfDoc.numPages : 1;
-        if (n >= 1 && n <= t) await renderReaderPage(n); else e.target.value = currentPage;
+        if (n >= 1 && n <= t) {
+            if (readerMode === 'flip') await renderFlipPage(n);
+            else scrollToScrollPage(n);
+        } else { e.target.value = currentPage; }
     });
 
-    // Touch swipe
+    // Swipe (flip only)
     let touchX = 0;
     const readerMain = document.getElementById('reader-main');
     readerMain.addEventListener('touchstart', e => { touchX = e.touches[0].clientX; }, { passive:true });
     readerMain.addEventListener('touchend',   e => {
+        if (readerMode !== 'flip') return;
         const dx = e.changedTouches[0].clientX - touchX;
         if (Math.abs(dx) < 40) return;
         dx < 0 ? goPage(1) : goPage(-1);
     }, { passive:true });
 
-    // Resize
+    // Resize: re-render flip page
     let resizeT;
     window.addEventListener('resize', () => {
         clearTimeout(resizeT);
         resizeT = setTimeout(() => {
-            if (currentView === 'reader' && currentPdfDoc) renderReaderPage(currentPage);
+            if (currentView === 'reader' && currentPdfDoc && readerMode === 'flip') renderFlipPage(currentPage);
         }, 200);
     });
 
-    // ==========================================================================
+    // ===========================================================
+    // READER — SCROLL MODE  (DPR-AWARE)
+    // ===========================================================
+    async function initScrollMode(targetPage) {
+        // Disconnect old observers
+        if (scrollObserver) { scrollObserver.disconnect(); scrollObserver = null; }
+        if (scrollTrackObs) { scrollTrackObs.disconnect(); scrollTrackObs = null; }
+
+        const scrollWrap = document.getElementById('reader-scroll-wrap');
+        scrollWrap.innerHTML = '';
+        scrollWrap.scrollTop = 0;
+
+        const total = currentPdfDoc.numPages;
+        // Cap DPR at 2 for scroll mode (multiple pages in memory)
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+        // Get aspect ratio from page 1 to size placeholders
+        const samplePage = await currentPdfDoc.getPage(1);
+        const sVp = samplePage.getViewport({ scale: 1 });
+        const ratio = sVp.height / sVp.width; // height-to-width ratio
+
+        // Build page placeholders
+        for (let i = 1; i <= total; i++) {
+            const wrap = document.createElement('div');
+            wrap.className = 'scroll-page-wrap';
+            wrap.dataset.page = i;
+
+            const ph = document.createElement('div');
+            ph.className = 'scroll-page-placeholder';
+            // Use padding-top trick for aspect ratio (works without CSS aspect-ratio)
+            ph.style.paddingTop = (ratio * 100).toFixed(2) + '%';
+            ph.innerHTML = `<i class="fas fa-circle-notch loading-spinner" style="position:absolute;font-size:20px;"></i>`;
+            ph.style.position = 'relative';
+
+            wrap.appendChild(ph);
+            scrollWrap.appendChild(wrap);
+        }
+
+        // LAZY RENDER: render pages as they approach viewport
+        scrollObserver = new IntersectionObserver(entries => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting && !entry.target.dataset.rendered) {
+                    entry.target.dataset.rendered = '1';
+                    renderScrollPage(entry.target, parseInt(entry.target.dataset.page), dpr);
+                }
+            });
+        }, { root: scrollWrap, rootMargin: '200% 0px' });
+
+        // PAGE TRACKER: update current page counter as user scrolls
+        scrollTrackObs = new IntersectionObserver(entries => {
+            // Find the entry with highest intersection ratio
+            let best = null;
+            entries.forEach(entry => {
+                if (!best || entry.intersectionRatio > best.intersectionRatio) best = entry;
+            });
+            if (best && best.intersectionRatio > 0) {
+                const pg = parseInt(best.target.dataset.page);
+                currentPage = pg;
+                document.getElementById('reader-page-input').value   = pg;
+                document.getElementById('info-page-num').textContent = pg;
+                saveBookmark(currentPub.id, currentFileIndex, pg);
+            }
+        }, { root: scrollWrap, threshold: [0, 0.1, 0.3, 0.5, 0.7, 1.0] });
+
+        scrollWrap.querySelectorAll('.scroll-page-wrap').forEach(w => {
+            scrollObserver.observe(w);
+            scrollTrackObs.observe(w);
+        });
+
+        // Scroll to target page after layout settles
+        requestAnimationFrame(() => requestAnimationFrame(() => scrollToScrollPage(targetPage)));
+    }
+
+    async function renderScrollPage(wrap, pageNum, dpr) {
+        try {
+            const page = await currentPdfDoc.getPage(pageNum);
+            const vp1  = page.getViewport({ scale: 1 });
+
+            // CSS display width of the wrapper
+            const cssW = Math.max(wrap.clientWidth || 600, 100);
+
+            // Render at DPR * cssW physical pixels wide → sharp on HiDPI
+            const renderScale = (cssW * dpr) / vp1.width;
+            const vp = page.getViewport({ scale: renderScale });
+
+            const canvas = document.createElement('canvas');
+            canvas.width  = vp.width;           // physical pixels = cssW * dpr
+            canvas.height = vp.height;
+            // CSS: fill container width, height preserves aspect via explicit value
+            canvas.style.width   = cssW + 'px';
+            canvas.style.height  = Math.round(vp.height / dpr) + 'px';
+            canvas.style.display = 'block';
+
+            await page.render({ canvasContext: canvas.getContext('2d'), viewport: vp }).promise;
+
+            wrap.innerHTML = '';
+            wrap.appendChild(canvas);
+        } catch(e) {
+            if (e.name !== 'RenderingCancelledException') {
+                wrap.innerHTML = `<div style="padding:20px;text-align:center;opacity:.4;font-size:12px;font-weight:bold;">Error loading page ${pageNum}</div>`;
+            }
+        }
+    }
+
+    function scrollToScrollPage(num) {
+        const scrollWrap = document.getElementById('reader-scroll-wrap');
+        const wrap = scrollWrap.querySelector(`[data-page="${num}"]`);
+        if (wrap) wrap.scrollIntoView({ behavior:'auto', block:'start' });
+    }
+
+    // ===========================================================
+    // MODE TOGGLE
+    // ===========================================================
+    function applyModeUI() {
+        const isFlip = readerMode === 'flip';
+        document.getElementById('reader-flip-wrap').style.display = isFlip ? '' : 'none';
+
+        const scrollWrap = document.getElementById('reader-scroll-wrap');
+        scrollWrap.classList.toggle('active', !isFlip);
+
+        document.getElementById('reader-nav-btns').style.display = isFlip ? '' : 'none';
+
+        const icon = document.getElementById('mode-icon');
+        const btn  = document.getElementById('btn-mode-toggle');
+        if (icon) icon.className = isFlip ? 'fas fa-scroll' : 'fas fa-book-open';
+        if (btn)  btn.title      = isFlip ? 'Switch to Scroll Mode' : 'Switch to Flip Mode';
+    }
+
+    // Initialize mode UI on page load
+    applyModeUI();
+
+    document.getElementById('btn-mode-toggle').addEventListener('click', async () => {
+        if (!currentPdfDoc) return;
+        playSnd('click-sound');
+
+        const savedPage = currentPage;
+        readerMode = (readerMode === 'flip') ? 'scroll' : 'flip';
+        localStorage.setItem('manga_mode', readerMode);
+        applyModeUI();
+
+        if (readerMode === 'scroll') {
+            await initScrollMode(savedPage);
+        } else {
+            // Switching to flip: clean up scroll observers
+            if (scrollObserver) { scrollObserver.disconnect(); scrollObserver = null; }
+            if (scrollTrackObs) { scrollTrackObs.disconnect(); scrollTrackObs = null; }
+            document.getElementById('reader-canvas').style.opacity = '0';
+            await renderFlipPage(savedPage);
+            document.getElementById('reader-canvas').style.opacity = '1';
+        }
+    });
+
+    // ===========================================================
     // BOOKMARK
-    // ==========================================================================
-    function bmKey(id) { return 'manga_bm_' + id; }
+    // ===========================================================
+    const bmKey = id => 'manga_bm_' + id;
     function saveBookmark(id, fi, pg) {
-        try { localStorage.setItem(bmKey(id), JSON.stringify({ fileIndex: fi, pageNum: pg, ts: Date.now() })); } catch(e) {}
+        try { localStorage.setItem(bmKey(id), JSON.stringify({ fileIndex:fi, pageNum:pg, ts:Date.now() })); } catch(e) {}
     }
     function loadBookmark(id) {
         try { const r = localStorage.getItem(bmKey(id)); return r ? JSON.parse(r) : null; } catch(e) { return null; }
     }
 
-    // ==========================================================================
+    // ===========================================================
     // INIT
-    // ==========================================================================
+    // ===========================================================
     async function init() {
         try {
             const tree = await fetchLibraryData();
             allPublications = await buildPublications(tree);
         } catch(e) {
             document.getElementById('library-loading').innerHTML =
-                '<div class="loading-text" style="color:red;">Cannot connect to library.<br>' +
-                '<small style="font-size:12px;text-transform:none;letter-spacing:0;">' + e.message + '</small></div>';
+                `<div class="loading-text" style="color:red;">Cannot connect to library.<br>
+                <small style="font-size:12px;text-transform:none;letter-spacing:0;">${e.message}</small></div>`;
             return;
         }
         document.getElementById('library-loading').style.display = 'none';
