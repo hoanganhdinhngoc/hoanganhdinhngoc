@@ -510,18 +510,20 @@
     // ===========================================================
     // STATE
     // ===========================================================
-    let allPublications  = [];
-    let currentView      = 'library';
-    let currentPub       = null;
-    let currentFileIndex = 0;
-    let currentPdfDoc    = null;
-    let currentPage      = 1;
-    let rendering        = false;
+    let allPublications     = [];
+    let currentView         = 'library';
+    let currentPub          = null;
+    let currentChapterIndex = 0;
+    let currentPartIndex    = 0;
+    let currentPdfDoc       = null;
+    let currentPage         = 1;
+    let rendering           = false;
 
     // Reader mode: persisted in localStorage
     let readerMode     = localStorage.getItem('manga_mode') || 'flip'; // 'flip' | 'scroll'
     let scrollObserver = null;
     let scrollTrackObs = null;
+    let scrollPartDocs = new Map(); // partIndex -> pdfDoc cache for multi-part scroll
 
     // ===========================================================
     // UTILS
@@ -565,6 +567,38 @@
             );
             if (!pdfFiles.length) continue;
 
+            // Group files into logical chapters (combine .partX.pdf files into single chapter)
+            const chapterMap = new Map();
+            for (const file of pdfFiles) {
+                const partMatch = file.match(/^(.*?)\.part(\d+)\.pdf$/i);
+                let baseName, partNum;
+                if (partMatch) {
+                    baseName = partMatch[1];
+                    partNum = parseInt(partMatch[2]);
+                } else {
+                    baseName = file.replace(/\.pdf$/i, '');
+                    partNum = 1;
+                }
+                if (!chapterMap.has(baseName)) {
+                    chapterMap.set(baseName, { name: baseName, parts: [] });
+                }
+                chapterMap.get(baseName).parts.push({ file, partNum });
+            }
+
+            const chapters = [];
+            for (const [name, ch] of chapterMap.entries()) {
+                ch.parts.sort((a, b) => a.partNum - b.partNum);
+                chapters.push({
+                    name: ch.name,
+                    files: ch.parts.map(p => p.file)
+                });
+            }
+
+            chapters.sort((a, b) => {
+                const na = parseInt(a.name), nb = parseInt(b.name);
+                return (!isNaN(na) && !isNaN(nb)) ? na - nb : a.name.localeCompare(b.name);
+            });
+
             const thumbItem = children.find(i =>
                 i.type === 'blob' &&
                 /^thumbnail\.(jpg|jpeg|png|webp|gif)$/i.test(i.path.slice(fp.length + 1))
@@ -584,7 +618,7 @@
                     }
                 } catch(e) {}
             }
-            publications.push({ id:folder, folderPath:fp, thumbnail, title, author, year, files:pdfFiles });
+            publications.push({ id:folder, folderPath:fp, thumbnail, title, author, year, files:pdfFiles, chapters:chapters });
         }
         publications.sort((a,b) => a.title.localeCompare(b.title));
         return publications;
@@ -745,6 +779,15 @@
         if (chapterObserver) { chapterObserver.disconnect(); chapterObserver = null; }
         const bm = loadBookmark(pub.id);
         const header = document.getElementById('chapter-header');
+        const chCount = pub.chapters.length;
+        const countText = chCount === 1 ? '1 Volume' : `${chCount} Chapters`;
+
+        let resumeHtml = '';
+        if (bm) {
+            const chName = pub.chapters[bm.chapterIndex] ? pub.chapters[bm.chapterIndex].name : ('Ch.' + (bm.chapterIndex + 1));
+            resumeHtml = `<div class="chapter-resume-hint" id="resume-btn"><i class="fas fa-play"></i> Resume: ${chName} \u2014 Page ${bm.pageNum}</div>`;
+        }
+
         header.innerHTML = (pub.thumbnail
             ? `<div class="chapter-pub-thumb"><img src="${pub.thumbnail}" alt="${pub.title}"></div>`
             : '')
@@ -752,11 +795,16 @@
             + `<div class="chapter-pub-title">${pub.title}</div>`
             + (pub.author ? `<div class="chapter-pub-author">${pub.author}</div>` : '')
             + (pub.year   ? `<div class="chapter-pub-year">${pub.year}</div>` : '')
-            + `<div class="chapter-count">${pub.files.length} chapter${pub.files.length !== 1 ? 's' : ''}</div>`
-            + (bm ? `<div class="chapter-resume-hint" id="resume-btn"><i class="fas fa-play"></i> Resume: Ch.${bm.fileIndex+1} \u2014 Page ${bm.pageNum}</div>` : '')
+            + `<div class="chapter-count">${countText}</div>`
+            + resumeHtml
             + '</div>';
 
-        if (bm) document.getElementById('resume-btn').addEventListener('click', () => { playSnd('click-sound'); openReader(pub, bm.fileIndex, bm.pageNum); });
+        if (bm) {
+            document.getElementById('resume-btn').addEventListener('click', () => {
+                playSnd('click-sound');
+                openReader(pub, bm.chapterIndex || 0, bm.partIndex || 0, bm.pageNum || 1);
+            });
+        }
 
         const grid = document.getElementById('grid-chapters');
         grid.innerHTML = '';
@@ -771,23 +819,31 @@
             });
         }, { rootMargin: '200px 0px' });
 
-        pub.files.forEach((file, idx) => {
+        pub.chapters.forEach((ch, idx) => {
+            const isBookmarked = bm && bm.chapterIndex === idx;
             const card = document.createElement('div');
-            card.className = 'chapter-card' + (bm && bm.fileIndex === idx ? ' bookmarked' : '');
+            card.className = 'chapter-card' + (isBookmarked ? ' bookmarked' : '');
             card.dataset.idx = idx;
-            const nm = file.replace(/\.pdf$/i, '');
+            const subLabel = chCount === 1 ? 'Full Volume' : `Chapter ${idx + 1}`;
             card.innerHTML = `<div class="chapter-card-loading" id="cl-${idx}"><i class="fas fa-circle-notch loading-spinner"></i></div>`
-                + `<div class="chapter-card-name">${nm}</div>`
-                + `<div class="chapter-card-num">Chapter ${idx+1}</div>`
-                + (bm && bm.fileIndex === idx ? `<div class="chapter-bookmark-badge">&#9654; P.${bm.pageNum}</div>` : '');
-            card.addEventListener('click', () => { playSnd('click-sound'); openReader(pub, idx, (bm && bm.fileIndex === idx) ? bm.pageNum : 1); });
+                + `<div class="chapter-card-name">${ch.name}</div>`
+                + `<div class="chapter-card-num">${subLabel}</div>`
+                + (isBookmarked ? `<div class="chapter-bookmark-badge">&#9654; P.${bm.pageNum}</div>` : '');
+            card.addEventListener('click', () => {
+                playSnd('click-sound');
+                const targetPart = isBookmarked ? (bm.partIndex || 0) : 0;
+                const targetPage = isBookmarked ? (bm.pageNum || 1) : 1;
+                openReader(pub, idx, targetPart, targetPage);
+            });
             grid.appendChild(card);
             chapterObserver.observe(card);
         });
     }
 
     async function renderChapterThumb(card, pub, idx) {
-        const pdfUrl = rawUrl(pub.folderPath) + '/' + pub.files[idx];
+        const chapter = pub.chapters[idx];
+        const firstFile = chapter.files[0];
+        const pdfUrl = rawUrl(pub.folderPath) + '/' + firstFile;
         const el = document.getElementById('cl-' + idx);
         try {
             const pdf  = await pdfjsLib.getDocument(pdfUrl).promise;
@@ -813,19 +869,27 @@
     // ===========================================================
     // READER — ENTRY POINTS
     // ===========================================================
-    async function openReader(pub, fileIndex, pageNum) {
-        currentPub = pub; currentFileIndex = fileIndex; currentPage = pageNum || 1;
+    async function openReader(pub, chapterIndex, partIndex, pageNum) {
+        currentPub = pub;
+        currentChapterIndex = chapterIndex;
+        currentPartIndex = partIndex || 0;
+        currentPage = pageNum || 1;
         navigateTo('reader');
         document.getElementById('title-main').textContent = pub.title;
         applyModeUI();
-        await loadReaderFile(pub, fileIndex, currentPage);
+        await loadReaderChapterPart(pub, currentChapterIndex, currentPartIndex, currentPage);
     }
 
-    async function loadReaderFile(pub, fileIndex, targetPage) {
-        const pdfUrl = rawUrl(pub.folderPath) + '/' + pub.files[fileIndex];
+    async function loadReaderChapterPart(pub, chIdx, partIdx, targetPage) {
+        currentChapterIndex = chIdx;
+        currentPartIndex = partIdx;
+        const chapter = pub.chapters[chIdx];
+        const fileName = chapter.files[partIdx];
+        const pdfUrl = rawUrl(pub.folderPath) + '/' + fileName;
+
         document.getElementById('reader-loading').style.display = 'flex';
         document.getElementById('reader-loading-text').textContent =
-            'Loading ' + pub.files[fileIndex].replace(/\.pdf$/i,'') + '...';
+            'Loading ' + chapter.name + '...';
 
         try {
             currentPdfDoc = await pdfjsLib.getDocument(pdfUrl).promise;
@@ -833,7 +897,7 @@
             document.getElementById('reader-page-total').textContent = total;
             document.getElementById('info-page-total').textContent   = total;
             document.getElementById('reader-page-input').max         = total;
-            document.getElementById('reader-ch-name').textContent    = pub.files[fileIndex].replace(/\.pdf$/i,'');
+            document.getElementById('reader-ch-name').textContent    = chapter.name;
             const pg = Math.min(Math.max(1, targetPage), total);
 
             if (readerMode === 'flip') {
@@ -886,7 +950,7 @@
             currentPage = num;
             document.getElementById('reader-page-input').value   = num;
             document.getElementById('info-page-num').textContent = num;
-            saveBookmark(currentPub.id, currentFileIndex, num);
+            saveBookmark(currentPub.id, currentChapterIndex, currentPartIndex, num);
         } catch(e) { if (e.name !== 'RenderingCancelledException') console.error(e); }
         finally { rendering = false; }
     }
@@ -894,14 +958,45 @@
     async function goPage(delta) {
         const total = currentPdfDoc ? currentPdfDoc.numPages : 1;
         const next  = currentPage + delta;
+        const chapter = currentPub.chapters[currentChapterIndex];
+
+        // Lùi trang trước trang 1
         if (next < 1) {
-            if (currentFileIndex > 0) { currentFileIndex--; await loadReaderFile(currentPub, currentFileIndex, 999999); }
+            // Còn part trước trong cùng chapter
+            if (currentPartIndex > 0) {
+                currentPartIndex--;
+                await loadReaderChapterPart(currentPub, currentChapterIndex, currentPartIndex, 999999);
+                return;
+            }
+            // Hết part trong chapter này, lùi về chapter trước nếu có
+            if (currentChapterIndex > 0) {
+                currentChapterIndex--;
+                const prevCh = currentPub.chapters[currentChapterIndex];
+                currentPartIndex = prevCh.files.length - 1;
+                await loadReaderChapterPart(currentPub, currentChapterIndex, currentPartIndex, 999999);
+                return;
+            }
             return;
         }
+
+        // Tiến trang vượt quá trang cuối của part hiện tại
         if (next > total) {
-            if (currentFileIndex < currentPub.files.length - 1) { currentFileIndex++; await loadReaderFile(currentPub, currentFileIndex, 1); }
+            // Còn part tiếp theo trong cùng chapter
+            if (currentPartIndex < chapter.files.length - 1) {
+                currentPartIndex++;
+                await loadReaderChapterPart(currentPub, currentChapterIndex, currentPartIndex, 1);
+                return;
+            }
+            // Hết part trong chapter này, chuyển sang chapter tiếp theo nếu có
+            if (currentChapterIndex < currentPub.chapters.length - 1) {
+                currentChapterIndex++;
+                currentPartIndex = 0;
+                await loadReaderChapterPart(currentPub, currentChapterIndex, currentPartIndex, 1);
+                return;
+            }
             return;
         }
+
         await renderFlipPage(next);
     }
 
@@ -957,40 +1052,86 @@
     });
 
     // ===========================================================
-    // READER — SCROLL MODE  (DPR-AWARE)
+    // READER — SCROLL MODE  (DPR-AWARE & SEAMLESS MULTI-PART)
     // ===========================================================
     async function initScrollMode(targetPage) {
-        // Disconnect old render observer and remove old scroll listener
         if (scrollObserver) { scrollObserver.disconnect(); scrollObserver = null; }
         if (scrollTrackObs) { scrollTrackObs.disconnect(); scrollTrackObs = null; }
 
         const scrollWrap = document.getElementById('reader-scroll-wrap');
-        // Remove previous scroll listener if any
         if (scrollWrap._scrollHandler) {
             scrollWrap.removeEventListener('scroll', scrollWrap._scrollHandler);
             scrollWrap._scrollHandler = null;
         }
         scrollWrap.innerHTML = '';
         scrollWrap.scrollTop = 0;
+        scrollPartDocs.clear();
 
-        const total = currentPdfDoc.numPages;
-        // Cap DPR at 2 for scroll mode (multiple pages in memory)
+        const chapter = currentPub.chapters[currentChapterIndex];
+        scrollPartDocs.set(currentPartIndex, currentPdfDoc);
+
         const dpr = Math.min(window.devicePixelRatio || 1, 2);
-
-        // Get aspect ratio from page 1 to size placeholders
         const samplePage = await currentPdfDoc.getPage(1);
         const sVp = samplePage.getViewport({ scale: 1 });
-        const ratio = sVp.height / sVp.width; // height-to-width ratio
+        const ratio = sVp.height / sVp.width;
 
-        // Build page placeholders
-        for (let i = 1; i <= total; i++) {
+        appendScrollPartPlaceholders(scrollWrap, currentPartIndex, currentPdfDoc.numPages, ratio);
+
+        scrollObserver = new IntersectionObserver(entries => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting && !entry.target.dataset.rendered) {
+                    entry.target.dataset.rendered = '1';
+                    const pIdx = parseInt(entry.target.dataset.part);
+                    const pg   = parseInt(entry.target.dataset.page);
+                    renderScrollPage(entry.target, pIdx, pg, dpr);
+                }
+            });
+        }, { root: scrollWrap, rootMargin: '200% 0px' });
+
+        scrollWrap.querySelectorAll('.scroll-page-wrap').forEach(w => scrollObserver.observe(w));
+
+        setupScrollNextTrigger(scrollWrap, ratio, dpr);
+
+        const updateScrollPageNum = () => {
+            const scrollTop = scrollWrap.scrollTop;
+            const pages = scrollWrap.querySelectorAll('.scroll-page-wrap');
+            let bestPage = 1, bestPart = currentPartIndex;
+            for (const p of pages) {
+                if (p.offsetTop <= scrollTop + 40) {
+                    bestPage = parseInt(p.dataset.page);
+                    bestPart = parseInt(p.dataset.part);
+                } else break;
+            }
+            if (bestPage !== currentPage || bestPart !== currentPartIndex) {
+                currentPage = bestPage;
+                currentPartIndex = bestPart;
+                document.getElementById('reader-page-input').value   = bestPage;
+                document.getElementById('info-page-num').textContent = bestPage;
+                const total = (scrollPartDocs.get(bestPart) || currentPdfDoc).numPages;
+                document.getElementById('reader-page-total').textContent = total;
+                document.getElementById('info-page-total').textContent   = total;
+
+                clearTimeout(scrollWrap._bkmTimer);
+                scrollWrap._bkmTimer = setTimeout(() =>
+                    saveBookmark(currentPub.id, currentChapterIndex, bestPart, bestPage), 800);
+            }
+        };
+
+        scrollWrap._scrollHandler = updateScrollPageNum;
+        scrollWrap.addEventListener('scroll', updateScrollPageNum, { passive: true });
+
+        requestAnimationFrame(() => requestAnimationFrame(() => scrollToScrollPage(currentPartIndex, targetPage)));
+    }
+
+    function appendScrollPartPlaceholders(scrollWrap, partIdx, numPages, ratio) {
+        for (let i = 1; i <= numPages; i++) {
             const wrap = document.createElement('div');
             wrap.className = 'scroll-page-wrap';
+            wrap.dataset.part = partIdx;
             wrap.dataset.page = i;
 
             const ph = document.createElement('div');
             ph.className = 'scroll-page-placeholder';
-            // Use padding-top trick for aspect ratio (works without CSS aspect-ratio)
             ph.style.paddingTop = (ratio * 100).toFixed(2) + '%';
             ph.innerHTML = `<i class="fas fa-circle-notch loading-spinner" style="position:absolute;font-size:20px;"></i>`;
             ph.style.position = 'relative';
@@ -998,65 +1139,73 @@
             wrap.appendChild(ph);
             scrollWrap.appendChild(wrap);
         }
+    }
 
-        // LAZY RENDER: render pages as they enter/approach viewport
-        scrollObserver = new IntersectionObserver(entries => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting && !entry.target.dataset.rendered) {
-                    entry.target.dataset.rendered = '1';
-                    renderScrollPage(entry.target, parseInt(entry.target.dataset.page), dpr);
-                }
-            });
-        }, { root: scrollWrap, rootMargin: '200% 0px' });
+    function setupScrollNextTrigger(scrollWrap, ratio, dpr) {
+        const oldTrigger = document.getElementById('scroll-next-trigger');
+        if (oldTrigger) oldTrigger.remove();
 
-        scrollWrap.querySelectorAll('.scroll-page-wrap').forEach(w => scrollObserver.observe(w));
+        const chapter = currentPub.chapters[currentChapterIndex];
+        const maxPartLoaded = Math.max(...Array.from(scrollPartDocs.keys()));
+        if (maxPartLoaded >= chapter.files.length - 1) return;
 
-        // PAGE TRACKER: stable scroll-event based approach (like Google Drive)
-        // Finds the last page whose top edge is at/above scrollTop + small offset.
-        // Only fires when the computed page number actually changes → no jumping.
-        const updateScrollPageNum = () => {
-            const scrollTop = scrollWrap.scrollTop;
-            const pages = scrollWrap.querySelectorAll('.scroll-page-wrap');
-            let pg = 1;
-            for (const p of pages) {
-                // offsetTop is relative to scrollWrap's scroll container
-                if (p.offsetTop <= scrollTop + 40) pg = parseInt(p.dataset.page);
-                else break; // pages are in DOM order, safe to break early
-            }
-            if (pg !== currentPage) {
-                currentPage = pg;
-                document.getElementById('reader-page-input').value   = pg;
-                document.getElementById('info-page-num').textContent = pg;
-                // Debounce bookmark save — don't write on every scroll pixel
-                clearTimeout(scrollWrap._bkmTimer);
-                scrollWrap._bkmTimer = setTimeout(() =>
-                    saveBookmark(currentPub.id, currentFileIndex, pg), 800);
+        const nextPartIdx = maxPartLoaded + 1;
+        const trigger = document.createElement('div');
+        trigger.id = 'scroll-next-trigger';
+        trigger.style.cssText = 'padding:24px 0;text-align:center;width:100%;';
+        trigger.innerHTML = `<div class="themebutton" id="btn-load-next-part" style="padding:10px 20px;cursor:pointer;">
+            <i class="fas fa-chevron-down"></i> TẢI TIẾP NỘI DUNG TIẾP THEO...
+        </div>`;
+        scrollWrap.appendChild(trigger);
+
+        const loadNextPart = async () => {
+            if (trigger._loading) return;
+            trigger._loading = true;
+            trigger.innerHTML = `<div style="font-size:13px;font-weight:bold;opacity:0.6;text-transform:uppercase;"><i class="fas fa-circle-notch loading-spinner"></i> Đang tải tiếp...</div>`;
+            try {
+                const nextFile = chapter.files[nextPartIdx];
+                const pdfUrl = rawUrl(currentPub.folderPath) + '/' + nextFile;
+                const nextDoc = await pdfjsLib.getDocument(pdfUrl).promise;
+                scrollPartDocs.set(nextPartIdx, nextDoc);
+
+                trigger.remove();
+                appendScrollPartPlaceholders(scrollWrap, nextPartIdx, nextDoc.numPages, ratio);
+
+                scrollWrap.querySelectorAll(`.scroll-page-wrap[data-part="${nextPartIdx}"]`).forEach(w => {
+                    if (scrollObserver) scrollObserver.observe(w);
+                });
+
+                setupScrollNextTrigger(scrollWrap, ratio, dpr);
+            } catch(e) {
+                console.error(e);
+                trigger.innerHTML = `<div style="font-size:12px;color:red;">Lỗi tải phần tiếp theo.</div>`;
             }
         };
 
-        scrollWrap._scrollHandler = updateScrollPageNum;
-        scrollWrap.addEventListener('scroll', updateScrollPageNum, { passive: true });
+        const triggerObs = new IntersectionObserver(entries => {
+            if (entries[0].isIntersecting) {
+                triggerObs.disconnect();
+                loadNextPart();
+            }
+        }, { root: scrollWrap, rootMargin: '350px 0px' });
 
-        // Scroll to target page after layout settles
-        requestAnimationFrame(() => requestAnimationFrame(() => scrollToScrollPage(targetPage)));
+        triggerObs.observe(trigger);
+        document.getElementById('btn-load-next-part')?.addEventListener('click', loadNextPart);
     }
 
-    async function renderScrollPage(wrap, pageNum, dpr) {
+    async function renderScrollPage(wrap, partIdx, pageNum, dpr) {
         try {
-            const page = await currentPdfDoc.getPage(pageNum);
+            const doc = scrollPartDocs.get(partIdx) || currentPdfDoc;
+            const page = await doc.getPage(pageNum);
             const vp1  = page.getViewport({ scale: 1 });
 
-            // CSS display width of the wrapper
             const cssW = Math.max(wrap.clientWidth || 600, 100);
-
-            // Render at DPR * cssW physical pixels wide → sharp on HiDPI
             const renderScale = (cssW * dpr) / vp1.width;
             const vp = page.getViewport({ scale: renderScale });
 
             const canvas = document.createElement('canvas');
-            canvas.width  = vp.width;           // physical pixels = cssW * dpr
+            canvas.width  = vp.width;
             canvas.height = vp.height;
-            // CSS: fill container width, height preserves aspect via explicit value
             canvas.style.width   = cssW + 'px';
             canvas.style.height  = Math.round(vp.height / dpr) + 'px';
             canvas.style.display = 'block';
@@ -1072,9 +1221,10 @@
         }
     }
 
-    function scrollToScrollPage(num) {
+    function scrollToScrollPage(partIdx, num) {
         const scrollWrap = document.getElementById('reader-scroll-wrap');
-        const wrap = scrollWrap.querySelector(`[data-page="${num}"]`);
+        const wrap = scrollWrap.querySelector(`[data-part="${partIdx}"][data-page="${num}"]`)
+                  || scrollWrap.querySelector(`[data-page="${num}"]`);
         if (wrap) wrap.scrollIntoView({ behavior:'auto', block:'start' });
     }
 
@@ -1128,11 +1278,30 @@
     // BOOKMARK
     // ===========================================================
     const bmKey = id => 'manga_bm_' + id;
-    function saveBookmark(id, fi, pg) {
-        try { localStorage.setItem(bmKey(id), JSON.stringify({ fileIndex:fi, pageNum:pg, ts:Date.now() })); } catch(e) {}
+    function saveBookmark(id, chIdx, partIdx, pg) {
+        try {
+            const chName = (currentPub && currentPub.chapters[chIdx]) ? currentPub.chapters[chIdx].name : '';
+            localStorage.setItem(bmKey(id), JSON.stringify({
+                chapterIndex: chIdx,
+                partIndex: partIdx || 0,
+                pageNum: pg,
+                chapterName: chName,
+                fileIndex: chIdx, // backward compatibility
+                ts: Date.now()
+            }));
+        } catch(e) {}
     }
     function loadBookmark(id) {
-        try { const r = localStorage.getItem(bmKey(id)); return r ? JSON.parse(r) : null; } catch(e) { return null; }
+        try {
+            const r = localStorage.getItem(bmKey(id));
+            if (!r) return null;
+            const data = JSON.parse(r);
+            if (data.chapterIndex === undefined && data.fileIndex !== undefined) {
+                data.chapterIndex = data.fileIndex;
+                data.partIndex = 0;
+            }
+            return data;
+        } catch(e) { return null; }
     }
 
     // ===========================================================
