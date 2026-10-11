@@ -1,0 +1,5 @@
+# Manga backup originals
+manga/.originals/
+.originals/
+__pycache__/
+*.pyc
