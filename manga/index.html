@@ -348,6 +348,60 @@
             padding:6px 12px; background:var(--nier-panel);
             border-bottom:1px solid rgba(100,98,86,.3); flex-shrink:0;
         }
+
+        /* CUSTOM TOOLTIP */
+        .custom-tooltip {
+            position: fixed;
+            z-index: 99999;
+            pointer-events: none;
+            display: none;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 200ms ease, transform 200ms ease, visibility 200ms ease;
+            transform: translate3d(0, 4px, 0);
+            max-width: 280px;
+            padding: 8px 12px;
+            background: rgba(235, 230, 215, 0.96);
+            color: var(--nier-dark);
+            border: 1px solid rgba(75, 67, 64, 0.4);
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+            font-size: 12px;
+            line-height: 1.45;
+            text-align: left;
+            border-radius: 3px;
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            word-break: break-word;
+        }
+        .custom-tooltip.visible {
+            opacity: 1;
+            visibility: visible;
+            transform: translate3d(0, 0, 0);
+        }
+        [data-theme="dark"] .custom-tooltip {
+            background: rgba(26, 24, 23, 0.96);
+            color: #f0eee4;
+            border: 1px solid rgba(211, 206, 187, 0.35);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6);
+        }
+        .custom-tooltip .tt-line {
+            display: block;
+            margin-bottom: 3px;
+        }
+        .custom-tooltip .tt-line:last-child {
+            margin-bottom: 0;
+        }
+        .custom-tooltip .tt-title {
+            font-weight: 700;
+            color: var(--nier-dark);
+        }
+        [data-theme="dark"] .custom-tooltip .tt-title {
+            color: #ffffff;
+        }
+        .custom-tooltip .tt-sub {
+            opacity: 0.85;
+            font-size: 11px;
+        }
     </style>
 </head>
 
@@ -525,9 +579,198 @@
     let scrollTrackObs = null;
     let scrollPartDocs = new Map(); // partIndex -> pdfDoc cache for multi-part scroll
 
+    // Chapter thumbnail cache (Memory Map + IndexedDB)
+    const chapterThumbCache = new Map();
+    const DB_NAME = 'manga_thumb_db_v1';
+    const DB_STORE = 'chapter_thumbs';
+    let dbPromise = null;
+
+    function getThumbDB() {
+        if (!dbPromise) {
+            dbPromise = new Promise(resolve => {
+                if (!window.indexedDB) return resolve(null);
+                const req = indexedDB.open(DB_NAME, 1);
+                req.onupgradeneeded = e => {
+                    const db = e.target.result;
+                    if (!db.objectStoreNames.contains(DB_STORE)) db.createObjectStore(DB_STORE);
+                };
+                req.onsuccess = e => resolve(e.target.result);
+                req.onerror = () => resolve(null);
+            });
+        }
+        return dbPromise;
+    }
+
+    async function getCachedThumb(key) {
+        if (chapterThumbCache.has(key)) return chapterThumbCache.get(key);
+        const db = await getThumbDB();
+        if (!db) return null;
+        return new Promise(resolve => {
+            try {
+                const tx = db.transaction(DB_STORE, 'readonly');
+                const req = tx.objectStore(DB_STORE).get(key);
+                req.onsuccess = () => {
+                    if (req.result) {
+                        chapterThumbCache.set(key, req.result);
+                        resolve(req.result);
+                    } else {
+                        resolve(null);
+                    }
+                };
+                req.onerror = () => resolve(null);
+            } catch(e) { resolve(null); }
+        });
+    }
+
+    async function setCachedThumb(key, dataUrl) {
+        chapterThumbCache.set(key, dataUrl);
+        const db = await getThumbDB();
+        if (!db) return;
+        try {
+            const tx = db.transaction(DB_STORE, 'readwrite');
+            tx.objectStore(DB_STORE).put(dataUrl, key);
+        } catch(e) {}
+    }
+
     // ===========================================================
-    // UTILS
+    // UTILS & TOOLTIP
     // ===========================================================
+    function escapeHtml(str) {
+        if (!str) return '';
+        return String(str).replace(/[&<>"']/g, m => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+        }[m]));
+    }
+
+    let tooltipEl = null;
+    function getTooltipEl() {
+        if (!tooltipEl) {
+            tooltipEl = document.createElement('div');
+            tooltipEl.id = 'custom-tooltip';
+            tooltipEl.className = 'custom-tooltip';
+            document.body.appendChild(tooltipEl);
+        }
+        return tooltipEl;
+    }
+
+    function showTooltip(html, mouseX, mouseY) {
+        if (!html) return;
+        const tt = getTooltipEl();
+        tt.innerHTML = html;
+        tt.style.display = 'block';
+
+        const tw = tt.offsetWidth || 200;
+        const th = tt.offsetHeight || 60;
+        const vw = window.innerWidth;
+        const vh = window.innerHeight;
+
+        let posX = mouseX + 14;
+        let posY = mouseY + 10;
+
+        if (posX + tw > vw - 12) {
+            posX = mouseX - tw - 14;
+            if (posX < 12) posX = Math.max(12, vw - tw - 12);
+        }
+        if (posY + th > vh - 12) {
+            posY = mouseY - th - 10;
+            if (posY < 12) posY = Math.max(12, vh - th - 12);
+        }
+
+        tt.style.left = posX + 'px';
+        tt.style.top = posY + 'px';
+
+        requestAnimationFrame(() => {
+            tt.classList.add('visible');
+        });
+    }
+
+    function hideTooltip() {
+        if (tooltipEl) {
+            tooltipEl.classList.remove('visible');
+        }
+    }
+
+    window.addEventListener('scroll', hideTooltip, { passive: true });
+    document.addEventListener('scroll', hideTooltip, { passive: true, capture: true });
+
+    function attachCardTooltip(card, getHtmlContent) {
+        let hoverTimer = null;
+        let longPressTimer = null;
+        let isLongPress = false;
+        let lastX = 0, lastY = 0;
+
+        // Desktop: hover and stay still for 1s
+        card.addEventListener('mouseenter', e => {
+            lastX = e.clientX;
+            lastY = e.clientY;
+            clearTimeout(hoverTimer);
+            hoverTimer = setTimeout(() => {
+                showTooltip(getHtmlContent(), lastX, lastY);
+            }, 1000);
+        });
+
+        card.addEventListener('mousemove', e => {
+            lastX = e.clientX;
+            lastY = e.clientY;
+            hideTooltip();
+            clearTimeout(hoverTimer);
+            hoverTimer = setTimeout(() => {
+                showTooltip(getHtmlContent(), lastX, lastY);
+            }, 1000);
+        });
+
+        card.addEventListener('mouseleave', () => {
+            clearTimeout(hoverTimer);
+            hideTooltip();
+        });
+
+        // Mobile: touch and hold for > 1s
+        let touchStartX = 0, touchStartY = 0;
+        card.addEventListener('touchstart', e => {
+            if (!e.touches || e.touches.length !== 1) return;
+            const touch = e.touches[0];
+            touchStartX = touch.clientX;
+            touchStartY = touch.clientY;
+            lastX = touch.clientX;
+            lastY = touch.clientY;
+            isLongPress = false;
+
+            clearTimeout(longPressTimer);
+            longPressTimer = setTimeout(() => {
+                isLongPress = true;
+                showTooltip(getHtmlContent(), lastX, lastY);
+            }, 1000);
+        }, { passive: true });
+
+        card.addEventListener('touchmove', e => {
+            if (!e.touches || e.touches.length !== 1) return;
+            const touch = e.touches[0];
+            const dx = Math.abs(touch.clientX - touchStartX);
+            const dy = Math.abs(touch.clientY - touchStartY);
+            if (dx > 10 || dy > 10) {
+                clearTimeout(longPressTimer);
+                hideTooltip();
+            }
+        }, { passive: true });
+
+        const endTouch = () => {
+            clearTimeout(longPressTimer);
+            hideTooltip();
+        };
+        card.addEventListener('touchend', endTouch);
+        card.addEventListener('touchcancel', endTouch);
+
+        // Prevent click if long press triggered tooltip on mobile
+        card.addEventListener('click', e => {
+            if (isLongPress) {
+                isLongPress = false;
+                e.preventDefault();
+                e.stopImmediatePropagation();
+                return false;
+            }
+        }, true);
+    }
+
     function numericSort(arr) {
         return [...arr].sort((a,b) => {
             const na = parseInt(a), nb = parseInt(b);
@@ -606,12 +849,14 @@
             const thumbnail = thumbItem ? rawUrl(thumbItem.path) : null;
 
             let title = folder, author = '', year = '';
-            const txtItem = children.find(i => i.type === 'blob' && i.path.toLowerCase().endsWith('.txt'));
+            const txtItem = children.find(i => i.type === 'blob' && i.path.toLowerCase().endsWith('/meta.txt'))
+                         || children.find(i => i.type === 'blob' && i.path.toLowerCase().endsWith('.txt'));
             if (txtItem) {
                 try {
                     const r = await fetch(rawUrl(txtItem.path));
                     if (r.ok) {
-                        const lines = (await r.text()).split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+                        const rawLines = (await r.text()).split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+                        const lines = rawLines.filter(l => !/^\d+\s+(?:valid|resized)\s+file/i.test(l));
                         if (lines[0]) title  = lines[0];
                         if (lines[1]) author = lines[1];
                         if (lines[2]) year   = lines[2];
@@ -641,10 +886,49 @@
         currentView = name;
     }
 
+    function updateChapterBookmarkUI(pub) {
+        if (!pub) return;
+        const bm = loadBookmark(pub.id);
+        const resumeBtn = document.getElementById('resume-btn');
+        if (resumeBtn) {
+            if (bm) {
+                const chName = pub.chapters[bm.chapterIndex] ? pub.chapters[bm.chapterIndex].name : ('Ch.' + (bm.chapterIndex + 1));
+                resumeBtn.innerHTML = `<i class="fas fa-play"></i> Resume: ${chName} \u2014 Page ${bm.pageNum}`;
+                resumeBtn.style.display = '';
+            } else {
+                resumeBtn.style.display = 'none';
+            }
+        }
+        const cards = document.querySelectorAll('#grid-chapters .chapter-card');
+        cards.forEach(card => {
+            const idx = parseInt(card.dataset.idx);
+            const isBm = bm && bm.chapterIndex === idx;
+            card.classList.toggle('bookmarked', !!isBm);
+            const badge = card.querySelector('.chapter-bookmark-badge');
+            if (isBm) {
+                if (!badge) {
+                    const b = document.createElement('div');
+                    b.className = 'chapter-bookmark-badge';
+                    b.innerHTML = `&#9654; P.${bm.pageNum}`;
+                    card.appendChild(b);
+                } else {
+                    badge.innerHTML = `&#9654; P.${bm.pageNum}`;
+                }
+            } else if (badge) {
+                badge.remove();
+            }
+        });
+    }
+
     document.getElementById('btn-back').addEventListener('click', () => {
         playSnd('click-sound');
-        if (currentView === 'chapter') navigateTo('library');
-        else if (currentView === 'reader') navigateTo('chapter', currentPub);
+        if (currentView === 'chapter') {
+            navigateTo('library');
+        } else if (currentView === 'reader') {
+            updateChapterBookmarkUI(currentPub);
+            document.getElementById('title-main').textContent = currentPub ? currentPub.title : 'Chapters';
+            showView('chapter');
+        }
     });
 
     function navigateTo(view, pub) {
@@ -682,6 +966,17 @@
                 + `<div class="pub-card-title">${pub.title}</div>`
                 + `<div class="pub-card-meta">${[pub.author, pub.year].filter(Boolean).join(' \u00b7 ')}</div>`;
             card.addEventListener('click', () => { playSnd('click-sound'); navigateTo('chapter', pub); });
+
+            // Tooltip showing Title, Author, Year (left-aligned)
+            attachCardTooltip(card, () => {
+                const lines = [
+                    `<div class="tt-line tt-title">${escapeHtml(pub.title)}</div>`,
+                    pub.author ? `<div class="tt-line tt-sub">${escapeHtml(pub.author)}</div>` : '',
+                    pub.year   ? `<div class="tt-line tt-sub">${escapeHtml(pub.year)}</div>` : ''
+                ].filter(Boolean);
+                return lines.join('');
+            });
+
             grid.appendChild(card);
         });
     }
@@ -812,7 +1107,6 @@
         chapterObserver = new IntersectionObserver(entries => {
             entries.forEach(entry => {
                 if (entry.isIntersecting && !entry.target.dataset.loaded) {
-                    entry.target.dataset.loaded = '1';
                     renderChapterThumb(entry.target, pub, parseInt(entry.target.dataset.idx));
                     chapterObserver.unobserve(entry.target);
                 }
@@ -820,31 +1114,79 @@
         }, { rootMargin: '200px 0px' });
 
         pub.chapters.forEach((ch, idx) => {
+            const key = pub.id + '/' + ch.name;
             const isBookmarked = bm && bm.chapterIndex === idx;
             const card = document.createElement('div');
             card.className = 'chapter-card' + (isBookmarked ? ' bookmarked' : '');
             card.dataset.idx = idx;
             const subLabel = chCount === 1 ? 'Full Volume' : `Chapter ${idx + 1}`;
-            card.innerHTML = `<div class="chapter-card-loading" id="cl-${idx}"><i class="fas fa-circle-notch loading-spinner"></i></div>`
+
+            const inMemThumb = chapterThumbCache.get(key);
+            let thumbHtml = '';
+            if (inMemThumb) {
+                card.dataset.loaded = '1';
+                thumbHtml = `<img src="${inMemThumb}" style="width:100%;height:auto;display:block;" alt="${ch.name}">`;
+            } else {
+                thumbHtml = `<div class="chapter-card-loading" id="cl-${idx}"><i class="fas fa-circle-notch loading-spinner"></i></div>`;
+            }
+
+            card.innerHTML = thumbHtml
                 + `<div class="chapter-card-name">${ch.name}</div>`
                 + `<div class="chapter-card-num">${subLabel}</div>`
                 + (isBookmarked ? `<div class="chapter-bookmark-badge">&#9654; P.${bm.pageNum}</div>` : '');
+
             card.addEventListener('click', () => {
                 playSnd('click-sound');
                 const targetPart = isBookmarked ? (bm.partIndex || 0) : 0;
                 const targetPage = isBookmarked ? (bm.pageNum || 1) : 1;
                 openReader(pub, idx, targetPart, targetPage);
             });
+
+            // Tooltip showing full chapter name
+            attachCardTooltip(card, () => {
+                return `<div class="tt-line tt-title">${escapeHtml(ch.name)}</div>`;
+            });
+
             grid.appendChild(card);
-            chapterObserver.observe(card);
+
+            if (!inMemThumb) {
+                getCachedThumb(key).then(cached => {
+                    if (cached && !card.dataset.loaded) {
+                        card.dataset.loaded = '1';
+                        const el = document.getElementById('cl-' + idx);
+                        const img = document.createElement('img');
+                        img.src = cached;
+                        img.style.width = '100%';
+                        img.style.height = 'auto';
+                        img.style.display = 'block';
+                        if (el) el.replaceWith(img); else card.prepend(img);
+                    }
+                });
+                chapterObserver.observe(card);
+            }
         });
     }
 
     async function renderChapterThumb(card, pub, idx) {
+        if (card.dataset.loaded === '1') return;
         const chapter = pub.chapters[idx];
+        const key = pub.id + '/' + chapter.name;
+        const el = document.getElementById('cl-' + idx);
+
+        const cached = await getCachedThumb(key);
+        if (cached) {
+            card.dataset.loaded = '1';
+            const img = document.createElement('img');
+            img.src = cached;
+            img.style.width = '100%';
+            img.style.height = 'auto';
+            img.style.display = 'block';
+            if (el) el.replaceWith(img); else card.prepend(img);
+            return;
+        }
+
         const firstFile = chapter.files[0];
         const pdfUrl = rawUrl(pub.folderPath) + '/' + firstFile;
-        const el = document.getElementById('cl-' + idx);
         try {
             const pdf  = await pdfjsLib.getDocument(pdfUrl).promise;
             const page = await pdf.getPage(1);
@@ -860,6 +1202,13 @@
             cvs.style.width  = '100%';
             cvs.style.height = 'auto';
             await page.render({ canvasContext: cvs.getContext('2d'), viewport: vp }).promise;
+
+            card.dataset.loaded = '1';
+            try {
+                const dataUrl = cvs.toDataURL('image/jpeg', 0.8);
+                setCachedThumb(key, dataUrl);
+            } catch(e) {}
+
             if (el) el.replaceWith(cvs); else card.prepend(cvs);
         } catch(e) {
             if (el) el.innerHTML = '<i class="fas fa-file-pdf" style="font-size:32px;opacity:.3;"></i>';
