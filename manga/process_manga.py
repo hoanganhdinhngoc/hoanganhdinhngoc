@@ -39,7 +39,7 @@ def split_pdf_file(pdf_path):
     rel_folder = os.path.relpath(folder_path, LIBRARY_DIR)
 
     size_mb = file_size / (1024 * 1024)
-    print(f"\n[PHÁT HIỆN] {file_name} ({size_mb:.2f} MB > 22 MB)")
+    print(f"\n[PHÁT HIỆN FILE LỚN] {file_name} ({size_mb:.2f} MB > 22 MB)")
 
     doc = pymupdf.open(pdf_path)
     total_pages = len(doc)
@@ -103,53 +103,120 @@ def split_pdf_file(pdf_path):
     shutil.move(pdf_path, backup_file_path)
     print(f"  [XONG] Hoàn tất xử lý: {file_name}")
 
+def update_meta_valid_count(meta_path, folder_name, count):
+    """Cập nhật hoặc thêm dòng 'X valid file' vào cuối file meta.txt"""
+    lines = []
+    if os.path.exists(meta_path):
+        try:
+            with open(meta_path, 'r', encoding='utf-8') as f:
+                lines = [l.strip() for l in f if l.strip()]
+        except Exception:
+            pass
+
+    # Nếu file meta.txt chưa có, tạo cấu trúc chuẩn với tên truyện
+    if not lines:
+        lines = [folder_name]
+
+    # Loại bỏ bất kỳ dòng 'X valid file' hoặc 'X resized file' cũ nào nếu có
+    clean_lines = [l for l in lines if not re.match(r'^\d+\s+(?:valid|resized)\s+file', l, re.IGNORECASE)]
+
+    # Thêm dòng mới vào cuối
+    clean_lines.append(f"{count} valid file")
+
+    with open(meta_path, 'w', encoding='utf-8') as f:
+        f.write("\n".join(clean_lines) + "\n")
+
 def process_library():
-    print("=" * 60)
+    print("=" * 65)
     print(" MANGA LIBRARY - CÔNG CỤ TỰ ĐỘNG CHIA & TỐI ƯU PDF")
-    print("=" * 60)
-    print(f"Thư mục library: {LIBRARY_DIR}")
+    print("=" * 65)
+    print(f"Thư mục library: {LIBRARY_DIR}\n")
 
     if not os.path.exists(LIBRARY_DIR):
         print("[ERROR] Không tìm thấy thư mục library!")
         return
 
-    large_files = []
-    normal_files = 0
-    part_files = 0
+    folders = [f for f in os.listdir(LIBRARY_DIR) if os.path.isdir(os.path.join(LIBRARY_DIR, f))]
+    folders.sort()
 
-    for root, dirs, files in os.walk(LIBRARY_DIR):
-        for f in files:
-            if not f.lower().endswith(".pdf"):
+    total_scanned = 0
+    total_skipped = 0
+    total_processed = 0
+
+    for folder_name in folders:
+        folder_path = os.path.join(LIBRARY_DIR, folder_name)
+        
+        # Đếm các file PDF hiện tại trong thư mục
+        pdf_files = [f for f in os.listdir(folder_path) if f.lower().endswith('.pdf') and os.path.isfile(os.path.join(folder_path, f))]
+        current_pdf_count = len(pdf_files)
+
+        if current_pdf_count == 0:
+            continue
+
+        total_scanned += 1
+        meta_path = os.path.join(folder_path, "meta.txt")
+
+        # Tự động đổi tên các file txt cũ (nếu có) thành meta.txt
+        if not os.path.exists(meta_path):
+            old_txts = [f for f in os.listdir(folder_path) if f.lower().endswith('.txt')]
+            if old_txts:
+                old_p = os.path.join(folder_path, old_txts[0])
+                os.rename(old_p, meta_path)
+
+        # Đọc thông tin từ file meta.txt
+        cached_count = None
+        if os.path.exists(meta_path):
+            try:
+                with open(meta_path, 'r', encoding='utf-8') as f:
+                    for line in f:
+                        m = re.match(r'^\s*(\d+)\s+(?:valid|resized)\s+file', line, re.IGNORECASE)
+                        if m:
+                            cached_count = int(m.group(1))
+            except Exception:
+                pass
+
+        # Kiểm tra điều kiện bỏ qua
+        if cached_count is not None and cached_count == current_pdf_count:
+            print(f"[BỎ QUA] {folder_name}: Đã tối ưu ({current_pdf_count} valid file)")
+            total_skipped += 1
+            continue
+
+        # Nếu số lượng không khớp hoặc chưa từng tối ưu
+        if cached_count is not None:
+            print(f"\n[PHÁT HIỆN THAY ĐỔI] {folder_name}: Có {current_pdf_count} file PDF (trước đó là {cached_count}) -> Bắt đầu quét...")
+        else:
+            print(f"\n[QUÉT MỚI] {folder_name}: {current_pdf_count} file PDF -> Bắt đầu kiểm tra...")
+
+        # Tìm các file lớn hơn MAX_SIZE_BYTES
+        large_files = []
+        for pf in pdf_files:
+            p_full = os.path.join(folder_path, pf)
+            if is_part_file(pf):
                 continue
-            fpath = os.path.join(root, f)
-            if is_part_file(f):
-                part_files += 1
-                continue
-            fsize = os.path.getsize(fpath)
-            if fsize > MAX_SIZE_BYTES:
-                large_files.append((fpath, fsize))
-            else:
-                normal_files += 1
+            if os.path.getsize(p_full) > MAX_SIZE_BYTES:
+                large_files.append(p_full)
 
-    print(f"Tìm thấy:")
-    print(f" - {normal_files} file PDF chuẩn (<= 22 MB)")
-    print(f" - {part_files} file đã chia nhỏ (.partX.pdf)")
-    print(f" - {len(large_files)} file vượt quá 22 MB cần xử lý")
+        if large_files:
+            print(f"  -> Có {len(large_files)} file vượt quá 22 MB cần chia nhỏ...")
+            for lf in large_files:
+                split_pdf_file(lf)
+            total_processed += 1
+        else:
+            print(f"  -> Tất cả {current_pdf_count} file đều đã <= 22 MB.")
 
-    if not large_files:
-        print("\n[TUYỆT VỜI] Không có file nào vượt quá 22 MB!")
-        print("Tất cả file đều đã sẵn sàng để deploy lên Cloudflare Pages.")
-        return
+        # Cập nhật lại số lượng file PDF thực tế sau khi xử lý vào meta.txt
+        updated_pdfs = [f for f in os.listdir(folder_path) if f.lower().endswith('.pdf') and os.path.isfile(os.path.join(folder_path, f))]
+        final_count = len(updated_pdfs)
+        update_meta_valid_count(meta_path, folder_name, final_count)
+        print(f"  [ĐÃ CẬP NHẬT] meta.txt -> '{final_count} valid file'")
 
-    print(f"\nBắt đầu xử lý {len(large_files)} file lớn...")
-    for fpath, _ in large_files:
-        split_pdf_file(fpath)
-
-    print("\n" + "=" * 60)
-    print(" [HOÀN THÀNH TẤT CẢ]")
+    print("\n" + "=" * 65)
+    print(f" [HOÀN THÀNH TẤT CẢ]")
+    print(f" - Tổng số bộ truyện: {total_scanned}")
+    print(f" - Bỏ qua (đã tối ưu từ trước): {total_skipped}")
+    print(f" - Đã kiểm tra / xử lý: {total_scanned - total_skipped}")
     print(" Giờ anh có thể yên tâm 'git add .', 'git commit' và 'git push'!")
-    print(" Cloudflare Pages sẽ deploy thành công 100%.")
-    print("=" * 60)
+    print("=" * 65)
 
 if __name__ == "__main__":
     process_library()
