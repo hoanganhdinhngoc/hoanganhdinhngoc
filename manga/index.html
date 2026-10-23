@@ -261,6 +261,12 @@
             padding:24px 16px 48px; gap:16px;
         }
         .reader-scroll-wrap.active { display:flex; }
+        /* Desktop: drag-to-scroll (grab cursor, no text/image selection) */
+        @media (hover:hover) and (pointer:fine) {
+            .reader-scroll-wrap.active { cursor:grab; user-select:none; -webkit-user-select:none; }
+            .reader-scroll-wrap.active.dragging { cursor:grabbing; }
+        }
+        .scroll-next-chapter { padding:16px 0 8px; text-align:center; width:100%; }
         .scroll-page-wrap {
             background:#fff; box-shadow:0 4px 20px rgba(0,0,0,.4);
             position:relative; flex-shrink:0;
@@ -568,8 +574,6 @@
     let currentView         = 'library';
     let currentPub          = null;
     let currentChapterIndex = 0;
-    let currentPartIndex    = 0;
-    let currentPdfDoc       = null;
     let currentPage         = 1;
     let rendering           = false;
 
@@ -577,7 +581,6 @@
     let readerMode     = localStorage.getItem('manga_mode') || 'flip'; // 'flip' | 'scroll'
     let scrollObserver = null;
     let scrollTrackObs = null;
-    let scrollPartDocs = new Map(); // partIndex -> pdfDoc cache for multi-part scroll
 
     // Chapter thumbnail cache (Memory Map + IndexedDB)
     const chapterThumbCache = new Map();
@@ -863,7 +866,8 @@
                     }
                 } catch(e) {}
             }
-            publications.push({ id:folder, folderPath:fp, thumbnail, title, author, year, files:pdfFiles, chapters:chapters });
+            const hasPartsManifest = children.some(i => i.type === 'blob' && i.path.toLowerCase().endsWith('/parts.json'));
+            publications.push({ id:folder, folderPath:fp, thumbnail, title, author, year, files:pdfFiles, chapters:chapters, hasPartsManifest });
         }
         publications.sort((a,b) => a.title.localeCompare(b.title));
         return publications;
@@ -1077,7 +1081,9 @@
         const chCount = pub.chapters.length;
         const countText = chCount === 1 ? '1 Volume' : `${chCount} Chapters`;
 
-        let resumeHtml = '';
+        // Resume button is always rendered (hidden when there is no bookmark) so it can be
+        // refreshed in place by updateChapterBookmarkUI() when returning from the reader.
+        let resumeHtml = '<div class="chapter-resume-hint" id="resume-btn" style="display:none"></div>';
         if (bm) {
             const chName = pub.chapters[bm.chapterIndex] ? pub.chapters[bm.chapterIndex].name : ('Ch.' + (bm.chapterIndex + 1));
             resumeHtml = `<div class="chapter-resume-hint" id="resume-btn"><i class="fas fa-play"></i> Resume: ${chName} \u2014 Page ${bm.pageNum}</div>`;
@@ -1094,12 +1100,13 @@
             + resumeHtml
             + '</div>';
 
-        if (bm) {
-            document.getElementById('resume-btn').addEventListener('click', () => {
-                playSnd('click-sound');
-                openReader(pub, bm.chapterIndex || 0, bm.partIndex || 0, bm.pageNum || 1);
-            });
-        }
+        // Always read the LATEST bookmark at click time (DOM is kept when coming back from the reader)
+        document.getElementById('resume-btn').addEventListener('click', () => {
+            const cur = loadBookmark(pub.id);
+            if (!cur) return;
+            playSnd('click-sound');
+            openReader(pub, cur.chapterIndex || 0, cur.pageNum || 1, cur.legacyPart);
+        });
 
         const grid = document.getElementById('grid-chapters');
         grid.innerHTML = '';
@@ -1137,9 +1144,8 @@
 
             card.addEventListener('click', () => {
                 playSnd('click-sound');
-                const targetPart = isBookmarked ? (bm.partIndex || 0) : 0;
-                const targetPage = isBookmarked ? (bm.pageNum || 1) : 1;
-                openReader(pub, idx, targetPart, targetPage);
+                // A chapter card always opens from page 1 of the chapter (use Resume to continue)
+                openReader(pub, idx, 1);
             });
 
             // Tooltip showing full chapter name
@@ -1216,33 +1222,137 @@
     }
 
     // ===========================================================
+    // CHAPTER MODEL — a chapter made of several .partX.pdf files is
+    // treated as ONE continuous document with GLOBAL page numbers.
+    // ===========================================================
+    // chapterInfo = { chIdx, parts:[{url, numPages}], offsets:[0, n1, n1+n2, ...], total }
+    let chapterInfo = null;
+    const docCache  = new Map();              // url -> Promise<PDFDocumentProxy>
+    const pcKey     = url => 'manga_pc_' + url; // cached page count per part file
+
+    const partUrl = (pub, file) => rawUrl(pub.folderPath) + '/' + file;
+
+    // Open a PDF lazily: with range requests only the needed bytes are fetched
+    function getDoc(url) {
+        if (!docCache.has(url)) {
+            const p = pdfjsLib.getDocument({ url, disableAutoFetch: true, rangeChunkSize: 524288 }).promise.then(doc => {
+                try { localStorage.setItem(pcKey(url), doc.numPages); } catch(e) {}
+                return doc;
+            });
+            p.catch(() => docCache.delete(url));
+            docCache.set(url, p);
+        }
+        return docCache.get(url);
+    }
+
+    // Free documents that don't belong to the chapter being opened
+    function releaseDocsExcept(urls) {
+        for (const [url, p] of docCache) {
+            if (!urls.includes(url)) {
+                p.then(d => d.destroy()).catch(() => {});
+                docCache.delete(url);
+            }
+        }
+    }
+
+    function getCachedPageCount(url) {
+        const v = parseInt(localStorage.getItem(pcKey(url)));
+        return v > 0 ? v : null;
+    }
+
+    // parts.json (written by optimize_manga.bat) = page count of every .partX.pdf,
+    // so page numbers are known without downloading the parts first.
+    const partsManifestCache = new Map(); // pub.id -> Promise<object>
+    function loadPartsManifest(pub) {
+        if (!pub.hasPartsManifest) return Promise.resolve({});
+        if (!partsManifestCache.has(pub.id)) {
+            partsManifestCache.set(pub.id,
+                fetch(rawUrl(pub.folderPath) + '/parts.json', { cache: 'no-cache' })
+                    .then(r => r.ok ? r.json() : {})
+                    .then(m => { const n = {}; for (const k in m) n[k.normalize('NFC')] = m[k]; return n; })
+                    .catch(() => ({})));
+        }
+        return partsManifestCache.get(pub.id);
+    }
+
+    async function loadChapterInfo(pub, chIdx) {
+        const files = pub.chapters[chIdx].files;
+        const urls  = files.map(f => partUrl(pub, f));
+        releaseDocsExcept(urls);
+        const manifest = files.length > 1 ? await loadPartsManifest(pub) : {};
+        const counts = await Promise.all(urls.map(async (url, i) =>
+            (manifest[files[i].normalize('NFC')] > 0 ? manifest[files[i].normalize('NFC')] : null)
+            || getCachedPageCount(url)
+            || (await getDoc(url)).numPages
+        ));
+        const offsets = [];
+        let acc = 0;
+        counts.forEach(c => { offsets.push(acc); acc += c; });
+        return { chIdx, parts: urls.map((url, i) => ({ url, numPages: counts[i] })), offsets, total: acc };
+    }
+
+    // Global page (1-based) -> { partIdx, local }
+    function locatePage(info, g) {
+        for (let i = info.parts.length - 1; i >= 0; i--) {
+            if (g > info.offsets[i]) return { partIdx: i, local: g - info.offsets[i] };
+        }
+        return { partIdx: 0, local: 1 };
+    }
+
+    async function getGlobalPage(info, g) {
+        const { partIdx, local } = locatePage(info, g);
+        const doc = await getDoc(info.parts[partIdx].url);
+        return doc.getPage(Math.min(local, doc.numPages));
+    }
+
+    // Old bookmarks stored (partIndex, local page) -> convert to a global page if counts are known
+    function legacyToGlobal(pub, chIdx, partIdx, local) {
+        const ch = pub && pub.chapters[chIdx];
+        if (!ch) return null;
+        let acc = 0;
+        for (let i = 0; i < partIdx; i++) {
+            if (!ch.files[i]) return null;
+            const c = getCachedPageCount(partUrl(pub, ch.files[i]));
+            if (!c) return null;
+            acc += c;
+        }
+        return acc + local;
+    }
+
+    function setPageUI(pg) {
+        document.getElementById('reader-page-input').value   = pg;
+        document.getElementById('info-page-num').textContent = pg;
+    }
+
+    // ===========================================================
     // READER — ENTRY POINTS
     // ===========================================================
-    async function openReader(pub, chapterIndex, partIndex, pageNum) {
+    async function openReader(pub, chapterIndex, pageNum, legacyPart) {
         currentPub = pub;
-        currentChapterIndex = chapterIndex;
-        currentPartIndex = partIndex || 0;
-        currentPage = pageNum || 1;
         navigateTo('reader');
         document.getElementById('title-main').textContent = pub.title;
         applyModeUI();
-        await loadReaderChapterPart(pub, currentChapterIndex, currentPartIndex, currentPage);
+        await loadChapter(pub, chapterIndex, pageNum || 1, legacyPart);
     }
 
-    async function loadReaderChapterPart(pub, chIdx, partIdx, targetPage) {
+    let loadToken = 0;
+    async function loadChapter(pub, chIdx, targetPage, legacyPart) {
+        const token = ++loadToken;
         currentChapterIndex = chIdx;
-        currentPartIndex = partIdx;
         const chapter = pub.chapters[chIdx];
-        const fileName = chapter.files[partIdx];
-        const pdfUrl = rawUrl(pub.folderPath) + '/' + fileName;
-
-        document.getElementById('reader-loading').style.display = 'flex';
-        document.getElementById('reader-loading-text').textContent =
-            'Loading ' + chapter.name + '...';
+        const loading = document.getElementById('reader-loading');
+        loading.style.display = 'flex';
+        document.getElementById('reader-loading-text').textContent = 'Loading ' + chapter.name + '...';
 
         try {
-            currentPdfDoc = await pdfjsLib.getDocument(pdfUrl).promise;
-            const total = currentPdfDoc.numPages;
+            const info = await loadChapterInfo(pub, chIdx);
+            if (token !== loadToken) return;
+            chapterInfo = info;
+
+            if (legacyPart !== undefined && legacyPart !== null) {
+                targetPage = (info.offsets[legacyPart] || 0) + targetPage;
+            }
+            const total = info.total;
             document.getElementById('reader-page-total').textContent = total;
             document.getElementById('info-page-total').textContent   = total;
             document.getElementById('reader-page-input').max         = total;
@@ -1258,22 +1368,24 @@
             }
         } catch(e) {
             console.error(e);
-            document.getElementById('reader-loading-text').textContent = 'Error loading file.';
+            if (token === loadToken) document.getElementById('reader-loading-text').textContent = 'Error loading file.';
             return;
         }
-        document.getElementById('reader-loading').style.display = 'none';
+        if (token === loadToken) loading.style.display = 'none';
     }
 
     // ===========================================================
-    // READER — FLIP MODE  (DPR-AWARE FIX)
+    // READER — FLIP MODE  (DPR-AWARE)
     // ===========================================================
     async function renderFlipPage(num) {
-        if (rendering) return;
+        if (rendering || !chapterInfo) return;
         rendering = true;
+        const info = chapterInfo;
         const canvas = document.getElementById('reader-canvas');
         canvas.classList.add('fading');
         try {
-            const page = await currentPdfDoc.getPage(num);
+            const page = await getGlobalPage(info, num);
+            if (info !== chapterInfo) return;
             const wrap = document.getElementById('reader-main');
             // Use real device pixel ratio — capped at 3 for performance/memory
             const dpr  = Math.min(window.devicePixelRatio || 1, 3);
@@ -1286,10 +1398,8 @@
             // Step 2: render at physical pixel resolution (cssScale * DPR)
             const vp = page.getViewport({ scale: cssScale * dpr });
 
-            // Canvas internal size = physical pixels
             canvas.width  = vp.width;
             canvas.height = vp.height;
-            // Canvas CSS size = logical CSS pixels (browser maps DPR:1 ratio → sharp)
             canvas.style.width  = Math.round(vp.width  / dpr) + 'px';
             canvas.style.height = Math.round(vp.height / dpr) + 'px';
 
@@ -1297,61 +1407,32 @@
             canvas.classList.remove('fading');
 
             currentPage = num;
-            document.getElementById('reader-page-input').value   = num;
-            document.getElementById('info-page-num').textContent = num;
-            saveBookmark(currentPub.id, currentChapterIndex, currentPartIndex, num);
+            setPageUI(num);
+            saveBookmark(currentPub.id, currentChapterIndex, num);
         } catch(e) { if (e.name !== 'RenderingCancelledException') console.error(e); }
         finally { rendering = false; }
     }
 
     async function goPage(delta) {
-        const total = currentPdfDoc ? currentPdfDoc.numPages : 1;
-        const next  = currentPage + delta;
-        const chapter = currentPub.chapters[currentChapterIndex];
-
-        // Lùi trang trước trang 1
+        if (!chapterInfo) return;
+        const next = currentPage + delta;
         if (next < 1) {
-            // Còn part trước trong cùng chapter
-            if (currentPartIndex > 0) {
-                currentPartIndex--;
-                await loadReaderChapterPart(currentPub, currentChapterIndex, currentPartIndex, 999999);
-                return;
-            }
-            // Hết part trong chapter này, lùi về chapter trước nếu có
-            if (currentChapterIndex > 0) {
-                currentChapterIndex--;
-                const prevCh = currentPub.chapters[currentChapterIndex];
-                currentPartIndex = prevCh.files.length - 1;
-                await loadReaderChapterPart(currentPub, currentChapterIndex, currentPartIndex, 999999);
-                return;
-            }
+            // Before page 1 → last page of the previous chapter
+            if (currentChapterIndex > 0) await loadChapter(currentPub, currentChapterIndex - 1, Infinity);
             return;
         }
-
-        // Tiến trang vượt quá trang cuối của part hiện tại
-        if (next > total) {
-            // Còn part tiếp theo trong cùng chapter
-            if (currentPartIndex < chapter.files.length - 1) {
-                currentPartIndex++;
-                await loadReaderChapterPart(currentPub, currentChapterIndex, currentPartIndex, 1);
-                return;
-            }
-            // Hết part trong chapter này, chuyển sang chapter tiếp theo nếu có
-            if (currentChapterIndex < currentPub.chapters.length - 1) {
-                currentChapterIndex++;
-                currentPartIndex = 0;
-                await loadReaderChapterPart(currentPub, currentChapterIndex, currentPartIndex, 1);
-                return;
-            }
+        if (next > chapterInfo.total) {
+            // After the last page → first page of the next chapter
+            if (currentChapterIndex < currentPub.chapters.length - 1) await loadChapter(currentPub, currentChapterIndex + 1, 1);
             return;
         }
-
         await renderFlipPage(next);
     }
 
     // Keyboard (flip only)
     document.addEventListener('keydown', e => {
         if (currentView !== 'reader' || readerMode !== 'flip') return;
+        if (e.target.closest && e.target.closest('input, textarea')) return;
         if (e.key === 'ArrowRight') goPage(1);
         if (e.key === 'ArrowLeft')  goPage(-1);
     });
@@ -1371,14 +1452,16 @@
     document.getElementById('cz-right').addEventListener('click', () => { if (readerMode === 'flip') { flashZone('cz-right'); goPage(1); } });
     document.getElementById('cz-left').addEventListener('click',  () => { if (readerMode === 'flip') { flashZone('cz-left');  goPage(-1); } });
 
-    // Page input
-    document.getElementById('reader-page-input').addEventListener('change', async e => {
-        const n = parseInt(e.target.value), t = currentPdfDoc ? currentPdfDoc.numPages : 1;
+    // Page input — jump to a GLOBAL page of the chapter (Enter or blur)
+    const pageInput = document.getElementById('reader-page-input');
+    pageInput.addEventListener('change', async e => {
+        const n = parseInt(e.target.value), t = chapterInfo ? chapterInfo.total : 1;
         if (n >= 1 && n <= t) {
             if (readerMode === 'flip') await renderFlipPage(n);
             else scrollToScrollPage(n);
         } else { e.target.value = currentPage; }
     });
+    pageInput.addEventListener('keydown', e => { if (e.key === 'Enter') pageInput.blur(); });
 
     // Swipe (flip only)
     let touchX = 0;
@@ -1396,158 +1479,113 @@
     window.addEventListener('resize', () => {
         clearTimeout(resizeT);
         resizeT = setTimeout(() => {
-            if (currentView === 'reader' && currentPdfDoc && readerMode === 'flip') renderFlipPage(currentPage);
+            if (currentView === 'reader' && chapterInfo && readerMode === 'flip') renderFlipPage(currentPage);
         }, 200);
     });
 
     // ===========================================================
-    // READER — SCROLL MODE  (DPR-AWARE & SEAMLESS MULTI-PART)
+    // READER — SCROLL MODE  (whole chapter = one continuous list)
     // ===========================================================
-    async function initScrollMode(targetPage) {
+    const scrollWrapEl = document.getElementById('reader-scroll-wrap');
+
+    function teardownScrollMode() {
+        stopScrollMomentum();
         if (scrollObserver) { scrollObserver.disconnect(); scrollObserver = null; }
         if (scrollTrackObs) { scrollTrackObs.disconnect(); scrollTrackObs = null; }
-
-        const scrollWrap = document.getElementById('reader-scroll-wrap');
-        if (scrollWrap._scrollHandler) {
-            scrollWrap.removeEventListener('scroll', scrollWrap._scrollHandler);
-            scrollWrap._scrollHandler = null;
+        if (scrollWrapEl._scrollHandler) {
+            scrollWrapEl.removeEventListener('scroll', scrollWrapEl._scrollHandler);
+            scrollWrapEl._scrollHandler = null;
         }
+    }
+
+    async function initScrollMode(targetPage) {
+        teardownScrollMode();
+        const scrollWrap = scrollWrapEl;
         scrollWrap.innerHTML = '';
         scrollWrap.scrollTop = 0;
-        scrollPartDocs.clear();
 
-        const chapter = currentPub.chapters[currentChapterIndex];
-        scrollPartDocs.set(currentPartIndex, currentPdfDoc);
-
+        const info = chapterInfo;
+        if (!info) return;
         const dpr = Math.min(window.devicePixelRatio || 1, 2);
-        const samplePage = await currentPdfDoc.getPage(1);
-        const sVp = samplePage.getViewport({ scale: 1 });
+
+        // Aspect ratio from page 1 to size the placeholders
+        const samplePage = await getGlobalPage(info, 1);
+        if (info !== chapterInfo) return;
+        const sVp   = samplePage.getViewport({ scale: 1 });
         const ratio = sVp.height / sVp.width;
 
-        appendScrollPartPlaceholders(scrollWrap, currentPartIndex, currentPdfDoc.numPages, ratio);
+        // One placeholder per GLOBAL page of the chapter (all parts)
+        const frag = document.createDocumentFragment();
+        for (let g = 1; g <= info.total; g++) {
+            const wrap = document.createElement('div');
+            wrap.className = 'scroll-page-wrap';
+            wrap.dataset.page = g;
+            const ph = document.createElement('div');
+            ph.className = 'scroll-page-placeholder';
+            ph.style.paddingTop = (ratio * 100).toFixed(2) + '%';
+            ph.style.position = 'relative';
+            ph.innerHTML = '<i class="fas fa-circle-notch loading-spinner" style="position:absolute;font-size:20px;"></i>';
+            wrap.appendChild(ph);
+            frag.appendChild(wrap);
+        }
 
+        // "Next chapter" button at the very end
+        if (info.chIdx < currentPub.chapters.length - 1) {
+            const nextCh = currentPub.chapters[info.chIdx + 1];
+            const foot = document.createElement('div');
+            foot.className = 'scroll-next-chapter';
+            foot.innerHTML = `<div class="themebutton" style="display:inline-flex;padding:10px 20px;cursor:pointer;">
+                ${escapeHtml(nextCh.name)} &nbsp;<i class="fas fa-chevron-right"></i></div>`;
+            foot.querySelector('.themebutton').addEventListener('click', () => {
+                playSnd('click-sound');
+                loadChapter(currentPub, info.chIdx + 1, 1);
+            });
+            frag.appendChild(foot);
+        }
+        scrollWrap.appendChild(frag);
+
+        // LAZY RENDER: render pages as they approach the viewport
         scrollObserver = new IntersectionObserver(entries => {
             entries.forEach(entry => {
                 if (entry.isIntersecting && !entry.target.dataset.rendered) {
                     entry.target.dataset.rendered = '1';
-                    const pIdx = parseInt(entry.target.dataset.part);
-                    const pg   = parseInt(entry.target.dataset.page);
-                    renderScrollPage(entry.target, pIdx, pg, dpr);
+                    renderScrollPage(entry.target, parseInt(entry.target.dataset.page), dpr, info);
                 }
             });
         }, { root: scrollWrap, rootMargin: '200% 0px' });
-
         scrollWrap.querySelectorAll('.scroll-page-wrap').forEach(w => scrollObserver.observe(w));
 
-        setupScrollNextTrigger(scrollWrap, ratio, dpr);
-
+        // PAGE TRACKER: last page whose top edge is at/above scrollTop + 40px (stable, no jumping)
         const updateScrollPageNum = () => {
             const scrollTop = scrollWrap.scrollTop;
             const pages = scrollWrap.querySelectorAll('.scroll-page-wrap');
-            let bestPage = 1, bestPart = currentPartIndex;
+            let pg = 1;
             for (const p of pages) {
-                if (p.offsetTop <= scrollTop + 40) {
-                    bestPage = parseInt(p.dataset.page);
-                    bestPart = parseInt(p.dataset.part);
-                } else break;
+                if (p.offsetTop <= scrollTop + 40) pg = parseInt(p.dataset.page);
+                else break;
             }
-            if (bestPage !== currentPage || bestPart !== currentPartIndex) {
-                currentPage = bestPage;
-                currentPartIndex = bestPart;
-                document.getElementById('reader-page-input').value   = bestPage;
-                document.getElementById('info-page-num').textContent = bestPage;
-                const total = (scrollPartDocs.get(bestPart) || currentPdfDoc).numPages;
-                document.getElementById('reader-page-total').textContent = total;
-                document.getElementById('info-page-total').textContent   = total;
-
+            if (pg !== currentPage) {
+                currentPage = pg;
+                setPageUI(pg);
                 clearTimeout(scrollWrap._bkmTimer);
                 scrollWrap._bkmTimer = setTimeout(() =>
-                    saveBookmark(currentPub.id, currentChapterIndex, bestPart, bestPage), 800);
+                    saveBookmark(currentPub.id, info.chIdx, pg), 800);
             }
         };
-
         scrollWrap._scrollHandler = updateScrollPageNum;
         scrollWrap.addEventListener('scroll', updateScrollPageNum, { passive: true });
 
-        requestAnimationFrame(() => requestAnimationFrame(() => scrollToScrollPage(currentPartIndex, targetPage)));
+        currentPage = targetPage;
+        setPageUI(targetPage);
+        saveBookmark(currentPub.id, info.chIdx, targetPage);
+        requestAnimationFrame(() => requestAnimationFrame(() => scrollToScrollPage(targetPage)));
     }
 
-    function appendScrollPartPlaceholders(scrollWrap, partIdx, numPages, ratio) {
-        for (let i = 1; i <= numPages; i++) {
-            const wrap = document.createElement('div');
-            wrap.className = 'scroll-page-wrap';
-            wrap.dataset.part = partIdx;
-            wrap.dataset.page = i;
-
-            const ph = document.createElement('div');
-            ph.className = 'scroll-page-placeholder';
-            ph.style.paddingTop = (ratio * 100).toFixed(2) + '%';
-            ph.innerHTML = `<i class="fas fa-circle-notch loading-spinner" style="position:absolute;font-size:20px;"></i>`;
-            ph.style.position = 'relative';
-
-            wrap.appendChild(ph);
-            scrollWrap.appendChild(wrap);
-        }
-    }
-
-    function setupScrollNextTrigger(scrollWrap, ratio, dpr) {
-        const oldTrigger = document.getElementById('scroll-next-trigger');
-        if (oldTrigger) oldTrigger.remove();
-
-        const chapter = currentPub.chapters[currentChapterIndex];
-        const maxPartLoaded = Math.max(...Array.from(scrollPartDocs.keys()));
-        if (maxPartLoaded >= chapter.files.length - 1) return;
-
-        const nextPartIdx = maxPartLoaded + 1;
-        const trigger = document.createElement('div');
-        trigger.id = 'scroll-next-trigger';
-        trigger.style.cssText = 'padding:24px 0;text-align:center;width:100%;';
-        trigger.innerHTML = `<div class="themebutton" id="btn-load-next-part" style="padding:10px 20px;cursor:pointer;">
-            <i class="fas fa-chevron-down"></i> TẢI TIẾP NỘI DUNG TIẾP THEO...
-        </div>`;
-        scrollWrap.appendChild(trigger);
-
-        const loadNextPart = async () => {
-            if (trigger._loading) return;
-            trigger._loading = true;
-            trigger.innerHTML = `<div style="font-size:13px;font-weight:bold;opacity:0.6;text-transform:uppercase;"><i class="fas fa-circle-notch loading-spinner"></i> Đang tải tiếp...</div>`;
-            try {
-                const nextFile = chapter.files[nextPartIdx];
-                const pdfUrl = rawUrl(currentPub.folderPath) + '/' + nextFile;
-                const nextDoc = await pdfjsLib.getDocument(pdfUrl).promise;
-                scrollPartDocs.set(nextPartIdx, nextDoc);
-
-                trigger.remove();
-                appendScrollPartPlaceholders(scrollWrap, nextPartIdx, nextDoc.numPages, ratio);
-
-                scrollWrap.querySelectorAll(`.scroll-page-wrap[data-part="${nextPartIdx}"]`).forEach(w => {
-                    if (scrollObserver) scrollObserver.observe(w);
-                });
-
-                setupScrollNextTrigger(scrollWrap, ratio, dpr);
-            } catch(e) {
-                console.error(e);
-                trigger.innerHTML = `<div style="font-size:12px;color:red;">Lỗi tải phần tiếp theo.</div>`;
-            }
-        };
-
-        const triggerObs = new IntersectionObserver(entries => {
-            if (entries[0].isIntersecting) {
-                triggerObs.disconnect();
-                loadNextPart();
-            }
-        }, { root: scrollWrap, rootMargin: '350px 0px' });
-
-        triggerObs.observe(trigger);
-        document.getElementById('btn-load-next-part')?.addEventListener('click', loadNextPart);
-    }
-
-    async function renderScrollPage(wrap, partIdx, pageNum, dpr) {
+    async function renderScrollPage(wrap, g, dpr, info) {
         try {
-            const doc = scrollPartDocs.get(partIdx) || currentPdfDoc;
-            const page = await doc.getPage(pageNum);
+            const page = await getGlobalPage(info, g);
+            if (info !== chapterInfo) return;
             const vp1  = page.getViewport({ scale: 1 });
-
             const cssW = Math.max(wrap.clientWidth || 600, 100);
             const renderScale = (cssW * dpr) / vp1.width;
             const vp = page.getViewport({ scale: renderScale });
@@ -1560,22 +1598,126 @@
             canvas.style.display = 'block';
 
             await page.render({ canvasContext: canvas.getContext('2d'), viewport: vp }).promise;
-
             wrap.innerHTML = '';
             wrap.appendChild(canvas);
         } catch(e) {
             if (e.name !== 'RenderingCancelledException') {
-                wrap.innerHTML = `<div style="padding:20px;text-align:center;opacity:.4;font-size:12px;font-weight:bold;">Error loading page ${pageNum}</div>`;
+                wrap.innerHTML = `<div style="padding:20px;text-align:center;opacity:.4;font-size:12px;font-weight:bold;">Error loading page ${g}</div>`;
             }
         }
     }
 
-    function scrollToScrollPage(partIdx, num) {
-        const scrollWrap = document.getElementById('reader-scroll-wrap');
-        const wrap = scrollWrap.querySelector(`[data-part="${partIdx}"][data-page="${num}"]`)
-                  || scrollWrap.querySelector(`[data-page="${num}"]`);
-        if (wrap) wrap.scrollIntoView({ behavior:'auto', block:'start' });
+    function scrollToScrollPage(num) {
+        stopScrollMomentum();
+        const wrap = scrollWrapEl.querySelector(`.scroll-page-wrap[data-page="${num}"]`);
+        if (wrap) scrollWrapEl.scrollTop = wrap.offsetTop;
     }
+
+    // ===========================================================
+    // SCROLL MODE — DESKTOP: drag-to-scroll with inertia + arrow keys
+    // ===========================================================
+    let momentumRAF = null;
+    let momentumV   = 0;    // px per ms (+ = content moves up / scroll down)
+    let momentumTau = 325;  // friction time constant (ms)
+    let keyDir      = 0;    // -1 / 0 / +1 while an arrow key is held
+    const KEY_SPEED = 1.1;  // px/ms max speed while holding an arrow key
+
+    function stopScrollMomentum() {
+        if (momentumRAF) cancelAnimationFrame(momentumRAF);
+        momentumRAF = null; momentumV = 0; keyDir = 0;
+    }
+
+    function runMomentum() {
+        if (momentumRAF) cancelAnimationFrame(momentumRAF);
+        let last = performance.now();
+        let pos  = scrollWrapEl.scrollTop;   // float accumulator (scrollTop may be rounded)
+        const step = now => {
+            const dt = Math.min(now - last, 50);
+            last = now;
+            if (Math.abs(scrollWrapEl.scrollTop - pos) > 2) pos = scrollWrapEl.scrollTop; // external change
+            if (keyDir) momentumV += (keyDir * KEY_SPEED - momentumV) * Math.min(1, dt / 120);
+            else        momentumV *= Math.exp(-dt / momentumTau);
+
+            const max = scrollWrapEl.scrollHeight - scrollWrapEl.clientHeight;
+            pos = Math.max(0, Math.min(max, pos + momentumV * dt));
+            scrollWrapEl.scrollTop = pos;
+
+            const atEdge = (pos <= 0 && momentumV < 0) || (pos >= max && momentumV > 0);
+            if (atEdge || (!keyDir && Math.abs(momentumV) < 0.02)) {
+                momentumRAF = null; momentumV = 0;
+                return;
+            }
+            momentumRAF = requestAnimationFrame(step);
+        };
+        momentumRAF = requestAnimationFrame(step);
+    }
+
+    // --- Drag with the mouse (pointer events, mouse only — touch keeps native scrolling)
+    let drag = null;
+    scrollWrapEl.addEventListener('pointerdown', e => {
+        if (readerMode !== 'scroll' || e.pointerType !== 'mouse' || e.button !== 0) return;
+        if (e.target.closest('button, a, input, .themebutton')) return;
+        e.preventDefault();
+        stopScrollMomentum();
+        const now = performance.now();
+        drag = { startY: e.clientY, startTop: scrollWrapEl.scrollTop, samples: [{ t: now, y: e.clientY }] };
+        scrollWrapEl.classList.add('dragging');
+    });
+    window.addEventListener('pointermove', e => {
+        if (!drag) return;
+        scrollWrapEl.scrollTop = drag.startTop - (e.clientY - drag.startY);
+        const now = performance.now();
+        drag.samples.push({ t: now, y: e.clientY });
+        while (drag.samples.length > 2 && now - drag.samples[0].t > 100) drag.samples.shift();
+    });
+    const endDrag = () => {
+        if (!drag) return;
+        const now = performance.now();
+        const s = drag.samples, first = s[0], lastS = s[s.length - 1];
+        const dt = lastS.t - first.t;
+        let v = 0;
+        // Only fling if the mouse was still moving right before release
+        if (dt > 0 && now - lastS.t < 80) v = -(lastS.y - first.y) / dt;
+        drag = null;
+        scrollWrapEl.classList.remove('dragging');
+        if (Math.abs(v) > 0.1) {
+            momentumV   = Math.max(-8, Math.min(8, v));
+            momentumTau = 325;
+            runMomentum();
+        }
+    };
+    window.addEventListener('pointerup', endDrag);
+    window.addEventListener('pointercancel', endDrag);
+    window.addEventListener('blur', () => { endDrag(); keyDir = 0; });
+    scrollWrapEl.addEventListener('wheel', () => { if (momentumRAF) stopScrollMomentum(); }, { passive: true });
+
+    // --- Keyboard (like Chrome's PDF viewer)
+    document.addEventListener('keydown', e => {
+        if (currentView !== 'reader' || readerMode !== 'scroll') return;
+        if (e.target.closest && e.target.closest('input, textarea')) return;
+        const k = e.key;
+        if (k === 'ArrowDown' || k === 'ArrowUp') {
+            e.preventDefault();
+            const dir = k === 'ArrowDown' ? 1 : -1;
+            if (e.repeat && keyDir === dir) return;
+            keyDir = dir;
+            momentumTau = 90;                                // short glide after release
+            if (momentumV * dir < 0.45) momentumV = dir * 0.45; // instant response on tap
+            if (!momentumRAF) runMomentum();
+        } else if (k === 'PageDown' || k === 'PageUp' || k === ' ') {
+            e.preventDefault();
+            const dir = (k === 'PageUp' || (k === ' ' && e.shiftKey)) ? -1 : 1;
+            stopScrollMomentum();
+            scrollWrapEl.scrollBy({ top: dir * scrollWrapEl.clientHeight * 0.9, behavior: 'smooth' });
+        } else if (k === 'Home' || k === 'End') {
+            e.preventDefault();
+            stopScrollMomentum();
+            scrollWrapEl.scrollTo({ top: k === 'Home' ? 0 : scrollWrapEl.scrollHeight, behavior: 'smooth' });
+        }
+    });
+    document.addEventListener('keyup', e => {
+        if ((e.key === 'ArrowDown' && keyDir === 1) || (e.key === 'ArrowUp' && keyDir === -1)) keyDir = 0;
+    });
 
     // ===========================================================
     // MODE TOGGLE
@@ -1583,9 +1725,7 @@
     function applyModeUI() {
         const isFlip = readerMode === 'flip';
         document.getElementById('reader-flip-wrap').style.display = isFlip ? '' : 'none';
-
-        const scrollWrap = document.getElementById('reader-scroll-wrap');
-        scrollWrap.classList.toggle('active', !isFlip);
+        scrollWrapEl.classList.toggle('active', !isFlip);
 
         // In scroll mode hide prev/next page buttons (they're not needed)
         document.getElementById('btn-prev-page').style.display = isFlip ? '' : 'none';
@@ -1601,7 +1741,7 @@
     applyModeUI();
 
     document.getElementById('btn-mode-toggle').addEventListener('click', async () => {
-        if (!currentPdfDoc) return;
+        if (!chapterInfo) return;
         playSnd('click-sound');
 
         const savedPage = currentPage;
@@ -1612,11 +1752,7 @@
         if (readerMode === 'scroll') {
             await initScrollMode(savedPage);
         } else {
-            // Switching to flip: clean up scroll render observer + scroll listener
-            if (scrollObserver) { scrollObserver.disconnect(); scrollObserver = null; }
-            if (scrollTrackObs) { scrollTrackObs.disconnect(); scrollTrackObs = null; }
-            const sw = document.getElementById('reader-scroll-wrap');
-            if (sw._scrollHandler) { sw.removeEventListener('scroll', sw._scrollHandler); sw._scrollHandler = null; }
+            teardownScrollMode();
             document.getElementById('reader-canvas').style.opacity = '0';
             await renderFlipPage(savedPage);
             document.getElementById('reader-canvas').style.opacity = '1';
@@ -1624,18 +1760,17 @@
     });
 
     // ===========================================================
-    // BOOKMARK
+    // BOOKMARK  (v2: chapterIndex + GLOBAL page number)
     // ===========================================================
     const bmKey = id => 'manga_bm_' + id;
-    function saveBookmark(id, chIdx, partIdx, pg) {
+    function saveBookmark(id, chIdx, pg) {
         try {
             const chName = (currentPub && currentPub.chapters[chIdx]) ? currentPub.chapters[chIdx].name : '';
             localStorage.setItem(bmKey(id), JSON.stringify({
+                v: 2,
                 chapterIndex: chIdx,
-                partIndex: partIdx || 0,
                 pageNum: pg,
                 chapterName: chName,
-                fileIndex: chIdx, // backward compatibility
                 ts: Date.now()
             }));
         } catch(e) {}
@@ -1645,9 +1780,13 @@
             const r = localStorage.getItem(bmKey(id));
             if (!r) return null;
             const data = JSON.parse(r);
-            if (data.chapterIndex === undefined && data.fileIndex !== undefined) {
-                data.chapterIndex = data.fileIndex;
-                data.partIndex = 0;
+            if (data.chapterIndex === undefined && data.fileIndex !== undefined) data.chapterIndex = data.fileIndex;
+            // Legacy bookmark (page counted inside a part) → convert to a global page
+            if (data.v !== 2 && data.partIndex > 0) {
+                const pub = allPublications.find(p => p.id === id);
+                const g = legacyToGlobal(pub, data.chapterIndex, data.partIndex, data.pageNum || 1);
+                if (g) data.pageNum = g;
+                else   data.legacyPart = data.partIndex; // resolved once the chapter is opened
             }
             return data;
         } catch(e) { return null; }

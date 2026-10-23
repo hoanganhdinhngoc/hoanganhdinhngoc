@@ -3,6 +3,7 @@ import sys
 import math
 import shutil
 import re
+import json
 
 # Đảm bảo in tiếng Việt trên console Windows không bị lỗi encoding
 if sys.platform == "win32":
@@ -126,6 +127,40 @@ def update_meta_valid_count(meta_path, folder_name, count):
     with open(meta_path, 'w', encoding='utf-8') as f:
         f.write("\n".join(clean_lines) + "\n")
 
+PARTS_MANIFEST = "parts.json"
+
+def sync_parts_manifest(folder_path):
+    """Ghi file parts.json: số trang của từng file .partX.pdf trong folder.
+    Web dùng file này để đánh số trang liên tục cho cả tập mà không phải tải hết các part.
+    Chỉ ghi lại khi danh sách part thay đổi (ví dụ sau khi chia file hoặc đổi tên)."""
+    manifest_path = os.path.join(folder_path, PARTS_MANIFEST)
+    part_files = sorted(f for f in os.listdir(folder_path) if is_part_file(f))
+
+    if not part_files:
+        if os.path.exists(manifest_path):
+            os.remove(manifest_path)
+            return "removed"
+        return None
+
+    old = {}
+    if os.path.exists(manifest_path):
+        try:
+            with open(manifest_path, "r", encoding="utf-8") as f:
+                old = json.load(f)
+        except Exception:
+            old = {}
+    if sorted(old.keys()) == part_files:
+        return None  # đã đồng bộ
+
+    data = {}
+    for pf in part_files:
+        doc = pymupdf.open(os.path.join(folder_path, pf))
+        data[pf] = len(doc)
+        doc.close()
+    with open(manifest_path, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=1)
+    return "written"
+
 def process_library():
     print("=" * 65)
     print(" MANGA LIBRARY - CÔNG CỤ TỰ ĐỘNG CHIA & TỐI ƯU PDF")
@@ -178,6 +213,8 @@ def process_library():
         # Kiểm tra điều kiện bỏ qua
         if cached_count is not None and cached_count == current_pdf_count:
             print(f"[BỎ QUA] {folder_name}: Đã tối ưu ({current_pdf_count} valid file)")
+            if sync_parts_manifest(folder_path) == "written":
+                print(f"  [ĐÃ CẬP NHẬT] {PARTS_MANIFEST} (danh sách part thay đổi)")
             total_skipped += 1
             continue
 
@@ -208,6 +245,8 @@ def process_library():
         updated_pdfs = [f for f in os.listdir(folder_path) if f.lower().endswith('.pdf') and os.path.isfile(os.path.join(folder_path, f))]
         final_count = len(updated_pdfs)
         update_meta_valid_count(meta_path, folder_name, final_count)
+        if sync_parts_manifest(folder_path) == "written":
+            print(f"  [ĐÃ CẬP NHẬT] {PARTS_MANIFEST}")
         print(f"  [ĐÃ CẬP NHẬT] meta.txt -> '{final_count} valid file'")
 
     print("\n" + "=" * 65)
