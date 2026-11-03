@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#DAD4BB" />
+  <title>YoRHa Tactical Chess System</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body data-mtab="coach">
+  <!-- CRT overlays -->
+  <div class="crt-scanlines" aria-hidden="true"></div>
+  <div class="crt-vignette" aria-hidden="true"></div>
+
+  <!-- ================= HEADER ================= -->
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 32 32" width="28" height="28"><path d="M16 2 L30 16 L16 30 L2 16 Z" fill="none" stroke="currentColor" stroke-width="2"/><rect x="12" y="12" width="8" height="8" fill="currentColor"/></svg>
+      </span>
+      <div class="brand-text">
+        <h1>YoRHa <span>TACTICAL CHESS SYSTEM</span></h1>
+        <p class="brand-sub" data-i18n="ui.subtitle">HỆ THỐNG CỜ VUA CHIẾN THUẬT // UNIT 2B</p>
+      </div>
+    </div>
+    <nav class="topbar-actions">
+      <button id="btn-lang" class="y-btn y-btn-sm" data-i18n-title="settings.language" title="Language">TIẾNG VIỆT [VI]</button>
+      <button id="btn-audio" class="y-btn y-btn-sm" data-i18n-title="settings.audio" title="Audio">♪ ON</button>
+      <button id="btn-profile" class="y-btn y-btn-sm" data-i18n="btn.profile">HỒ SƠ</button>
+      <button id="btn-settings" class="y-btn y-btn-sm" data-i18n="btn.settings">CÀI ĐẶT</button>
+    </nav>
+  </header>
+
+  <!-- ================= COMMAND CENTER ================= -->
+  <main class="command-center">
+
+    <!-- ---------- LEFT COLUMN ---------- -->
+    <aside id="col-left" class="column">
+      <section id="pane-setup" class="pane y-panel" data-mtab="settings">
+        <header class="y-panel-head"><span class="node"></span><h2 data-i18n="ui.newOperation">THIẾT LẬP TÁC CHIẾN</h2></header>
+        <div class="y-panel-body">
+          <div class="field-label" data-i18n="ui.gameMode">CHẾ ĐỘ</div>
+          <div id="mode-select" class="seg">
+            <button class="seg-btn active" data-mode="bot" data-i18n="mode.bot">ĐẤU VỚI BOT</button>
+            <button class="seg-btn" data-mode="pvp" data-i18n="mode.pvp">2 NGƯỜI / 1 MÁY</button>
+          </div>
+
+          <div id="bot-setup">
+            <div class="field-label" data-i18n="ui.selectOpponent">CHỌN ĐỐI THỦ</div>
+            <div id="bot-roster" class="bot-roster"></div>
+            <div class="field-label" data-i18n="ui.yourColor">QUÂN CỦA BẠN</div>
+            <div id="color-select" class="seg">
+              <button class="seg-btn active" data-color="w" data-i18n="ui.white">TRẮNG</button>
+              <button class="seg-btn" data-color="random" data-i18n="ui.random">NGẪU NHIÊN</button>
+              <button class="seg-btn" data-color="b" data-i18n="ui.black">ĐEN</button>
+            </div>
+          </div>
+
+          <div id="pvp-setup" class="hidden">
+            <label class="check-row"><input type="checkbox" id="opt-autoflip" /> <span data-i18n="settings.autoFlip">Tự động xoay bàn cờ mỗi lượt</span></label>
+          </div>
+
+          <div class="field-label" data-i18n="ui.timeControl">THỜI GIAN</div>
+          <select id="tc-select" class="y-select">
+            <option value="none" data-i18n="tc.none">Không giới hạn</option>
+            <option value="3+2">3 + 2</option>
+            <option value="5+0">5 + 0</option>
+            <option value="10+0">10 + 0</option>
+            <option value="15+10">15 + 10</option>
+            <option value="30+0">30 + 0</option>
+          </select>
+
+          <button id="btn-start" class="y-btn y-btn-primary y-btn-block" data-i18n="btn.start">[ BẮT ĐẦU TÁC CHIẾN ]</button>
+        </div>
+      </section>
+
+      <section id="pane-bot" class="pane y-panel" data-mtab="coach">
+        <header class="y-panel-head"><span class="node"></span><h2 data-i18n="ui.opponentUnit">ĐƠN VỊ ĐỐI THỦ</h2></header>
+        <div class="y-panel-body bot-card">
+          <div id="bot-portrait" class="bot-portrait"></div>
+          <div class="bot-meta">
+            <div id="bot-name" class="bot-name">—</div>
+            <div id="bot-elo" class="bot-elo">—</div>
+          </div>
+          <div id="bot-dialogue" class="bot-dialogue"><span class="dlg-caret">▶</span> <span class="dlg-text">...</span></div>
+        </div>
+      </section>
+    </aside>
+
+    <!-- ---------- CENTER COLUMN ---------- -->
+    <section id="col-center" class="column">
+      <div id="bar-top" class="player-bar">
+        <span class="pcolor"></span>
+        <span class="pname">—</span><span class="pelo"></span>
+        <span class="pcaptured"></span>
+        <span class="pclock">--:--</span>
+      </div>
+
+      <div class="board-zone">
+        <div id="eval-bar" class="eval-bar" title="Evaluation">
+          <div id="eval-fill" class="eval-fill"></div>
+          <div id="eval-text" class="eval-text">0.0</div>
+        </div>
+        <div class="board-frame">
+          <span class="corner tl"></span><span class="corner tr"></span><span class="corner bl"></span><span class="corner br"></span>
+          <div id="board-wrap" class="board-wrap">
+            <div id="board" class="board" aria-label="Chessboard"></div>
+            <svg id="arrow-layer" class="arrow-layer" viewBox="0 0 800 800" preserveAspectRatio="none" aria-hidden="true">
+              <defs>
+                <marker id="ah-cyan" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="3.2" markerHeight="3.2" orient="auto-start-reverse">
+                  <path d="M0,0 L10,5 L0,10 Z" fill="#2B8C84" />
+                </marker>
+                <marker id="ah-green" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="3.2" markerHeight="3.2" orient="auto-start-reverse">
+                  <path d="M0,0 L10,5 L0,10 Z" fill="#4E7A45" />
+                </marker>
+                <marker id="ah-red" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="3.2" markerHeight="3.2" orient="auto-start-reverse">
+                  <path d="M0,0 L10,5 L0,10 Z" fill="#B83A2D" />
+                </marker>
+                <marker id="ah-orange" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="3.2" markerHeight="3.2" orient="auto-start-reverse">
+                  <path d="M0,0 L10,5 L0,10 Z" fill="#C9772B" />
+                </marker>
+              </defs>
+              <g id="arrow-group"></g>
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      <div id="bar-bottom" class="player-bar">
+        <span class="pcolor"></span>
+        <span class="pname">—</span><span class="pelo"></span>
+        <span class="pcaptured"></span>
+        <span class="pclock">--:--</span>
+      </div>
+
+      <div id="status-line" class="status-line" data-i18n="status.idle">HỆ THỐNG SẴN SÀNG. CHỌN CHẾ ĐỘ ĐỂ BẮT ĐẦU.</div>
+
+      <div id="board-controls" class="board-controls">
+        <button id="btn-new" class="y-btn y-btn-sm" data-i18n="btn.new">MỚI</button>
+        <button id="btn-flip" class="y-btn y-btn-sm" data-i18n="btn.flip">XOAY</button>
+        <button id="btn-takeback" class="y-btn y-btn-sm" data-i18n="btn.takeback">ĐI LẠI</button>
+        <button id="btn-resign" class="y-btn y-btn-sm" data-i18n="btn.resign">ĐẦU HÀNG</button>
+        <button id="toggle-live" class="y-btn y-btn-sm y-toggle on" aria-pressed="true">
+          <span data-i18n="ui.liveEval">ĐÁNH GIÁ TRỰC TIẾP</span> <b class="tg-state">[ON]</b>
+        </button>
+      </div>
+    </section>
+
+    <!-- ---------- RIGHT COLUMN ---------- -->
+    <aside id="col-right" class="column">
+      <nav class="dtabs">
+        <button class="dtab active" data-dtab="coach" data-i18n="tab.coach">COACH</button>
+        <button class="dtab" data-dtab="moves" data-i18n="tab.moves">NƯỚC ĐI / PHÂN TÍCH</button>
+        <button class="dtab" data-dtab="puzzles" data-i18n="tab.puzzles">CÂU ĐỐ</button>
+        <button class="dtab" data-dtab="archive" data-i18n="tab.archive">LƯU TRỮ</button>
+      </nav>
+
+      <!-- COACH -->
+      <section id="pane-coach" class="pane y-panel dpane dtab-active" data-mtab="coach" data-dtab="coach">
+        <header class="y-panel-head"><span class="node"></span><h2 data-i18n="ui.coachHud">TRỢ LÝ CHIẾN THUẬT // POD 042</h2></header>
+        <div class="y-panel-body">
+          <div class="coach-top">
+            <div id="coach-badge" class="cls-badge cls-none">—</div>
+            <div class="coach-evalbox">
+              <div class="field-label" data-i18n="ui.evaluation">ĐÁNH GIÁ</div>
+              <div id="coach-eval" class="coach-eval">0.00</div>
+              <div id="coach-source" class="coach-source"></div>
+            </div>
+          </div>
+          <div class="y-sep"></div>
+          <p id="coach-text" class="coach-text" data-i18n="coach.idle">Pod 042 đang chờ dữ liệu. Thực hiện nước đi để nhận đánh giá.</p>
+          <div id="coach-best" class="coach-best hidden"></div>
+          <div class="coach-actions">
+            <button id="btn-optimal" class="y-btn y-btn-accent hidden" data-i18n="btn.showOptimal">[ ĐỀ XUẤT NƯỚC TỐI ƯU ]</button>
+            <button id="btn-coach-takeback" class="y-btn hidden" data-i18n="btn.coachTakeback">[ ĐI LẠI ]</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- MOVES / REVIEW -->
+      <section id="pane-moves" class="pane y-panel dpane" data-mtab="moves" data-dtab="moves">
+        <header class="y-panel-head"><span class="node"></span><h2 data-i18n="ui.movesReview">BIÊN BẢN & PHÂN TÍCH</h2></header>
+        <div class="y-panel-body">
+          <div id="review-progress" class="review-progress hidden"><div class="rp-fill"></div><span class="rp-text"></span></div>
+          <div id="review-summary" class="review-summary hidden"></div>
+          <svg id="eval-graph" class="eval-graph hidden" viewBox="0 0 300 80" preserveAspectRatio="none"></svg>
+          <div id="review-nav" class="review-nav">
+            <button id="rv-first" class="y-btn y-btn-sm">|&lt;</button>
+            <button id="rv-prev" class="y-btn y-btn-sm" data-i18n="btn.back">&lt; LÙI</button>
+            <button id="rv-next" class="y-btn y-btn-sm" data-i18n="btn.next">TIẾN &gt;</button>
+            <button id="rv-last" class="y-btn y-btn-sm">&gt;|</button>
+          </div>
+          <button id="rv-critical" class="y-btn y-btn-accent y-btn-block" data-i18n="btn.nextCritical">[ &gt;&gt; NƯỚC QUAN TRỌNG TIẾP THEO ]</button>
+          <div id="review-comment" class="review-comment hidden"></div>
+          <ol id="move-list" class="move-list"></ol>
+          <div class="y-sep"></div>
+          <div class="file-actions">
+            <button id="btn-analyze" class="y-btn y-btn-sm" data-i18n="btn.analyze">PHÂN TÍCH TRẬN</button>
+            <button id="btn-save" class="y-btn y-btn-sm" data-i18n="btn.save">LƯU TRÌNH DUYỆT</button>
+            <button id="btn-export" class="y-btn y-btn-sm" data-i18n="btn.export">TẢI .JSON</button>
+            <button id="btn-import" class="y-btn y-btn-sm" data-i18n="btn.import">NHẬP .JSON</button>
+            <input id="file-import" type="file" accept=".json,application/json" class="hidden" />
+          </div>
+        </div>
+      </section>
+
+      <!-- PUZZLES -->
+      <section id="pane-puzzles" class="pane y-panel dpane" data-mtab="puzzles" data-dtab="puzzles">
+        <header class="y-panel-head"><span class="node"></span><h2 data-i18n="ui.puzzleLib">THƯ VIỆN CÂU ĐỐ</h2></header>
+        <div class="y-panel-body">
+          <div id="puzzle-info" class="puzzle-info hidden"></div>
+          <div class="puzzle-actions">
+            <button id="btn-puzzle-hint" class="y-btn y-btn-sm" data-i18n="btn.hint">GỢI Ý</button>
+            <button id="btn-puzzle-retry" class="y-btn y-btn-sm" data-i18n="btn.retry">THỬ LẠI</button>
+            <button id="btn-canonical" class="y-btn y-btn-sm y-btn-accent" data-i18n="btn.canonical">[ XEM NƯỚC CHUẨN LỊCH SỬ ]</button>
+            <button id="btn-puzzle-next" class="y-btn y-btn-sm" data-i18n="btn.nextPuzzle">CÂU TIẾP &gt;</button>
+          </div>
+          <div class="y-sep"></div>
+          <div class="puzzle-filter-row">
+            <select id="puzzle-filter" class="y-select"></select>
+            <span id="puzzle-progress" class="puzzle-progress"></span>
+          </div>
+          <ul id="puzzle-list" class="puzzle-list"></ul>
+        </div>
+      </section>
+
+      <!-- ARCHIVE -->
+      <section id="pane-archive" class="pane y-panel dpane" data-mtab="settings" data-dtab="archive">
+        <header class="y-panel-head"><span class="node"></span><h2 data-i18n="ui.archive">KHO LƯU TRỮ TRẬN ĐẤU</h2></header>
+        <div class="y-panel-body">
+          <ul id="archive-list" class="archive-list"></ul>
+        </div>
+      </section>
+    </aside>
+  </main>
+
+  <!-- ================= MOBILE TABS ================= -->
+  <nav id="mobile-tabs" class="mobile-tabs">
+    <button class="mtab active" data-mtab="coach" data-i18n="mtab.coach">[ COACH ]</button>
+    <button class="mtab" data-mtab="moves" data-i18n="mtab.moves">[ NƯỚC ĐI ]</button>
+    <button class="mtab" data-mtab="puzzles" data-i18n="mtab.puzzles">[ CÂU ĐỐ ]</button>
+    <button class="mtab" data-mtab="settings" data-i18n="mtab.settings">[ CÀI ĐẶT ]</button>
+  </nav>
+
+  <!-- ================= MODALS ================= -->
+  <div id="modal-settings" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="modal-box y-panel">
+      <header class="y-panel-head"><span class="node"></span><h2 data-i18n="settings.title">CÀI ĐẶT HỆ THỐNG</h2></header>
+      <div class="y-panel-body">
+        <div class="field-label" data-i18n="settings.language">NGÔN NGỮ / LANGUAGE</div>
+        <div id="set-lang" class="seg">
+          <button class="seg-btn" data-lang="vi">TIẾNG VIỆT [VI]</button>
+          <button class="seg-btn" data-lang="en">ENGLISH [EN]</button>
+        </div>
+        <div class="field-label" data-i18n="settings.audio">ÂM THANH</div>
+        <div class="row">
+          <label class="check-row"><input type="checkbox" id="set-audio" /> <span data-i18n="settings.audioOn">Bật hiệu ứng âm thanh</span></label>
+          <input type="range" id="set-volume" min="0" max="100" step="5" class="y-range" />
+        </div>
+        <div class="field-label" data-i18n="settings.gameplay">LỐI CHƠI</div>
+        <label class="check-row"><input type="checkbox" id="set-live" /> <span data-i18n="ui.liveEval">ĐÁNH GIÁ TRỰC TIẾP</span></label>
+        <label class="check-row"><input type="checkbox" id="set-legal" /> <span data-i18n="settings.showLegal">Hiển thị nước đi hợp lệ</span></label>
+        <label class="check-row"><input type="checkbox" id="set-coords" /> <span data-i18n="settings.showCoords">Hiển thị tọa độ</span></label>
+        <label class="check-row"><input type="checkbox" id="set-autoflip" /> <span data-i18n="settings.autoFlip">Tự động xoay bàn cờ mỗi lượt</span></label>
+        <label class="check-row"><input type="checkbox" id="set-cloud" /> <span data-i18n="settings.cloudEval">Dùng Lichess Cloud Eval khi online</span></label>
+        <div class="y-sep"></div>
+        <div id="engine-info" class="engine-info"></div>
+        <div class="modal-actions">
+          <button class="y-btn" data-close="modal-settings" data-i18n="btn.close">ĐÓNG</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal-profile" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="modal-box y-panel">
+      <header class="y-panel-head"><span class="node"></span><h2 data-i18n="profile.title">HỒ SƠ ĐƠN VỊ</h2></header>
+      <div class="y-panel-body">
+        <p class="modal-intro" data-i18n="profile.intro">Nhập danh tính chiến binh trước khi xuất kích.</p>
+        <fieldset class="profile-set">
+          <legend data-i18n="profile.p1">NGƯỜI CHƠI 1</legend>
+          <label><span data-i18n="profile.name">Tên</span><input id="pf-p1-name" class="y-input" maxlength="24" /></label>
+          <label><span data-i18n="profile.elo">Elo hiện tại</span><input id="pf-p1-elo" class="y-input" type="number" min="100" max="3500" step="1" /></label>
+        </fieldset>
+        <fieldset class="profile-set">
+          <legend data-i18n="profile.p2">NGƯỜI CHƠI 2 (CHẾ ĐỘ 2 NGƯỜI)</legend>
+          <label><span data-i18n="profile.name">Tên</span><input id="pf-p2-name" class="y-input" maxlength="24" /></label>
+          <label><span data-i18n="profile.elo">Elo hiện tại</span><input id="pf-p2-elo" class="y-input" type="number" min="100" max="3500" step="1" /></label>
+        </fieldset>
+        <div class="modal-actions">
+          <button id="btn-profile-save" class="y-btn y-btn-primary" data-i18n="btn.confirm">XÁC NHẬN</button>
+          <button class="y-btn" data-close="modal-profile" data-i18n="btn.cancel">HỦY</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal-promo" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="modal-box modal-small y-panel">
+      <header class="y-panel-head"><span class="node"></span><h2 data-i18n="ui.promotion">PHONG CẤP</h2></header>
+      <div class="y-panel-body"><div id="promo-choices" class="promo-choices"></div></div>
+    </div>
+  </div>
+
+  <div id="modal-gameover" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="modal-box modal-small y-panel">
+      <header class="y-panel-head"><span class="node"></span><h2 id="go-title">GAME OVER</h2></header>
+      <div class="y-panel-body">
+        <p id="go-text" class="go-text"></p>
+        <div class="modal-actions">
+          <button id="btn-go-review" class="y-btn y-btn-primary" data-i18n="btn.review">[ PHÂN TÍCH SAU TRẬN ]</button>
+          <button id="btn-go-new" class="y-btn" data-i18n="btn.new">MỚI</button>
+          <button class="y-btn" data-close="modal-gameover" data-i18n="btn.close">ĐÓNG</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <!-- ================= SCRIPTS ================= -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+  <script>window.Chess || document.write('<script src="vendor/chess.min.js"><\/script>');</script>
+  <script src="i18n.js"></script>
+  <script src="audio.js"></script>
+  <script src="storage.js"></script>
+  <script src="bots.js"></script>
+  <script src="puzzles.js"></script>
+  <script src="engine.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
