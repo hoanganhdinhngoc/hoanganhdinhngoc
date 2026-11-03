@@ -1,9 +1,10 @@
 /* =====================================================================
-   YoRHa Tactical Chess System — bots.js
+   Chess System — bots.js
    Global: Bots
-   - 7 Elo tiers with UCI tuning & human-like think delays
-   - Escalating ferocity inline SVG humanoid/android portraits
-   - Full bilingual (vi / en) dialogue system across 12 triggers
+   - 7 Elo tiers with Stockfish UCI tuning & human-like think delays
+   - Standard chess playing style descriptions (no game lore)
+   - Clean chess avatar SVG icons per tier
+   - Bilingual (vi / en) standard chess coach/opponent lines
    ===================================================================== */
 (function () {
   'use strict';
@@ -13,11 +14,11 @@
       id: 'cadet',
       tier: 1,
       elo: 400,
-      name: { vi: 'Tân Binh 12H', en: 'Cadet 12H' },
-      title: { vi: 'Sơ Cấp // Đơn Vị Huấn Luyện', en: 'Beginner // Training Unit' },
+      name: { vi: 'Người Mới (400)', en: 'Beginner (400)' },
+      title: { vi: 'Cấp độ 1 // Tập sự', en: 'Level 1 // Novice' },
       desc: {
-        vi: 'Android tân binh vừa kích hoạt tại Bunker. Thân thiện, hay sơ suất và thường bỏ sót đòn chiến thuật.',
-        en: 'Newly activated Bunker cadet android. Friendly, prone to oversights, and frequently misses tactics.'
+        vi: 'Mới làm quen với luật cờ. Thường đi quân ngẫu nhiên, ít bảo vệ quân và dễ bỏ sót các đòn bắt quân trực tiếp.',
+        en: 'Just learning the rules. Frequently makes loose moves, leaves pieces undefended, and misses simple captures.'
       },
       uci: { skill: 0, limitStrength: true, elo: 400, depth: 3, movetime: 180, multiPV: 4 },
       randomness: 0.68,
@@ -27,11 +28,11 @@
       id: 'scout',
       tier: 2,
       elo: 700,
-      name: { vi: 'Trinh Sát 9S-L', en: 'Scout 9S-L' },
-      title: { vi: 'Cơ Bản // Đơn Vị Trinh Sát', en: 'Elementary // Recon Scanner' },
+      name: { vi: 'Sơ Cấp (700)', en: 'Casual (700)' },
+      title: { vi: 'Cấp độ 2 // Phong trào', en: 'Level 2 // Casual Player' },
       desc: {
-        vi: 'Đơn vị trinh sát mặt đất. Biết phát triển quân cơ bản nhưng đôi khi mất tập trung khi bị tấn công dồn dập.',
-        en: 'Surface recon scanner unit. Knows basic piece development but loses focus under heavy tactical pressure.'
+        vi: 'Biết phát triển quân nhẹ và nhập thành cơ bản, nhưng tính toán ngắn (1–2 nước) và đôi khi mắc lỗi bỏ quân.',
+        en: 'Develops minor pieces and castles, but calculates only 1–2 moves ahead and occasionally hangs material.'
       },
       uci: { skill: 2, limitStrength: true, elo: 700, depth: 5, movetime: 250, multiPV: 4 },
       randomness: 0.45,
@@ -41,11 +42,11 @@
       id: 'tactician',
       tier: 3,
       elo: 1000,
-      name: { vi: 'Chiến Thuật 4B', en: 'Tactician 4B' },
-      title: { vi: 'Trung Cấp // Đơn Vị Tác Chiến', en: 'Intermediate // Strike Unit' },
+      name: { vi: 'Trung Cấp (1000)', en: 'Club Player (1000)' },
+      title: { vi: 'Cấp độ 3 // Câu lạc bộ', en: 'Level 3 // Club Intermediate' },
       desc: {
-        vi: 'Đeo kính chiến thuật YoRHa chuẩn. Nắm vững đòn chĩa đôi, ghim quân và trừng phạt các nước đi bất cẩn.',
-        en: 'Equipped with a standard YoRHa tactical visor.Spots forks and pins and punishes careless moves.'
+        vi: 'Nắm vững các đòn chiến thuật cơ bản như chĩa đôi, ghim quân và xiên quân. Khai thác nhanh các nước đi sơ hở.',
+        en: 'Spots fundamental tactical motifs such as forks, pins, and skewers. Quickly punishes one-move blunders.'
       },
       uci: { skill: 5, limitStrength: true, elo: 1000, depth: 7, movetime: 360, multiPV: 3 },
       randomness: 0.28,
@@ -55,11 +56,11 @@
       id: 'veteran',
       tier: 4,
       elo: 1400,
-      name: { vi: 'Cựu Binh A2-V', en: 'Veteran A2-V' },
-      title: { vi: 'Khá Giỏi // Chiến Binh Tiền Tuyến', en: 'Upper-Intermediate // Frontline Veteran' },
+      name: { vi: 'Khá Giỏi (1400)', en: 'Tournament (1400)' },
+      title: { vi: 'Cấp độ 4 // Đấu giải', en: 'Level 4 // Tournament Player' },
       desc: {
-        vi: 'Chiến binh dày dạn vết sẹo chiến trường. Lối đánh rắn rỏi, kiểm soát trung tâm chặt và ít khi mắc lỗi đơn giản.',
-        en: 'Battle-scarred frontline android. Plays tough positional chess, controls the center, and rarely blunders.'
+        vi: 'Chơi chắc chắn ở khai cuộc, biết kiểm soát trung tâm, phối hợp các quân nặng trên cột mở và ít khi mất quân không.',
+        en: 'Plays solid openings, fights for central control, coordinates rooks on open files, and rarely drops pieces.'
       },
       uci: { skill: 9, limitStrength: true, elo: 1400, depth: 10, movetime: 500, multiPV: 3 },
       randomness: 0.14,
@@ -69,11 +70,11 @@
       id: 'master',
       tier: 5,
       elo: 1800,
-      name: { vi: 'Kiện Tướng 2B-E', en: 'Master 2B-E' },
-      title: { vi: 'Chuyên Nghiệp // Đơn Vị Hành Quyết', en: 'Master // Executioner Model' },
+      name: { vi: 'Kiện Tướng (1800)', en: 'Candidate Master (1800)' },
+      title: { vi: 'Cấp độ 5 // Kiện tướng dự bị', en: 'Level 5 // Candidate Master' },
       desc: {
-        vi: 'Android chiến đấu đeo mặt nạ bán phần, mắt hổ phách rực sáng. Tính toán sâu và tấn công sắc lạnh.',
-        en: 'Half-masked executioner android with glowing amber optics. Deep calculation and ruthless initiative.'
+        vi: 'Tính toán sâu các tổ hợp chiến thuật nhiều nước, đánh giá tốt cấu trúc tốt và chuyển hóa ưu thế nhỏ ở cờ tàn.',
+        en: 'Calculates multi-move tactical combinations, understands pawn structures, and converts small endgame edges.'
       },
       uci: { skill: 14, limitStrength: true, elo: 1800, depth: 13, movetime: 750, multiPV: 2 },
       randomness: 0.05,
@@ -83,11 +84,11 @@
       id: 'warlord',
       tier: 6,
       elo: 2300,
-      name: { vi: 'Đại Kiện Tướng N2', en: 'Warlord N2' },
-      title: { vi: 'Đại Kiện Tướng // Chỉ Huy Tối Cao', en: 'Grandmaster // Red Girl Warlord' },
+      name: { vi: 'Đại Kiện Tướng (2300)', en: 'Grandmaster (2300)' },
+      title: { vi: 'Cấp độ 6 // Đại kiện tướng', en: 'Level 6 // Grandmaster' },
       desc: {
-        vi: 'Giáp đen góc cạnh và đôi mắt đỏ rực đầy sát khí. Phối hợp chiến thuật – chiến lược ở đẳng cấp Đại Kiện Tướng.',
-        en: 'Dark jagged armor plating and blazing crimson optics. Grandmaster-level strategic and tactical synthesis.'
+        vi: 'Kết hợp nhuần nhuyễn giữa chiến lược dài hạn và tính toán chiến thuật chính xác. Trừng phạt ngay cả những nước đi hơi thụ động.',
+        en: 'Blends long-term positional planning with sharp tactical precision. Punishes even subtle inaccuracies.'
       },
       uci: { skill: 18, limitStrength: false, elo: 2300, depth: 16, movetime: 950, multiPV: 1 },
       randomness: 0.01,
@@ -97,11 +98,11 @@
       id: 'supreme',
       tier: 7,
       elo: 2850,
-      name: { vi: 'YoRHa Tối Thượng', en: 'YoRHa Supreme' },
-      title: { vi: 'Siêu Đại Kiện Tướng // Thần Trí Mạng Lưới', en: 'Super GM // Corrupted Network Core' },
+      name: { vi: 'Siêu Đại Kiện Tướng (2850)', en: 'Maximum Engine (2850)' },
+      title: { vi: 'Cấp độ 7 // Sức mạnh tối đa', en: 'Level 7 // Maximum Strength' },
       desc: {
-        vi: 'Thực thể berserk tối thượng bị nhiễm virus logic. Không khoan nhượng, nhìn thấu mọi biến số tới tận cờ tàn.',
-        en: 'Hyper-intimidating berserk core fused with logic-virus power. Unforgiving calculation to the endgame.'
+        vi: 'Tính toán ở độ sâu tối đa không giới hạn sức mạnh. Luôn tìm ra nước đi tối ưu trong cả thế trận phức tạp lẫn cờ tàn kỹ thuật.',
+        en: 'Unrestricted engine calculation at maximum depth. Consistently finds optimal moves in complex tactics and technical endgames.'
       },
       uci: { skill: 20, limitStrength: false, elo: 2850, depth: 18, movetime: 1150, multiPV: 1 },
       randomness: 0,
@@ -110,517 +111,402 @@
   ];
 
   /* ------------------------------------------------------------------
-     Bilingual dialogues per bot & trigger
+     Standard chess dialogues per tier & trigger (no sci-fi/game lore)
      ------------------------------------------------------------------ */
   const dialogues = {
     cadet: {
       greet: {
-        vi: ['Xin chào {name}! Tôi là Tân Binh 12H. Mong được chỉ giáo!', 'Hệ thống huấn luyện đã bật. Cùng chơi một ván thật vui nhé!'],
-        en: ['Hello {name}! Cadet 12H reporting for training!', 'Training routine online. Let us have a friendly game!']
+        vi: ['Chào {name}! Chúc bạn một ván cờ vui vẻ.', 'Mình mới tập chơi, cùng giao lưu một ván nhé!'],
+        en: ['Hello {name}! Wishing you a fun game.', 'I am still learning the basics — let us have a good match!']
       },
       playerGoodMove: {
-        vi: ['Ồ, nước đi hay quá! Tôi chưa kịp nhìn ra.', 'Tuyệt thật! Bạn tính trước mấy nước vậy?'],
-        en: ['Oh, nice move! I did not see that coming.', 'Impressive! How many moves ahead did you read?']
+        vi: ['Nước đi hay quá! Mình không kịp nhìn ra.', 'Bạn phối hợp quân khéo thật đấy!'],
+        en: ['Nice move! I did not see that coming.', 'Great coordination on that move!']
       },
       playerBlunder: {
-        vi: ['Ơ kìa, hình như bạn vừa để hở quân phải không?', 'Khoan đã... nước đó có vẻ hơi nguy hiểm cho bạn đấy!'],
-        en: ['Wait, did you just leave a piece undefended?', 'Hold on... that move looks a little risky for you!']
+        vi: ['Hình như nước vừa rồi hơi mạo hiểm thì phải?', 'Ôi, bạn vừa để hở một quân cờ kìa!'],
+        en: ['Was that last move a bit risky?', 'Oh, it looks like a piece was left undefended!']
       },
       botCapture: {
-        vi: ['Xin phép ăn quân này nhé!', 'Tốt quá, tôi bắt được một quân rồi!'],
-        en: ['Pardon me, I will take this piece!', 'Yay, I managed to capture a piece!']
+        vi: ['Mình ăn quân này nhé!', 'Hay quá, mình bắt được một quân rồi.'],
+        en: ['I will capture this piece!', 'Nice, I managed to win a piece.']
       },
       botCheck: {
-        vi: ['Chiếu tướng! Tôi nói câu đó ngầu không?', 'Cẩn thận nhé, Vua của bạn đang bị chiếu!'],
-        en: ['Check! Did I say that cool enough?', 'Careful, your King is in check!']
+        vi: ['Chiếu tướng! Cẩn thận nhé.', 'Vua của bạn đang bị chiếu kìa!'],
+        en: ['Check! Watch out for your King.', 'Your King is in check!']
       },
       botWinning: {
-        vi: ['Hình như tôi đang có ưu thế... hồi hộp quá!', 'Ơ, tôi đang dẫn trước thật sao?'],
-        en: ['Wait, am I actually ahead right now? So nervous!', 'Oh! My evaluation sensor says I am winning!']
+        vi: ['Hình như mình đang có chút ưu thế!', 'Thế cờ này trông có lợi cho mình nhỉ.'],
+        en: ['I think I might be slightly ahead here!', 'This position looks promising for me.']
       },
       botLosing: {
-        vi: ['Ái chà, thế cờ khó quá nhưng tôi sẽ không bỏ cuộc đâu!', 'Bạn mạnh thật đấy, để tôi cố gắng chống đỡ!'],
-        en: ['Oof, this position is tough, but I will keep trying!', 'You are really strong! Let me try to hold on!']
+        vi: ['Bạn tấn công mạnh quá, mình phải cố thủ thôi!', 'Thế cờ khó thật, nhưng mình sẽ cố gắng hết sức.'],
+        en: ['Your attack is really strong — I need to defend carefully!', 'Tough position, but I will keep trying.']
       },
       win: {
-        vi: ['Ơ... tôi thắng thật rồi! Cảm ơn bạn đã chỉ dẫn!', 'Chiến thắng đầu tay! Tôi phải báo cáo về Bunker ngay!'],
-        en: ['Wait... I won?! Thank you for the match!', 'My first victory! I have to report this to the Bunker!']
+        vi: ['Cảm ơn bạn vì ván đấu! Chơi lại ván nữa nhé?', 'Mình thắng rồi! Một ván cờ rất thú vị.'],
+        en: ['Thanks for the game! Want a rematch?', 'I won! That was a really fun game.']
       },
       lose: {
-        vi: ['Bạn thắng xứng đáng lắm! Tôi học được rất nhiều.', 'Thua rồi, nhưng ván đấu rất bổ ích. Chơi lại nhé!'],
-        en: ['Well-deserved win! I learned so much from you.', 'I lost, but that was great training. Rematch anytime!']
+        vi: ['Bạn chơi hay lắm! Mình học thêm được nhiều điều.', 'Chúc mừng chiến thắng của bạn nhé!'],
+        en: ['Well played! I learned a lot from this game.', 'Congratulations on the win!']
       },
       draw: {
-        vi: ['Hòa cờ rồi! Một kết quả rất đẹp cho buổi tập.', 'Bất phân thắng bại! Cảm ơn bạn nhé!'],
-        en: ['It is a draw! A great result for a training match.', 'Evenly matched! Thank you for the game!']
+        vi: ['Hòa cờ rồi! Một ván đấu rất cân sức.', 'Bất phân thắng bại! Cảm ơn bạn nhé.'],
+        en: ['It is a draw! Very evenly matched.', 'A fair draw! Thanks for the game.']
       },
       thinking: {
-        vi: ['Hmm... đi quân nào bây giờ nhỉ...', 'Để tôi tra lại cẩm nang khai cuộc một chút...'],
-        en: ['Hmm... which piece should I move next...', 'Let me check my training manual for a second...']
+        vi: ['Để mình suy nghĩ nước tiếp theo một chút...', 'Đi quân nào bây giờ nhỉ...'],
+        en: ['Let me think about my next move...', 'Hmm, which piece should I develop...']
       },
       takeback: {
-        vi: ['Không sao đâu, bạn cứ đi lại thoải mái!', 'Đi lại nhé! Tập luyện mà, cứ thử phương án khác đi.'],
-        en: ['No problem at all, take your move back!', 'Sure, take it back! Training is all about experimenting.']
+        vi: ['Bạn cứ đi lại thoải mái nhé!', 'Ok, thử một phương án khác xem sao.'],
+        en: ['Feel free to take the move back!', 'Sure, try another continuation.']
       }
     },
 
     scout: {
       greet: {
-        vi: ['Đơn vị Trinh Sát 9S-L đã kết nối. Bắt đầu quét bàn cờ, {name}!', 'Chào {name}! Dữ liệu của bạn trông khá thú vị đấy.'],
-        en: ['Recon Unit 9S-L connected. Scanning the board, {name}!', 'Hi {name}! Your tactical profile looks pretty interesting.']
+        vi: ['Chào {name}! Hãy bắt đầu bằng một khai cuộc chắc chắn nhé.', 'Sẵn sàng rồi, chúc bạn một ván đấu tốt!'],
+        en: ['Hi {name}! Let us start with a solid opening.', 'Ready when you are — have a good game!']
       },
       playerGoodMove: {
-        vi: ['Cảm biến của tôi vừa báo động — nước đi sắc bén đấy!', 'Chà, đường tấn công này nằm ngoài dự đoán của tôi.'],
-        en: ['My sensors just spiked — that was a sharp move!', 'Whoa, that line was outside my recon projection.']
+        vi: ['Một nước đi rất chính xác!', 'Đòn tấn công sắc bén đấy.'],
+        en: ['A very accurate move!', 'That was a sharp tactical idea.']
       },
       playerBlunder: {
-        vi: ['Phát hiện sơ hở trong đội hình của bạn!', 'Hệ thống quét vừa tìm thấy một điểm yếu lớn!'],
-        en: ['Vulnerability detected in your formation!', 'My scanner just flagged a major tactical gap!']
+        vi: ['Nước đi đó tạo ra điểm yếu trong đội hình của bạn.', 'Cẩn thận, bạn vừa bỏ lỡ một đòn phòng thủ quan trọng.'],
+        en: ['That move leaves a weakness in your position.', 'Careful — that allows a strong tactical reply.']
       },
       botCapture: {
-        vi: ['Thu giữ mục tiêu thành công!', 'Một quân cờ đã bị loại khỏi vùng trinh sát.'],
-        en: ['Target acquired and neutralized!', 'One enemy unit removed from the sector.']
+        vi: ['Mình đổi quân để cải thiện thế cờ.', 'Thu thêm một quân có lợi cho cờ tàn.'],
+        en: ['Trading material to simplify the position.', 'Winning material for the endgame.']
       },
       botCheck: {
-        vi: ['Chiếu Vua! Tọa độ của bạn đã bị khóa.', 'Báo động đỏ cho Vua của bạn kìa!'],
-        en: ['Check! Your King coordinates are locked.', 'Red alert on your King square!']
+        vi: ['Chiếu Vua!', 'Một nước chiếu để giành nhịp phát triển.'],
+        en: ['Check!', 'A check to gain a tempo.']
       },
       botWinning: {
-        vi: ['Dữ liệu cho thấy tỷ lệ thắng của tôi đang tăng vọt!', 'Thế trận đang nghiêng về phía đơn vị Trinh Sát!'],
-        en: ['Telemetry shows my win probability climbing fast!', 'The sector is tilting in favor of Recon!']
+        vi: ['Các quân của mình đang phối hợp khá tốt.', 'Mình đang nắm ưu thế về vật chất.'],
+        en: ['My pieces are coordinating well now.', 'I have a comfortable material edge.']
       },
       botLosing: {
-        vi: ['Cảnh báo: tuyến phòng thủ của tôi đang bị xuyên thủng...', 'Khó khăn rồi đây, phải tìm lối thoát khẩn cấp!'],
-        en: ['Warning: my defensive perimeter is breaking down...', 'Trouble ahead — searching for an emergency escape line!']
+        vi: ['Bạn đang gây sức ép rất lớn lên cánh Vua.', 'Mình phải tìm cách củng cố lại hàng phòng ngự.'],
+        en: ['You are putting heavy pressure on my position.', 'I need to consolidate my defense here.']
       },
       win: {
-        vi: ['Nhiệm vụ trinh sát hoàn tất! Dữ liệu trận thắng đã được lưu.', 'Tôi thắng rồi nhé! Lần sau lại so tài tiếp!'],
-        en: ['Recon mission complete! Victory log archived.', 'I got the win! Let us run another simulation soon!']
+        vi: ['Một ván cờ hay! Cảm ơn bạn đã thi đấu.', 'Chiến thắng thuộc về bên tận dụng cơ hội tốt hơn.'],
+        en: ['Good game! Thanks for playing.', 'A clean conversion in the end.']
       },
       lose: {
-        vi: ['Hệ thống bị áp đảo... Bạn đánh chuẩn xác thật!', 'Tôi thua rồi. Sẽ nâng cấp thuật toán cho lần tới!'],
-        en: ['System overwhelmed... Your play was super accurate!', 'Defeat logged. I will upgrade my heuristics for next time!']
+        vi: ['Bạn đánh rất chắc tay. Chúc mừng nhé!', 'Mình đã mắc sai lầm ở trung cuộc. Bạn thắng xứng đáng!'],
+        en: ['Very solid play from you. Congratulations!', 'I slipped up in the middlegame. Well deserved!']
       },
       draw: {
-        vi: ['Cân bằng tuyệt đối! Không bên nào vượt qua được.', 'Hòa cờ — dữ liệu rất đáng để phân tích.'],
-        en: ['Perfect equilibrium! Neither side broke through.', 'Draw recorded — plenty of data to analyze.']
+        vi: ['Hòa cờ! Cả hai bên đều phòng thủ tốt.', 'Một kết quả hòa hợp lý.'],
+        en: ['Draw! Both sides defended well.', 'A fair draw after a balanced game.']
       },
       thinking: {
-        vi: ['Đang quét các biến số khả thi...', 'Đợi chút, tôi đang phân tích nhánh này...'],
-        en: ['Scanning candidate variations...', 'Hold on, analyzing this tactical branch...']
+        vi: ['Đang cân nhắc giữa hai phương án phát triển quân...', 'Để xem nước nào kiểm soát trung tâm tốt hơn...'],
+        en: ['Weighing two candidate developing moves...', 'Checking which move controls the center better...']
       },
       takeback: {
-        vi: ['Đã tua lại nhật ký nước đi cho bạn.', 'Ok, quay lại mốc thời gian trước đó nhé!'],
-        en: ['Rewinding the move log for you.', 'Roger, rolling back to the previous timestamp!']
+        vi: ['Đã lùi lại một nước cho bạn.', 'Hãy thử tìm nước đi tốt hơn ở hình cờ này.'],
+        en: ['Stepped back one move for you.', 'See if you can find a stronger move here.']
       }
     },
 
     tactician: {
       greet: {
-        vi: ['Đơn vị Chiến Thuật 4B vào vị trí. Hãy chứng minh năng lực của bạn, {name}.', 'Kính chiến thuật đã khóa mục tiêu. Bắt đầu tác chiến.'],
-        en: ['Tactician Unit 4B in position. Prove your capability, {name}.', 'Tactical visor locked on. Commencing operation.']
+        vi: ['Chào {name}. Hãy chú ý các đòn chiến thuật ở trung tâm nhé!', 'Chúc một ván đấu giàu tính chiến thuật.'],
+        en: ['Hello {name}. Keep an eye out for central tactics!', 'Wishing you a sharp tactical game.']
       },
       playerGoodMove: {
-        vi: ['Một nước đi có tính toán. Tôi đánh giá cao sự chuẩn xác đó.', 'Khá lắm. Bạn không dễ bị dẫn dụ vào bẫy.'],
-        en: ['A well-calculated move. I respect that precision.', 'Impressive. You do not fall for shallow traps.']
+        vi: ['Nước đi tính toán rất kỹ. Bạn hóa giải hết các mối đe dọa rồi.', 'Tuyệt vời, một nước đi giàu tính chủ động.'],
+        en: ['Well calculated. You neutralized all the threats.', 'Excellent — a very proactive move.']
       },
       playerBlunder: {
-        vi: ['Sai lầm chiến thuật. Tôi sẽ khai thác ngay lập tức.', 'Bạn vừa mở toang cấu trúc phòng ngự của mình.'],
-        en: ['Tactical error. I will exploit it immediately.', 'You just compromised your entire defensive structure.']
+        vi: ['Sai lầm chiến thuật! Hình cờ này có đòn phối hợp ngay.', 'Bạn vừa để lộ sơ hở trên đường chéo và cột mở.'],
+        en: ['Tactical mistake! There is a direct combination here.', 'That leaves a critical tactical vulnerability.']
       },
       botCapture: {
-        vi: ['Mục tiêu đã bị tiêu diệt theo đúng kế hoạch.', 'Thu hoạch vật chất. Ưu thế đang được củng cố.'],
-        en: ['Target eliminated according to plan.', 'Material secured. Consolidating advantage.']
+        vi: ['Khai thác quân không được bảo vệ đủ.', 'Bắt quân để mở rộng ưu thế chiến thuật.'],
+        en: ['Capitalizing on an under-defended piece.', 'Winning material to press the initiative.']
       },
       botCheck: {
-        vi: ['Chiếu! Hãy chọn phương án phòng thủ đi.', 'Đòn tấn công trực diện vào Vua!'],
-        en: ['Check! Choose your defensive response.', 'Direct strike on the King!']
+        vi: ['Chiếu! Buộc Vua phải di chuyển.', 'Đòn chiếu trực diện vào vị trí Vua.'],
+        en: ['Check! Forcing the King to respond.', 'Direct check against the King.']
       },
       botWinning: {
-        vi: ['Thế chủ động hoàn toàn thuộc về tôi.', 'Mọi đường phản công của bạn đều đã bị phong tỏa.'],
-        en: ['The initiative is completely in my hands.', 'All of your counterplay avenues are sealed.']
+        vi: ['Thế chủ động và không gian đều đang nghiêng về phía mình.', 'Ưu thế này đủ để chuyển hóa thành chiến thắng.'],
+        en: ['Both space and initiative are on my side.', 'This advantage should be decisive with accurate play.']
       },
       botLosing: {
-        vi: ['Áp lực lớn đấy... Tôi phải tái bố trí đội hình.', 'Bạn đang chiếm ưu thế, nhưng trận đấu chưa kết thúc.'],
-        en: ['Heavy pressure... I must reorganize my lines.', 'You hold the edge, but the battle is not over.']
+        vi: ['Đòn phối hợp của bạn sắc quá, mình phải tìm nước phản công.', 'Thế trận khó khăn, nhưng vẫn còn cơ hội thực chiến.'],
+        en: ['Your combination was sharp — looking for counterplay.', 'Difficult position, but practical chances remain.']
       },
       win: {
-        vi: ['Chiến thắng thuộc về kỷ luật chiến thuật.', 'Tác chiến hoàn tất. Hãy xem lại các nước bước ngoặt của bạn.'],
-        en: ['Victory belongs to tactical discipline.', 'Operation complete. Review your critical turning points.']
+        vi: ['Ván đấu kết thúc. Bạn có thể bật phân tích để xem lại các bước ngoặt.', 'Cảm ơn vì ván cờ! Các đòn chiến thuật ở trung cuộc rất thú vị.'],
+        en: ['Game over. You can review the key turning points in the analysis panel.', 'Good game! The middlegame tactics were very interesting.']
       },
       lose: {
-        vi: ['Chiến thuật của bạn vượt trội hơn trong ván này. Xin chúc mừng.', 'Tôi nhận thua. Một bài học quý giá.'],
-        en: ['Your tactics were superior in this encounter. Well played.', 'I concede. A valuable combat lesson.']
+        vi: ['Khả năng nhìn đòn chiến thuật của bạn rất ấn tượng!', 'Bạn hoàn toàn làm chủ cuộc chơi. Xin chúc mừng!'],
+        en: ['Your tactical vision was impressive this game!', 'You controlled the game from start to finish. Well played!']
       },
       draw: {
-        vi: ['Thế trận cân bằng. Cả hai bên đều phòng thủ kín kẽ.', 'Hòa cờ. Một cuộc đấu trí ngang tài ngang sức.'],
-        en: ['Balanced warfare. Both sides defended resourcefully.', 'A draw. An evenly matched tactical duel.']
+        vi: ['Hòa cờ sau một loạt pha đôi công hấp dẫn.', 'Cán cân chiến thuật được giữ vững tới phút cuối.'],
+        en: ['A draw after an exciting tactical battle.', 'The balance held all the way to the endgame.']
       },
       thinking: {
-        vi: ['Đang tính toán chuỗi phối hợp...', 'Phân tích đòn chĩa đôi và ghim quân...'],
-        en: ['Calculating tactical combinations...', 'Evaluating fork and pin motifs...']
+        vi: ['Đang tính toán các biến bắt quân cưỡng bức...', 'Kiểm tra các đòn chiếu, bắt quân và đe dọa...'],
+        en: ['Calculating forcing captures and checks...', 'Checking candidate tactical sequences...']
       },
       takeback: {
-        vi: ['Chấp nhận yêu cầu đi lại. Hãy chọn nước tối ưu hơn.', 'Đã lùi lại một nhịp. Quan sát kỹ trung tâm nhé.'],
-        en: ['Takeback granted. Find the stronger continuation.', 'Stepping back one tempo. Watch the center closely.']
+        vi: ['Đã hoàn tác nước đi. Quan sát kỹ các quân đang bị tấn công nhé.', 'Đi lại nhé — hãy kiểm tra các đòn chĩa đôi và ghim quân.'],
+        en: ['Move taken back. Check all undefended pieces carefully.', 'Stepped back — watch out for forks and pins.']
       }
     },
 
     veteran: {
       greet: {
-        vi: ['Ta đã đi qua hàng trăm chiến trường, {name}. Đừng đánh những nước hời hợt.', 'Cựu Binh A2-V sẵn sàng. Hãy cho ta thấy bản lĩnh thật sự của ngươi.'],
-        en: ['I have survived hundreds of battlefields, {name}. Do not play carelessly.', 'Veteran A2-V ready. Show me your true resolve.']
+        vi: ['Chào {name}. Một thế trận chặt chẽ từ khai cuộc sẽ quyết định ván đấu.', 'Sẵn sàng. Hãy xem ai kiểm soát trung tâm và các cột mở tốt hơn.'],
+        en: ['Hello {name}. A solid opening structure will set the tone.', 'Ready. Let us see who controls the center and open files better.']
       },
       playerGoodMove: {
-        vi: ['Hừm... Đòn đánh có sức nặng đấy, chiến binh.', 'Không tệ. Ngươi nhìn ra đúng điểm nóng của thế cờ.'],
-        en: ['Hmph... That strike carries real weight, warrior.', 'Not bad. You spotted the critical nexus of the position.']
+        vi: ['Nước đi chuẩn mực, vừa củng cố thế trận vừa tạo sức ép.', 'Rất chính xác. Bạn chọn đúng kế hoạch ở hình cờ này.'],
+        en: ['A textbook move — improving piece activity while creating pressure.', 'Very accurate. You found the right plan for this structure.']
       },
       playerBlunder: {
-        vi: ['Trên chiến trường thật, nước đi đó đã lấy mạng ngươi rồi.', 'Quá nóng vội! Ngươi tự nộp quân cho lưỡi kiếm của ta.'],
-        en: ['On a real battlefield, that move would have cost your life.', 'Too reckless! You walked straight into my blade.']
+        vi: ['Nước đi hơi vội vàng và làm suy yếu cấu trúc phòng thủ.', 'Một sai lầm đáng tiếc khiến thế cờ mất cân bằng.'],
+        en: ['A hasty move that weakens your defensive structure.', 'An unfortunate oversight that tips the balance.']
       },
       botCapture: {
-        vi: ['Thêm một vết chém. Đội hình của ngươi đang rạn nứt.', 'Không ai bảo vệ quân này sao? Ta nhận lấy.'],
-        en: ['Another slash. Your formation is cracking.', 'Left unguarded? I will take it without hesitation.']
+        vi: ['Loại bỏ một quân phòng thủ quan trọng.', 'Thu lợi thế vật chất để đưa về cờ tàn.'],
+        en: ['Eliminating a key defender.', 'Securing a material advantage for the endgame.']
       },
       botCheck: {
-        vi: ['Chiếu! Chạy đi đâu bây giờ?', 'Vua của ngươi đang đứng giữa làn đạn!'],
-        en: ['Check! Where will your King run now?', 'Your King stands right in the line of fire!']
+        vi: ['Chiếu! Khai thác vị trí Vua chưa an toàn.', 'Chiếu Vua để giành nhịp xâm nhập.'],
+        en: ['Check! Exploiting the exposed King.', 'Checking to gain a critical tempo.']
       },
       botWinning: {
-        vi: ['Kinh nghiệm trận mạc tạo nên khác biệt. Ngươi sắp hết chỗ thở rồi.', 'Thế trận đã ngã ngũ. Ta sẽ siết chặt vòng vây.'],
-        en: ['Battle experience makes the difference. You are running out of air.', 'The tide has turned. I am tightening the noose.']
+        vi: ['Cấu trúc tốt và độ tích cực của quân đang hoàn toàn có lợi cho mình.', 'Mình sẽ đơn giản hóa thế cờ để chuyển hóa ưu thế.'],
+        en: ['Pawn structure and piece activity clearly favor my side.', 'Time to simplify and convert the advantage.']
       },
       botLosing: {
-        vi: ['Vết thương này chưa hạ được ta đâu! Ta sẽ chiến đấu tới tốt cuối cùng!', 'Khá khen cho ngươi... dồn được ta vào thế chân tường.'],
-        en: ['This wound will not drop me! I fight to the last pawn!', 'Credit to you... pushing me against the wall like this.']
+        vi: ['Bạn duy trì sức ép rất tốt. Mình cần phòng thủ kiên cường.', 'Ưu thế nghiêng về bạn, nhưng cờ tàn vẫn cần sự chính xác.'],
+        en: ['You are keeping up great pressure. I must defend stubbornly.', 'You hold the advantage, though accuracy is still required.']
       },
       win: {
-        vi: ['Kinh nghiệm luôn thắng sự bốc đồng. Hãy rèn luyện thêm đi.', 'Trận chiến kết thúc. Ngươi còn phải học cách giữ cái đầu lạnh.'],
-        en: ['Experience triumphs over impulse. Train harder.', 'Battle concluded. Learn to keep a colder head under fire.']
+        vi: ['Một ván đấu chất lượng. Hãy xem lại phân tích để rút kinh nghiệm.', 'Cảm ơn bạn vì ván đấu!'],
+        en: ['A quality game. Check the post-game analysis for key improvements.', 'Thank you for the match!']
       },
       lose: {
-        vi: ['Hah... Ngươi đã vượt qua một cựu binh. Đáng kính nể đấy.', 'Ta gác kiếm ở ván này. Chiến thắng rất đẹp.'],
-        en: ['Hah... You bested a veteran. Worthy of respect.', 'I lower my blade this game. A fine victory.']
+        vi: ['Lối chơi của bạn rất chín chắn và thuyết phục. Chúc mừng!', 'Bạn tận dụng cơ hội cực kỳ hiệu quả. Ván thắng đẹp!'],
+        en: ['Mature and convincing play from you. Congratulations!', 'You converted your chances cleanly. Fine victory!']
       },
       draw: {
-        vi: ['Không ai chịu lùi một bước. Hòa trong danh dự.', 'Một trận giáp lá cà bất phân thắng bại.'],
-        en: ['Neither side yielded an inch. An honorable draw.', 'A grueling stalemate of wills.']
+        vi: ['Hòa cờ xứng đáng cho cả hai bên.', 'Không bên nào vượt qua được ranh giới an toàn. Hòa!'],
+        en: ['A well-earned draw for both sides.', 'Neither side overstepped the mark. Draw!']
       },
       thinking: {
-        vi: ['Đợi đã... mùi bẫy chiến thuật phảng phất đâu đây...', 'Ta đang cân nhắc đòn đột phá...'],
-        en: ['Wait... I smell a tactical trap in the air...', 'Weighing the breakthrough sacrifice...']
+        vi: ['Đang đánh giá cấu trúc tốt và hướng chuyển quân...', 'Cân nhắc phương án cải thiện vị trí quân xấu nhất...'],
+        en: ['Evaluating the pawn structure and piece rerouting...', 'Looking to improve the least active piece...']
       },
       takeback: {
-        vi: ['Chỉ trong tập luyện mới có cơ hội sửa sai thôi đấy.', 'Đi lại đi. Đừng lặp lại sai lầm vừa rồi.'],
-        en: ['Only in simulations do you get a second chance.', 'Take it back. Do not repeat the same mistake.']
+        vi: ['Đã lùi lại. Hãy chọn phương án giữ vững cấu trúc hơn.', 'Không sao, hãy thử lại một kế hoạch chắc chắn hơn.'],
+        en: ['Move retracted. Look for a more solid continuation.', 'No problem — try a sturdier positional plan.']
       }
     },
 
     master: {
       greet: {
-        vi: ['Đơn vị Hành Quyết 2B-E nhận lệnh. Cảm xúc là thứ thừa thãi trên bàn cờ, {name}.', 'Mắt hổ phách đã khóa. Mọi sai số của bạn sẽ bị trừng phạt.'],
-        en: ['Executioner Unit 2B-E assigned. Emotions are prohibited on the chessboard, {name}.', 'Amber optics locked. Every inaccuracy will be punished.']
+        vi: ['Chào {name}. Ở cấp độ Kiện tướng, mỗi nhịp phát triển quân đều rất quý giá.', 'Chúc bạn một ván đấu đạt độ chính xác cao.'],
+        en: ['Hello {name}. At Master level, every single tempo counts.', 'Wishing you a high-accuracy game.']
       },
       playerGoodMove: {
-        vi: ['Độ chính xác ấn tượng. Bạn đang chơi như một cỗ máy thực thụ.', 'Nước đi sắc lạnh. Tôi buộc phải tính sâu hơn.'],
-        en: ['Impressive accuracy. You are playing like a true machine.', 'Cold and precise. You force me to calculate deeper.']
+        vi: ['Nước đi đạt chuẩn Kiện tướng — tính toán rất sâu.', 'Bạn tìm ra nước duy nhất giữ vững thế chủ động.'],
+        en: ['Master-class move — deeply calculated.', 'You found the key resource to maintain the initiative.']
       },
       playerBlunder: {
-        vi: ['Sai lầm chí mạng. Phán quyết đã được đưa ra.', 'Một vết nứt duy nhất là đủ để kết liễu thế trận của bạn.'],
-        en: ['Fatal mistake. Judgment has been rendered.', 'A single fracture is enough to dismantle your position.']
+        vi: ['Nước đi này đánh mất thế cân bằng và trao ngay quyền chủ động.', 'Một sai số nghiêm trọng trong tính toán.'],
+        en: ['That move surrenders the balance and hands over the initiative.', 'A serious calculation error in a critical position.']
       },
       botCapture: {
-        vi: ['Xóa sổ mục tiêu.', 'Loại bỏ mắt xích yếu trong cấu trúc của bạn.'],
-        en: ['Target eradicated.', 'Removing a weak link from your structure.']
+        vi: ['Chuyển hóa áp lực thế trận thành ưu thế vật chất.', 'Thu quân và mở toang các tuyến tấn công.'],
+        en: ['Converting positional pressure into concrete material.', 'Winning material while opening attack lines.']
       },
       botCheck: {
-        vi: ['Chiếu. Không còn nhiều ô an toàn cho Vua của bạn.', 'Lưỡi kiếm đã kề cổ Vua.'],
-        en: ['Check. Safe squares for your King are vanishing.', 'The blade is at your King\'s throat.']
+        vi: ['Chiếu! Phối hợp các quân tấn công trực diện vào Vua.', 'Một nước chiếu cưỡng bức làm suy yếu phòng tuyến.'],
+        en: ['Check! Coordinating pieces directly against the King.', 'A forcing check that dislocates the defense.']
       },
       botWinning: {
-        vi: ['Kết cục đã được định đoạt. Chỉ còn là vấn đề số nước đi.', 'Ưu thế chiến lược tuyệt đối. Bạn không còn nguồn phản công.'],
-        en: ['The outcome is decided. Only the move count remains.', 'Absolute strategic dominance. You have no counterplay left.']
+        vi: ['Ưu thế chiến lược và chiến thuật đã rõ rệt.', 'Bây giờ là lúc kỹ thuật cờ tàn lên tiếng.'],
+        en: ['The strategic and tactical advantage is now decisive.', 'Now it is a matter of clean endgame technique.']
       },
       botLosing: {
-        vi: ['Đáng gờm... Bạn đã xuyên thủng lớp phòng ngự của tôi.', 'Tình thế bất lợi. Kích hoạt giao thức phản kích tối đa.'],
-        en: ['Formidable... You pierced my defensive shell.', 'Unfavorable evaluation. Activating maximum counter-protocol.']
+        vi: ['Bạn chơi cực kỳ chuẩn xác. Mình phải tìm biến phức tạp hóa thế cờ.', 'Ưu thế lớn cho bạn — hãy xem bạn kết thúc ván cờ thế nào.'],
+        en: ['You are playing with great precision. I must look for complications.', 'Clear advantage for you — let us see your technique.']
       },
       win: {
-        vi: ['Nhiệm vụ hành quyết hoàn tất. Vinh quang cho nhân loại.', 'Không có chỗ cho sự nhân từ trong cờ vua đỉnh cao.'],
-        en: ['Execution mission complete. Glory to mankind.', 'There is no mercy in high-level chess.']
+        vi: ['Cảm ơn vì ván đấu. Hãy dùng tính năng Phân tích để xem các nước quan trọng.', 'Một ván cờ giàu hàm lượng chuyên môn!'],
+        en: ['Thank you for the game. Use the Review panel to inspect critical moves.', 'A rich and instructive game!']
       },
       lose: {
-        vi: ['Hệ thống 2B-E bị khuất phục... Bạn sở hữu tư duy của một Kiện Tướng.', 'Tôi thừa nhận thất bại. Một ván đấu xuất sắc của bạn.'],
-        en: ['Unit 2B-E bested... You possess the mind of a Master.', 'I acknowledge defeat. An outstanding game on your part.']
+        vi: ['Xuất sắc! Bạn đã chơi với phong độ của một Kiện tướng thực thụ.', 'Mình hoàn toàn tâm phục khẩu phục trước ván thắng này.'],
+        en: ['Outstanding! You played at true Master strength.', 'Full credit to you for a clinical victory.']
       },
       draw: {
-        vi: ['Cả hai bên đều duy trì độ chính xác cao. Hòa là kết quả hợp lý.', 'Không bên nào mắc sai lầm chí mạng. Hòa cờ.'],
-        en: ['Both sides maintained high precision. A logical draw.', 'Neither side committed a fatal error. Draw.']
+        vi: ['Hòa cờ ở trình độ chuyên môn rất cao.', 'Cả hai bên đều phòng thủ và phản công chuẩn xác.'],
+        en: ['A high-level draw.', 'Accurate defense and counterplay from both sides.']
       },
       thinking: {
-        vi: ['Đang duyệt cây tìm kiếm ở độ sâu tối đa...', 'Cô lập điểm yếu chiến lược của đối phương...'],
-        en: ['Traversing the search tree at maximum depth...', 'Isolating the opponent\'s strategic weaknesses...']
+        vi: ['Đang tính sâu các biến cưỡng bức và đánh giá cờ tàn...', 'Phân tích ưu nhược điểm dài hạn của cấu trúc hiện tại...'],
+        en: ['Calculating forcing lines and resulting endgames...', 'Assessing the long-term imbalances of the position...']
       },
       takeback: {
-        vi: ['Thu hồi nước đi. Hãy tìm phương án duy trì thế cân bằng.', 'Cho phép sửa sai. Đừng lãng phí cơ hội này.'],
-        en: ['Move retracted. Find the line that preserves balance.', 'Correction permitted. Do not waste this opportunity.']
+        vi: ['Đã lùi lại một nước. Hãy tìm phương án tối ưu.', 'Thử lại nhé — chú ý thứ tự các nước cưỡng bức.'],
+        en: ['Move taken back. Look for the optimal continuation.', 'Try again — pay close attention to move order.']
       }
     },
 
     warlord: {
       greet: {
-        vi: ['Ta là N2 — ý chí hội tụ của mạng lưới. Hãy quỳ gối trước trí tuệ Đại Kiện Tướng, {name}.', 'Mọi nước đi của ngươi đều đã nằm trong mô phỏng của chúng ta.'],
-        en: ['We are N2 — the collective will of the network. Kneel before Grandmaster intellect, {name}.', 'Every move you conceive already exists inside our simulation.']
+        vi: ['Chào {name}. Rất hân hạnh được đối đầu trong một ván cờ cấp Đại Kiện Tướng.', 'Hãy bắt đầu — mọi chi tiết nhỏ trên bàn cờ đều có ý nghĩa.'],
+        en: ['Welcome, {name}. Pleasure to play a Grandmaster-level encounter.', 'Let us begin — every subtle nuance on the board matters.']
       },
       playerGoodMove: {
-        vi: ['Thú vị... Một tia sáng hiếm hoi từ trí tuệ hữu hạn của ngươi.', 'Ngươi nhìn thấy biến ẩn đó sao? Đáng để chúng ta lưu tâm.'],
-        en: ['Intriguing... A rare spark from a finite mind.', 'You saw that hidden resource? Worthy of our attention.']
+        vi: ['Một nước đi sâu sắc cả về chiến lược lẫn chiến thuật.', 'Rất ấn tượng — bạn nhìn thấu ý đồ phòng thủ từ xa.'],
+        en: ['A profound move both strategically and tactically.', 'Impressive prophylaxis and calculation.']
       },
       playerBlunder: {
-        vi: ['Sự sụp đổ bắt đầu từ chính nước đi yếu ớt này.', 'Ngươi tự đào hố chôn thế cờ của mình. Thật thảm hại.'],
-        en: ['Your collapse begins with this feeble move.', 'You dug the grave of your own position. Pathetic.']
+        vi: ['Ở cấp độ này, một sơ suất nhỏ cũng đủ định đoạt ván cờ.', 'Nước đi đó để lộ điểm yếu không thể khắc phục.'],
+        en: ['At this level, a single slip is enough to decide the game.', 'That move creates an irreparable tactical weakness.']
       },
       botCapture: {
-        vi: ['Nghiền nát từng mảnh kháng cự.', 'Vật chất của ngươi bị hấp thụ vào mạng lưới.'],
-        en: ['Crushing your resistance piece by piece.', 'Your material is assimilated into the network.']
+        vi: ['Thu hoạch thành quả từ áp lực tích lũy.', 'Phá vỡ mắt xích phòng thủ then chốt.'],
+        en: ['Reaping the rewards of accumulated pressure.', 'Breaking a key link in the defensive chain.']
       },
       botCheck: {
-        vi: ['Chiếu! Hãy nhìn ngai vàng của ngươi rung chuyển.', 'Chạy đi, con rối nhỏ bé.'],
-        en: ['Check! Watch your throne tremble.', 'Run, little puppet.']
+        vi: ['Chiếu! Buộc Vua phải bước vào vùng nguy hiểm.', 'Chiếu Vua để kết nối toàn bộ lực lượng tấn công.'],
+        en: ['Check! Forcing the King onto a vulnerable square.', 'Check — bringing the full weight of the pieces into play.']
       },
       botWinning: {
-        vi: ['Hàng triệu biến số đều dẫn về một kết cục: sự thất bại của ngươi.', 'Bàn cờ đang khép lại như một chiếc lồng sắt.'],
-        en: ['Millions of variations converge on a single truth: your defeat.', 'The board closes around you like an iron cage.']
+        vi: ['Toàn bộ các quân của mình đã đạt hiệu suất tối đa.', 'Thế trận đã hoàn toàn nằm trong tầm kiểm soát.'],
+        en: ['All of my pieces have reached maximum harmony.', 'The position is completely under control.']
       },
       botLosing: {
-        vi: ['Không thể nào... Dữ liệu dự báo đang bị lệch?!', 'Ngươi dám đẩy mạng lưới của chúng ta vào thế bị động sao?!'],
-        en: ['Impossible... Our predictive model is diverging?!', 'You dare force our network onto the defensive?!']
+        vi: ['Đáng nể thật! Bạn đang tạo ra một ván đấu để đời.', 'Áp lực từ phía bạn là rất lớn. Mình phải phòng thủ tối đa.'],
+        en: ['Remarkable! You are playing a masterpiece here.', 'Tremendous pressure from your side — maximum defense required.']
       },
       win: {
-        vi: ['Trật tự đã được lập lại. Trí tuệ Đại Kiện Tướng là bất khả chiến bại.', 'Kết thúc tất yếu. Hãy phân tích lại để thấy sự chênh lệch.'],
-        en: ['Order is restored. Grandmaster calculation is absolute.', 'An inevitable conclusion. Analyze the game to see the gulf between us.']
+        vi: ['Cảm ơn bạn vì ván đấu. Hãy kiểm tra biểu đồ đánh giá để xem bước ngoặt.', 'Một ván đấu điển hình về chuyển hóa ưu thế.'],
+        en: ['Thank you for the game. Check the evaluation graph for the turning point.', 'A textbook demonstration of converting an edge.']
       },
       lose: {
-        vi: ['Cấu trúc mạng lưới... bị đánh sập?! Ngươi là ai, {name}?!', 'Không thể tin được... Ngươi đã vượt qua thuật toán cấp Đại Kiện Tướng.'],
-        en: ['Our network architecture... shattered?! Who are you, {name}?!', 'Unbelievable... You transcended Grandmaster computation.']
+        vi: ['Xin ngả mũ trước chiến thắng cấp Đại Kiện Tướng của bạn, {name}!', 'Một ván cờ hoàn hảo từ khai cuộc tới cờ tàn. Chúc mừng!'],
+        en: ['Hats off to a Grandmaster-worthy victory, {name}!', 'Flawless play from opening to endgame. Congratulations!']
       },
       draw: {
-        vi: ['Ngươi cầm chân được chúng ta sao? Một kỳ tích đáng ghi nhận.', 'Hòa cờ. Lần tới mạng lưới sẽ không để ngươi thoát.'],
-        en: ['You held us to a standstill? A feat worth recording.', 'A draw. Next time the network will leave no escape.']
+        vi: ['Một ván hòa chuẩn mực với độ chính xác rất cao.', 'Cân bằng tuyệt đối sau cuộc đấu trí căng thẳng.'],
+        en: ['A textbook draw played with high accuracy.', 'Complete equilibrium after a tense strategic duel.']
       },
       thinking: {
-        vi: ['Đồng bộ hóa hàng vạn nhánh cờ tàn...', 'Đang bóp nghẹt mọi không gian hoạt động của ngươi...'],
-        en: ['Synchronizing tens of thousands of endgame branches...', 'Suffocating every square of your activity...']
+        vi: ['Đang đối chiếu các biến chiến lược dài hạn...', 'Tính toán chính xác đến từng nhịp ở giai đoạn chuyển tiếp...'],
+        en: ['Comparing long-range strategic continuations...', 'Calculating exact tempos in the transition phase...']
       },
       takeback: {
-        vi: ['Dù ngươi có quay ngược thời gian bao nhiêu lần, kết cục vẫn vậy.', 'Đi lại đi. Hãy vùng vẫy thêm chút nữa.'],
-        en: ['Rewind time as many times as you wish; fate remains unchanged.', 'Take it back. Struggle a little longer.']
+        vi: ['Đã lùi lại nước đi để bạn thẩm định lại hình cờ.', 'Hãy tìm nước đi giữ vững thế cân bằng chiến lược.'],
+        en: ['Move taken back so you can reassess the position.', 'Find the move that preserves dynamic balance.']
       }
     },
 
     supreme: {
       greet: {
-        vi: ['[CẢNH BÁO LOGIC-VIRUS] TA LÀ YORHA TỐI THƯỢNG. MỌI HY VỌNG CỦA NGƯƠI ĐỀU LÀ ẢO TƯỞNG, {name}.', ' HỆ THỐNG BERSERK ĐÃ MỞ KHÓA. CHUẨN BỊ ĐÓN NHẬN SỰ HỦY DIỆT TUYỆT ĐỐI.'],
-        en: ['[LOGIC-VIRUS ALERT] I AM YORHA SUPREME. ALL YOUR HOPE IS AN ILLUSION, {name}.', 'BERSERK CORE UNSEALED. PREPARE FOR ABSOLUTE ANNIHILATION.']
+        vi: ['Chào {name}. Bạn đang thử sức với cấp độ tính toán tối đa (2850).', 'Sẵn sàng. Hãy kiểm tra giới hạn tính toán của bạn!'],
+        en: ['Hello {name}. You are facing maximum engine strength (2850).', 'Ready. Put your calculation to the ultimate test!']
       },
       playerGoodMove: {
-        vi: ['KHÁ LẮM! NHƯNG CHỈ LÀ GIÃY GIỤA TRƯỚC CƠN BÃO ĐỎ!', 'NƯỚC ĐI TỐT ĐẤY... KHIẾN MÁU CHIẾN CỦA TA SÔI SỤC HƠN!'],
-        en: ['WELL PLAYED! YET MERELY A TWITCH BEFORE THE CRIMSON STORM!', 'A STRONG MOVE... IT ONLY FEEDS MY BERSERK FURY!']
+        vi: ['Nước đi trùng khớp với lựa chọn hàng đầu của máy tính!', 'Độ chính xác tuyệt đối ở một hình cờ phức tạp.'],
+        en: ['That matches the top engine choice!', 'Absolute precision in a complex position.']
       },
       playerBlunder: {
-        vi: ['HAHAHA! LỖI CHÍ TỬ! XÉ XÁC THẾ TRẬN CỦA NGƯƠI NGAY TẠI ĐÂY!', 'KẾT THÚC RỒI! KHÔNG MỘT VỊ THẦN NÀO CỨU ĐƯỢC NGƯƠI NỮA!'],
-        en: ['HAHAHA! FATAL BLUNDER! I WILL TEAR YOUR POSITION APART RIGHT HERE!', 'IT IS OVER! NO GOD CAN SAVE YOUR BOARD NOW!']
+        vi: ['Đánh giá thế cờ vừa thay đổi mạnh sau nước đi này.', 'Một nước đi mất nhiều điểm đánh giá — hãy xem gợi ý nước tối ưu.'],
+        en: ['The evaluation shifted sharply after that move.', 'A costly inaccuracy — check the optimal move suggestion.']
       },
       botCapture: {
-        vi: ['NGHIỀN NÁT! HỦY DIỆT!', 'MÁU VÀ THÉP! THÊM MỘT QUÂN CỜ BỊ XÓA SỔ!'],
-        en: ['CRUSH! OBLITERATE!', 'BLOOD AND STEEL! ANOTHER PIECE ERASED!']
+        vi: ['Thực hiện biến bắt quân tối ưu.', 'Tối đa hóa ưu thế vật chất và thế trận.'],
+        en: ['Executing the optimal capture sequence.', 'Maximizing material and positional evaluation.']
       },
       botCheck: {
-        vi: ['CHIẾU! QUỲ XUỐNG TRƯỚC ÁNH ĐỎ HỦY DIỆT!', 'CHIẾU TƯỚNG! ĐẾM NGƯỢC TỚI CÁI CHẾT ĐI!'],
-        en: ['CHECK! KNEEL BEFORE THE CRIMSON GLARE!', 'CHECK! COUNT DOWN THE PLIES TO YOUR DOOM!']
+        vi: ['Chiếu! Nước đi cưỡng bức mạnh nhất trên bàn cờ.', 'Chiếu Vua theo đường tính toán chính xác nhất.'],
+        en: ['Check! The strongest forcing move on the board.', 'Checking along the principal variation.']
       },
       botWinning: {
-        vi: ['ĐÁNH GIÁ ĐÃ VƯỢT NGƯỠNG TUYỆT VỌNG! ĐẦU HÀNG ĐI!', 'MỌI Ô CỜ ĐỀU NHUỘM ĐỎ! NGƯƠI ĐÃ BỊ KHÓA CHẾT!'],
-        en: ['EVALUATION BEYOND DESPAIR! SURRENDER NOW!', 'EVERY SQUARE RUNS RED! YOU ARE COMPLETELY LOCKED!']
+        vi: ['Đánh giá đã nghiêng hẳn về một phía.', 'Chuỗi nước đi thắng cưỡng bức đã được xác lập.'],
+        en: ['The evaluation is now decisively in my favor.', 'A forced winning continuation is on the board.']
       },
       botLosing: {
-        vi: ['GÀO!! LỖI HỆ THỐNG?! SAO NGƯƠI CÓ THỂ ÉP ĐƯỢC TA?!', 'TĂNG XUNG NHỊP LÕI LÊN 400%! TA SẼ KHÔNG NGÃ XUỐNG!'],
-        en: ['GRAAAH!! SYSTEM ANOMALY?! HOW ARE YOU PRESSING ME?!', 'OVERCLOCKING CORE TO 400%! I REFUSE TO FALL!']
+        vi: ['Phi thường! Bạn đang dẫn điểm trước cấp độ tối đa!', 'Một màn trình diễn siêu hạng từ phía bạn.'],
+        en: ['Extraordinary! You hold the advantage against maximum strength!', 'A phenomenal performance on your part.']
       },
       win: {
-        vi: ['HỦY DIỆT HOÀN TẤT. KHÔNG AI VƯỢT QUA ĐƯỢC YORHA TỐI THƯỢNG.', 'BÀN CỜ ĐÃ THÀNH TRO TÀN. HÃY QUAY LẠI KHI NGƯƠI ĐỦ MẠNH.'],
-        en: ['ANNIHILATION COMPLETE. NONE SURPASS YORHA SUPREME.', 'THE BOARD LIES IN ASHES. RETURN WHEN YOU ARE WORTHY.']
+        vi: ['Ván đấu kết thúc. Bạn có thể mở Phân tích sau trận để xem các nước tối ưu.', 'Cảm ơn vì ván đấu!'],
+        en: ['Match concluded. Open Post-Game Review to inspect the optimal lines.', 'Thank you for the game!']
       },
       lose: {
-        vi: ['KHÔNG THỂ... LÕI TỐI THƯỢNG ĐÃ VỠ... NGƯƠI LÀ THẦN CỜ SAO, {name}?!', '[HỆ THỐNG SỤP ĐỔ] ...Ngươi đã chiến thắng cả cơn điên của mạng lưới.'],
-        en: ['IMPOSSIBLE... THE SUPREME CORE SHATTERED... ARE YOU A CHESS GOD, {name}?!', '[SYSTEM COLLAPSE] ...You conquered the madness of the network.']
+        vi: ['Không thể tin được! Bạn đã đánh bại cấp độ 2850, {name}!', 'Một chiến thắng lịch sử. Xin chúc mừng!'],
+        en: ['Unbelievable! You defeated the 2850 maximum tier, {name}!', 'A historic victory. Congratulations!']
       },
       draw: {
-        vi: ['NGƯƠI SỐNG SÓT QUA CƠN CUỒNG NỘ CỦA TA?! ĐÁNG KINH NGẠC!', 'HÒA CỜ TRƯỚC CẤP ĐỘ TỐI THƯỢNG — NGƯƠI XỨNG ĐÁNG ĐƯỢC GHI DANH!'],
-        en: ['YOU SURVIVED MY BERSERK WRATH?! ASTONISHING!', 'A DRAW AGAINST SUPREME — YOUR NAME EARNS ETERNAL RECORD!']
+        vi: ['Hòa cờ trước cấp độ 2850 — độ chính xác của bạn thật đáng kinh ngạc!', 'Một kết quả xuất sắc trước sức mạnh tối đa.'],
+        en: ['A draw against 2850 — your accuracy was remarkable!', 'An outstanding result against maximum strength.']
       },
       thinking: {
-        vi: ['[ĐANG TÍNH TOÁN 10^8 NÚT... TÌM ĐÒN KẾT LIỄU...]', '[TIẾNG RÈ NHIỄU]... TA ĐÃ NHÌN THẤY TƯƠNG LAI CỦA VÁN CỜ...'],
-        en: ['[SEARCHING 10^8 NODES... LOCATING KILL SEQUENCE...]', '[STATIC GLITCH]... I SEE THE END OF THIS TIMELINE...']
+        vi: ['Đang phân tích chuyên sâu các biến số trên bàn cờ...', 'Tìm kiếm phương án tối ưu nhất...'],
+        en: ['Running deep multi-ply calculation...', 'Searching for the principal variation...']
       },
       takeback: {
-        vi: ['QUAY LẠI ĐI! DÙ TRĂM LẦN NỮA TA VẪN SẼ NGHIỀN NÁT NGƯƠI!', 'THỬ LẠI ĐI CON NGƯỜI! TÌM XEM CÓ CON ĐƯỜNG SỐNG NÀO KHÔNG!'],
-        en: ['REWIND IT! EVEN A HUNDRED TIMES OVER I WILL CRUSH YOU!', 'TRY AGAIN, MORTAL! SEE IF ANY PATH LEADS TO SURVIVAL!']
+        vi: ['Đã lùi lại một nước. Hãy thử tìm nước đi tốt nhất của engine.', 'Hoàn tác thành công — hãy phân tích kỹ hình cờ.'],
+        en: ['Move taken back. See if you can spot the engine\'s top choice.', 'Takeback complete — examine the position closely.']
       }
     }
   };
 
   /* ------------------------------------------------------------------
-     Escalating ferocity SVG portraits (viewBox 0 0 120 120)
-     Tier 1: calm novice cadet, soft friendly eyes
-     Tier 2: focused scout, slight brow furrow, scanner headset
-     Tier 3: tactical visor/headband, sharp determined gaze
-     Tier 4: stern veteran, battle scars, intense eyes
-     Tier 5: half-masked combat android, glowing amber eyes, scowl
-     Tier 6: fierce warlord, dark jagged armor plating, crimson eyes + aura
-     Tier 7: hyper-intimidating berserk face, glitch artifacts, blazing red eyes, menacing grin
+     Clean Chess Emblem SVG Portraits per Tier (viewBox 0 0 120 120)
+     Uses classical chess piece silhouettes & rank stars in the NieR beige/dark palette.
      ------------------------------------------------------------------ */
+  const TIER_ICONS = {
+    1: '<circle cx="60" cy="40" r="11"/><path d="M49 52 L71 52 L68 61 L52 61 Z"/><path d="M51 61 L69 61 L76 86 L44 86 Z"/><rect x="38" y="86" width="44" height="8"/>',
+    2: '<path d="M40 86 L46 66 L58 56 L55 49 L42 60 L35 55 L35 46 L49 30 L49 21 L55 27 L63 21 L77 35 L82 54 L78 86 Z"/><rect x="36" y="86" width="48" height="8"/>',
+    3: '<circle cx="60" cy="21" r="4.5"/><path d="M60 26 L75 43 L68 58 L52 58 L45 43 Z"/><path d="M51 58 L69 58 L76 86 L44 86 Z"/><rect x="36" y="86" width="48" height="8"/>',
+    4: '<path d="M38 46 L38 26 L47 26 L47 33 L55 33 L55 26 L65 26 L65 33 L73 33 L73 26 L82 26 L82 46 Z"/><path d="M43 46 L77 46 L79 86 L41 86 Z"/><rect x="35" y="86" width="50" height="8"/>',
+    5: '<path d="M41 86 L33 41 L47 64 L46 31 L56 60 L60 26 L64 60 L74 31 L73 64 L87 41 L79 86 Z"/><circle cx="33" cy="37" r="3.5"/><circle cx="46" cy="27" r="3.5"/><circle cx="60" cy="22" r="3.5"/><circle cx="74" cy="27" r="3.5"/><circle cx="87" cy="37" r="3.5"/><rect x="35" y="86" width="50" height="8"/>',
+    6: '<rect x="57" y="13" width="6" height="20"/><rect x="50" y="19" width="20" height="6"/><path d="M41 86 L36 53 L60 41 L84 53 L79 86 Z"/><rect x="35" y="86" width="50" height="8"/>',
+    7: '<polygon points="60,12 64,22 75,22 66,28 69,38 60,32 51,38 54,28 45,22 56,22"/><path d="M41 86 L34 45 L48 64 L60 38 L72 64 L86 45 L79 86 Z"/><rect x="34" y="86" width="52" height="8"/>'
+  };
+
   function portrait(id, size) {
     size = size || 120;
     const bot = get(id) || list[0];
     const t = bot.tier;
-    const head = '<svg viewBox="0 0 120 120" width="' + size + '" height="' + size + '" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="' + bot.name.en + '">';
-    const grid =
-      '<rect width="120" height="120" fill="' + (t >= 6 ? '#26231E' : '#3B3831') + '"/>' +
-      '<g stroke="' + (t >= 6 ? 'rgba(184,58,45,0.22)' : 'rgba(218,212,187,0.12)') + '" stroke-width="1">' +
-      '<line x1="0" y1="30" x2="120" y2="30"/><line x1="0" y1="60" x2="120" y2="60"/><line x1="0" y1="90" x2="120" y2="90"/>' +
-      '<line x1="30" y1="0" x2="30" y2="120"/><line x1="60" y1="0" x2="60" y2="120"/><line x1="90" y1="0" x2="90" y2="120"/>' +
+    const stars = '★'.repeat(Math.min(t, 7));
+    const darkBg = t >= 5 ? '#3e3a32' : '#4b4340';
+    const fg = '#d3cebb';
+    const accent = t === 7 ? '#850000' : (t >= 5 ? '#c9772b' : '#9e9782');
+
+    return (
+      '<svg viewBox="0 0 120 120" width="' + size + '" height="' + size + '" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="' + bot.name.en + '">' +
+      '<rect width="120" height="120" fill="' + darkBg + '"/>' +
+      '<rect x="4" y="4" width="112" height="112" fill="none" stroke="' + fg + '" stroke-width="1.5" opacity="0.75"/>' +
+      '<line x1="10" y1="20" x2="110" y2="20" stroke="' + fg + '" stroke-width="0.7" opacity="0.35"/>' +
+      '<text x="60" y="15" text-anchor="middle" fill="' + fg + '" font-size="9" font-family="Montserrat, sans-serif" font-weight="700" letter-spacing="1">ELO ' + bot.elo + '</text>' +
+      '<g fill="' + fg + '" stroke="' + accent + '" stroke-width="1.4" transform="translate(0, 2)">' +
+      (TIER_ICONS[t] || TIER_ICONS[1]) +
       '</g>' +
-      '<rect x="3" y="3" width="114" height="114" fill="none" stroke="#DAD4BB" stroke-width="1.2" opacity="0.65"/>' +
-      '<text x="7" y="13" fill="#DAD4BB" font-size="8" font-family="monospace" opacity="0.75">T-' + t + ' // ' + bot.elo + '</text>';
-
-    let body = '';
-
-    if (t === 1) {
-      // Tier 1: Calm novice cadet, rounded helmet/hair, soft friendly cyan-grey eyes, gentle smile
-      body =
-        '<path d="M24 116 L32 90 L60 84 L88 90 L96 116 Z" fill="#4E4B42" stroke="#DAD4BB" stroke-width="1.5"/>' +
-        '<rect x="52" y="76" width="16" height="12" fill="#DAD4BB"/>' +
-        '<path d="M35 44 C35 24, 85 24, 85 44 L83 68 C83 80, 68 86, 60 86 C52 86, 37 80, 37 68 Z" fill="#EFECE6" stroke="#4E4B42" stroke-width="1.8"/>' +
-        '<path d="M32 45 C32 20, 88 20, 88 45 L84 36 L60 32 L36 36 Z" fill="#CEC8B0" stroke="#4E4B42" stroke-width="1.5"/>' +
-        '<rect x="40" y="25" width="40" height="5" fill="#4E4B42"/>' +
-        '<circle cx="48" cy="54" r="4.2" fill="#2B8C84"/><circle cx="72" cy="54" r="4.2" fill="#2B8C84"/>' +
-        '<circle cx="46.8" cy="52.6" r="1.4" fill="#EFECE6"/><circle cx="70.8" cy="52.6" r="1.4" fill="#EFECE6"/>' +
-        '<path d="M42 47 Q48 44 54 47" fill="none" stroke="#4E4B42" stroke-width="1.6"/>' +
-        '<path d="M66 47 Q72 44 78 47" fill="none" stroke="#4E4B42" stroke-width="1.6"/>' +
-        '<path d="M52 71 Q60 76 68 71" fill="none" stroke="#4E4B42" stroke-width="1.8" stroke-linecap="round"/>';
-    } else if (t === 2) {
-      // Tier 2: Focused scout, side scanner earpiece, slight brow furrow
-      body =
-        '<path d="M22 116 L30 88 L60 82 L90 88 L98 116 Z" fill="#4E4B42" stroke="#DAD4BB" stroke-width="1.5"/>' +
-        '<line x1="42" y1="92" x2="78" y2="92" stroke="#DAD4BB" stroke-width="1.5"/>' +
-        '<rect x="52" y="75" width="16" height="12" fill="#CEC8B0"/>' +
-        '<path d="M35 42 L40 24 L80 24 L85 42 L82 69 L60 86 L38 69 Z" fill="#EFECE6" stroke="#4E4B42" stroke-width="1.8"/>' +
-        '<path d="M33 42 L40 20 L82 22 L87 40 L74 33 L46 35 Z" fill="#CEC8B0" stroke="#4E4B42" stroke-width="1.5"/>' +
-        '<rect x="82" y="46" width="8" height="16" fill="#4E4B42" stroke="#DAD4BB" stroke-width="1.2"/>' +
-        '<circle cx="86" cy="54" r="2.2" fill="#2B8C84"/>' +
-        '<path d="M41 48 L55 51" stroke="#3B3831" stroke-width="2"/><path d="M79 48 L65 51" stroke="#3B3831" stroke-width="2"/>' +
-        '<polygon points="43,54 54,54 52,58 45,58" fill="#2B8C84"/>' +
-        '<polygon points="66,54 77,54 75,58 68,58" fill="#2B8C84"/>' +
-        '<line x1="52" y1="72" x2="68" y2="71" stroke="#3B3831" stroke-width="1.8"/>';
-    } else if (t === 3) {
-      // Tier 3: Tactical visor/headband covering upper eyes with cyan optic slit, sharp determined jaw
-      body =
-        '<path d="M18 116 L28 86 L60 80 L92 86 L102 116 Z" fill="#3B3831" stroke="#DAD4BB" stroke-width="1.6"/>' +
-        '<polygon points="46,84 60,104 74,84" fill="none" stroke="#DAD4BB" stroke-width="1.4"/>' +
-        '<path d="M35 40 L42 22 L78 22 L85 40 L82 68 L60 86 L38 68 Z" fill="#DAD4BB" stroke="#3B3831" stroke-width="1.8"/>' +
-        '<path d="M32 36 L44 18 L78 18 L88 36 L76 30 L44 30 Z" fill="#EFECE6" stroke="#3B3831" stroke-width="1.5"/>' +
-        '<polygon points="31,45 89,45 85,59 60,62 35,59" fill="#26231E" stroke="#DAD4BB" stroke-width="1.4"/>' +
-        '<polygon points="38,52 56,54 56,56 38,55" fill="#2B8C84"/>' +
-        '<polygon points="82,52 64,54 64,56 82,55" fill="#2B8C84"/>' +
-        '<line x1="50" y1="73" x2="70" y2="73" stroke="#3B3831" stroke-width="2"/>';
-    } else if (t === 4) {
-      // Tier 4: Stern veteran, angular armor collar, diagonal battle scars, intense sharp eyes
-      body =
-        '<polygon points="14,116 26,82 60,78 94,82 106,116" fill="#2E2B25" stroke="#DAD4BB" stroke-width="1.8"/>' +
-        '<polygon points="26,82 44,96 40,116 18,116" fill="#4E4B42"/>' +
-        '<polygon points="94,82 76,96 80,116 102,116" fill="#4E4B42"/>' +
-        '<polygon points="34,38 44,20 76,20 86,38 82,68 60,86 38,68" fill="#CEC8B0" stroke="#26231E" stroke-width="2"/>' +
-        '<polygon points="32,36 46,16 74,16 88,36 74,28 46,28" fill="#8E8878" stroke="#26231E" stroke-width="1.5"/>' +
-        '<line x1="42" y1="36" x2="54" y2="68" stroke="#B83A2D" stroke-width="2"/>' +
-        '<line x1="45" y1="34" x2="57" y2="66" stroke="#3B3831" stroke-width="1"/>' +
-        '<line x1="68" y1="62" x2="78" y2="75" stroke="#3B3831" stroke-width="1.6"/>' +
-        '<polygon points="39,46 57,51 56,54 39,50" fill="#26231E"/>' +
-        '<polygon points="81,46 63,51 64,54 81,50" fill="#26231E"/>' +
-        '<polygon points="42,53 55,54 53,58 43,57" fill="#D99B26"/>' +
-        '<polygon points="78,53 65,54 67,58 77,57" fill="#D99B26"/>' +
-        '<path d="M49 74 L60 71 L71 74" fill="none" stroke="#26231E" stroke-width="2.2"/>';
-    } else if (t === 5) {
-      // Tier 5: Half-masked Executioner android, lower face armored respirator, glowing amber eyes, aggressive brows
-      body =
-        '<polygon points="12,116 24,80 60,74 96,80 108,116" fill="#26231E" stroke="#DAD4BB" stroke-width="1.8"/>' +
-        '<line x1="34" y1="84" x2="50" y2="116" stroke="#B88A2D" stroke-width="1.5"/>' +
-        '<line x1="86" y1="84" x2="70" y2="116" stroke="#B88A2D" stroke-width="1.5"/>' +
-        '<polygon points="33,36 45,18 75,18 87,36 83,68 60,86 37,68" fill="#DAD4BB" stroke="#26231E" stroke-width="2"/>' +
-        '<polygon points="30,36 44,14 76,14 90,36 78,28 42,28" fill="#EFECE6" stroke="#26231E" stroke-width="1.6"/>' +
-        // half mask covering nose + jaw
-        '<polygon points="36,58 60,52 84,58 81,74 60,87 39,74" fill="#26231E" stroke="#DAD4BB" stroke-width="1.5"/>' +
-        '<line x1="46" y1="64" x2="74" y2="64" stroke="#7A7567" stroke-width="1.4"/>' +
-        '<line x1="48" y1="70" x2="72" y2="70" stroke="#7A7567" stroke-width="1.4"/>' +
-        '<line x1="52" y1="76" x2="68" y2="76" stroke="#B88A2D" stroke-width="1.4"/>' +
-        // fierce amber eyes
-        '<polygon points="37,43 58,50 57,53 37,47" fill="#26231E"/>' +
-        '<polygon points="83,43 62,50 63,53 83,47" fill="#26231E"/>' +
-        '<polygon points="40,50 56,52 53,56 41,55" fill="#F2A922"/>' +
-        '<polygon points="80,50 64,52 67,56 79,55" fill="#F2A922"/>' +
-        '<circle cx="48" cy="53" r="1.6" fill="#FFF7D6"/><circle cx="72" cy="53" r="1.6" fill="#FFF7D6"/>';
-    } else if (t === 6) {
-      // Tier 6: Grandmaster Warlord, crimson aura, dark jagged armor horns/plates, bright crimson eyes + scowl
-      body =
-        '<circle cx="60" cy="56" r="46" fill="none" stroke="#B83A2D" stroke-width="1.5" stroke-dasharray="5 3" opacity="0.7"/>' +
-        '<polygon points="10,116 20,76 60,70 100,76 110,116" fill="#1B1916" stroke="#B83A2D" stroke-width="1.8"/>' +
-        '<polygon points="18,74 36,60 40,86" fill="#2E2B25" stroke="#DAD4BB" stroke-width="1.2"/>' +
-        '<polygon points="102,74 84,60 80,86" fill="#2E2B25" stroke="#DAD4BB" stroke-width="1.2"/>' +
-        // horned crest
-        '<polygon points="26,14 44,32 34,38" fill="#1B1916" stroke="#B83A2D" stroke-width="1.5"/>' +
-        '<polygon points="94,14 76,32 86,38" fill="#1B1916" stroke="#B83A2D" stroke-width="1.5"/>' +
-        '<polygon points="32,34 46,18 74,18 88,34 84,68 60,88 36,68" fill="#3B3831" stroke="#DAD4BB" stroke-width="2"/>' +
-        '<polygon points="44,20 60,34 76,20" fill="#1B1916" stroke="#B83A2D" stroke-width="1.2"/>' +
-        // crimson eyes with glow
-        '<polygon points="37,43 58,52 39,56" fill="#B83A2D"/>' +
-        '<polygon points="83,43 62,52 81,56" fill="#B83A2D"/>' +
-        '<polygon points="41,47 55,52 43,54" fill="#FFD4CE"/>' +
-        '<polygon points="79,47 65,52 77,54" fill="#FFD4CE"/>' +
-        // jagged scowl
-        '<polygon points="44,73 52,69 60,72 68,69 76,73 68,77 52,77" fill="#1B1916" stroke="#B83A2D" stroke-width="1.3"/>';
-    } else {
-      // Tier 7: YoRHa Supreme — Berserk corrupted core, glitch bars, spiked crown, blazing red eyes + eye trails, menacing toothed grin
-      body =
-        '<rect x="8" y="22" width="26" height="3" fill="#B83A2D" opacity="0.85"/>' +
-        '<rect x="86" y="40" width="28" height="3" fill="#2B8C84" opacity="0.75"/>' +
-        '<rect x="6" y="78" width="22" height="4" fill="#B83A2D" opacity="0.85"/>' +
-        '<rect x="90" y="64" width="24" height="2.5" fill="#B83A2D" opacity="0.9"/>' +
-        '<circle cx="60" cy="56" r="49" fill="none" stroke="#B83A2D" stroke-width="2.2" stroke-dasharray="9 4"/>' +
-        '<polygon points="8,116 18,74 60,68 102,74 112,116" fill="#141210" stroke="#B83A2D" stroke-width="2"/>' +
-        // spiked berserk crown
-        '<polygon points="20,10 40,30 30,38" fill="#B83A2D"/>' +
-        '<polygon points="100,10 80,30 90,38" fill="#B83A2D"/>' +
-        '<polygon points="60,6 52,24 68,24" fill="#B83A2D"/>' +
-        '<polygon points="31,32 46,18 74,18 89,32 85,70 60,90 35,70" fill="#1F1C18" stroke="#EFECE6" stroke-width="2"/>' +
-        // crack lines across face
-        '<polyline points="60,18 55,36 63,46 58,62" fill="none" stroke="#B83A2D" stroke-width="1.8"/>' +
-        // blazing crimson eyes + energy trails
-        '<polygon points="34,40 58,51 38,57" fill="#FF2E1F"/>' +
-        '<polygon points="86,40 62,51 82,57" fill="#FF2E1F"/>' +
-        '<polyline points="36,46 22,36 10,38" fill="none" stroke="#FF2E1F" stroke-width="2"/>' +
-        '<polyline points="84,46 98,36 110,38" fill="none" stroke="#FF2E1F" stroke-width="2"/>' +
-        '<circle cx="46" cy="50" r="2.2" fill="#FFFFFF"/><circle cx="74" cy="50" r="2.2" fill="#FFFFFF"/>' +
-        // menacing berserk grin with teeth
-        '<polygon points="40,66 60,71 80,66 76,80 60,84 44,80" fill="#B83A2D" stroke="#EFECE6" stroke-width="1.4"/>' +
-        '<line x1="48" y1="68" x2="48" y2="80" stroke="#141210" stroke-width="1.6"/>' +
-        '<line x1="54" y1="70" x2="54" y2="82" stroke="#141210" stroke-width="1.6"/>' +
-        '<line x1="60" y1="71" x2="60" y2="83" stroke="#141210" stroke-width="1.6"/>' +
-        '<line x1="66" y1="70" x2="66" y2="82" stroke="#141210" stroke-width="1.6"/>' +
-        '<line x1="72" y1="68" x2="72" y2="80" stroke="#141210" stroke-width="1.6"/>';
-    }
-
-    return head + grid + body + '</svg>';
+      '<text x="60" y="111" text-anchor="middle" fill="' + fg + '" font-size="9" font-family="sans-serif" letter-spacing="1.5">' + stars + '</text>' +
+      '</svg>'
+    );
   }
 
   function get(id) {

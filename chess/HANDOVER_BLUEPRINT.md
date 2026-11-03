@@ -10,14 +10,14 @@
 | # | File | Status | Notes |
 |---|------|--------|-------|
 | 1 | `HANDOVER_BLUEPRINT.md` | [x] Completed | This file |
-| 2 | `index.html` | [x] Completed | Layout, modals, SVG arrow `<defs>`; chess.js CDN + `vendor/` fallback |
-| 3 | `style.css` | [x] Completed | YoRHa theme, 3-col desktop / mobile tabs (`body[data-mtab]`) |
-| 4 | `i18n.js` | [x] Completed | `I18N` global, `vi` default + `en`; keys `r.*` (played-move reasons), `b.*` (best-move reasons) |
-| 5 | `engine.js` | [x] Completed | `Engine` global: worker, cloud eval, classifier, commentary |
-| 6 | `app.js` | [x] Completed | `App` global: controller, board, coach HUD, review, puzzles, archive |
-| 7 | `audio.js` | [x] Completed | `YoRHaAudio` global: procedural Web Audio API synthesizer |
-| 8 | `bots.js` | [x] Completed | `Bots` global: 7 tiers, bilingual dialogues, escalating SVG portraits |
-| 9 | `storage.js` | [x] Completed | `YStorage` global: profile, settings, archive, `.json` export/import |
+| 2 | `index.html` | [x] Completed | Landing Main Menu (`#screen-menu`), 2-col Game Workspace (`#screen-game`), NieR `.popupSection` modals, custom favicon |
+| 3 | `style.css` | [x] Completed | Authentic CDN NieR theme (`#ccc6b0` 5px grid, `.coreSystem`, `.section`, `.themebutton`, `.popupSection`) + CRT scanlines/phosphor blur |
+| 4 | `i18n.js` | [x] Completed | Standard Chess.com-style `vi` + `en` localization, SAN move notation, zero game lore |
+| 5 | `engine.js` | [x] Completed | `Engine` global: worker, cloud eval, classifier, SAN commentary (`describeMove` returns pure SAN) |
+| 6 | `app.js` | [x] Completed | `App` global: menu/game routing, desktop drag-and-drop, `0.2s` piece slide animation, collapsible analysis, pawn promotion fix |
+| 7 | `audio.js` | [x] Completed | `YoRHaAudio` global: CDN `.ogg` UI sounds, `fortress-of-lies-the-bunker.ogg` BGM, realistic wooden chess piece synthesis |
+| 8 | `bots.js` | [x] Completed | `Bots` global: 7 standard chess engine tiers (400–2850 Elo), classical chess piece SVG emblems, pure chess dialogues |
+| 9 | `storage.js` | [x] Completed | `YStorage` global: profile, BGM/audio settings, archive, `.json` export/import |
 | 10 | `puzzles.js` | [x] Completed | `PUZZLES`, `PUZZLE_CATEGORIES` globals (100 verified puzzles across 4 categories) |
 
 Status legend: `[ ] Pending`, `[~] In Progress`, `[x] Completed`.

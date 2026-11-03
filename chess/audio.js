@@ -1,17 +1,60 @@
 /* =====================================================================
-   YoRHa Tactical Chess System — audio.js
-   Global: YoRHaAudio — zero-dependency Web Audio API synthesizer
-   replicating NieR: Automata mechanical clicks, confirm chimes, piece
-   clacks, check sirens, and blunder glitch alerts.
+   Chess System — audio.js
+   Global: YoRHaAudio
+   - UI sounds from https://hoanganhdinhngoc.github.io/cdn/sounds/
+   - Background music: fortress-of-lies-the-bunker.ogg (loop, toggle + volume)
+   - Realistic wooden chess piece placement sound (Web Audio synthesis)
    ===================================================================== */
 (function () {
   'use strict';
+
+  const CDN_SOUNDS = 'https://hoanganhdinhngoc.github.io/cdn/sounds/';
+  const BGM_URL = CDN_SOUNDS + 'fortress-of-lies-the-bunker.ogg';
 
   let ctx = null;
   let master = null;
   let noiseBuf = null;
   let enabled = true;
-  let volume = 0.6;
+  let volume = 0.7;
+  let bgmEnabled = true;
+  let bgmVolume = 0.35;
+  let bgmAudio = null;
+  let bgmWanted = false;
+
+  const uiClips = {};
+  const CLIP_FILES = {
+    core_1: 'core_1.ogg',
+    core_16: 'core_16.ogg',
+    core_20: 'core_20.ogg',
+    core_32: 'core_32.ogg',
+    core_52: 'core_52.ogg',
+    core_58: 'core_58.ogg',
+    core_76: 'core_76.ogg'
+  };
+
+  function preloadClips() {
+    Object.keys(CLIP_FILES).forEach(k => {
+      if (uiClips[k]) return;
+      try {
+        const a = new Audio(CDN_SOUNDS + CLIP_FILES[k]);
+        a.preload = 'auto';
+        a.volume = enabled ? volume : 0;
+        uiClips[k] = a;
+      } catch (e) { /* ignore */ }
+    });
+  }
+
+  function ensureBgm() {
+    if (!bgmAudio) {
+      try {
+        bgmAudio = new Audio(BGM_URL);
+        bgmAudio.loop = true;
+        bgmAudio.preload = 'auto';
+        bgmAudio.volume = bgmEnabled ? bgmVolume : 0;
+      } catch (e) { /* ignore */ }
+    }
+    return bgmAudio;
+  }
 
   function ensureCtx() {
     if (!ctx) {
@@ -21,8 +64,7 @@
       master = ctx.createGain();
       master.gain.value = enabled ? volume : 0;
       master.connect(ctx.destination);
-      // 0.3s white noise buffer for mechanical / glitch textures
-      const len = Math.floor(ctx.sampleRate * 0.3);
+      const len = Math.floor(ctx.sampleRate * 0.25);
       noiseBuf = ctx.createBuffer(1, len, ctx.sampleRate);
       const data = noiseBuf.getChannelData(0);
       for (let i = 0; i < len; i++) data[i] = Math.random() * 2 - 1;
@@ -33,151 +75,203 @@
     return ctx;
   }
 
-  function tone(freq, type, startOffset, dur, gainVal, freqEnd) {
-    if (!ctx || !enabled) return;
-    const t0 = ctx.currentTime + (startOffset || 0);
-    const osc = ctx.createOscillator();
-    const g = ctx.createGain();
-    osc.type = type || 'sine';
-    osc.frequency.setValueAtTime(freq, t0);
-    if (freqEnd && freqEnd !== freq) {
-      osc.frequency.exponentialRampToValueAtTime(Math.max(20, freqEnd), t0 + dur);
-    }
-    g.gain.setValueAtTime(0.0001, t0);
-    g.gain.linearRampToValueAtTime(gainVal, t0 + Math.min(0.008, dur * 0.2));
-    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
-    osc.connect(g);
-    g.connect(master);
-    osc.start(t0);
-    osc.stop(t0 + dur + 0.01);
+  function playClip(key, volScale) {
+    if (!enabled) return;
+    preloadClips();
+    const base = uiClips[key];
+    if (!base) return;
+    try {
+      base.volume = Math.max(0, Math.min(1, volume * (volScale || 1)));
+      base.currentTime = 0;
+      base.play().catch(() => {});
+    } catch (e) { /* ignore */ }
   }
 
-  function burstNoise(startOffset, dur, gainVal, filterFreq, filterType, q) {
-    if (!ctx || !enabled || !noiseBuf) return;
-    const t0 = ctx.currentTime + (startOffset || 0);
-    const src = ctx.createBufferSource();
-    src.buffer = noiseBuf;
-    const flt = ctx.createBiquadFilter();
-    flt.type = filterType || 'bandpass';
-    flt.frequency.setValueAtTime(filterFreq || 1800, t0);
-    flt.Q.setValueAtTime(q || 2.5, t0);
-    const g = ctx.createGain();
-    g.gain.setValueAtTime(gainVal, t0);
-    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
-    src.connect(flt);
-    flt.connect(g);
-    g.connect(master);
-    src.start(t0);
-    src.stop(t0 + dur + 0.01);
-  }
+  /* ------------------------------------------------------------------
+     Realistic Wooden Chess Piece Sound (Web Audio API)
+     Simulates a weighted wooden Staunton piece set down on a wooden board:
+     - Warm low-mid wood body resonance (135–190 Hz + 340–480 Hz)
+     - Crisp felt/wood contact transient (filtered noise burst)
+     - Optional secondary knock for captures or castling
+     ------------------------------------------------------------------ */
+  function woodKnock(offset, intensity, pitchShift) {
+    if (!ensureCtx() || !enabled) return;
+    const t0 = ctx.currentTime + (offset || 0);
+    const p = pitchShift || 1;
+    const amp = (intensity || 1) * 0.55;
 
-  const sounds = {
-    click() {
-      burstNoise(0, 0.022, 0.18, 2600, 'bandpass', 4);
-      tone(1480, 'triangle', 0, 0.028, 0.14, 920);
-    },
-    hover() {
-      tone(1960, 'sine', 0, 0.018, 0.06, 2100);
-    },
-    select() {
-      burstNoise(0, 0.018, 0.12, 2200, 'highpass', 1.5);
-      tone(1046.5, 'triangle', 0, 0.045, 0.14, 1318.5);
-    },
-    confirm() {
-      // NieR menu confirm double-chime
-      burstNoise(0, 0.02, 0.14, 3000, 'bandpass', 3);
-      tone(880, 'triangle', 0, 0.09, 0.18);
-      tone(1318.5, 'sine', 0.055, 0.16, 0.2);
-      tone(1760, 'sine', 0.055, 0.18, 0.08);
-    },
-    cancel() {
-      burstNoise(0, 0.025, 0.14, 1600, 'bandpass', 3);
-      tone(987.8, 'triangle', 0, 0.07, 0.16);
-      tone(659.3, 'triangle', 0.05, 0.13, 0.16);
-    },
-    move() {
-      // crisp mechanical piece clack
-      burstNoise(0, 0.032, 0.26, 1100, 'bandpass', 2.2);
-      tone(320, 'triangle', 0, 0.045, 0.22, 140);
-      tone(960, 'sine', 0.006, 0.03, 0.09, 640);
-    },
-    capture() {
-      // heavier metallic impact
-      burstNoise(0, 0.055, 0.36, 900, 'bandpass', 1.6);
-      tone(220, 'sawtooth', 0, 0.08, 0.24, 95);
-      tone(1240, 'triangle', 0.01, 0.06, 0.16, 480);
-    },
-    castle() {
-      // two-step mechanical slide + lock
-      burstNoise(0, 0.03, 0.22, 1150, 'bandpass', 2);
-      tone(310, 'triangle', 0, 0.045, 0.2, 150);
-      burstNoise(0.085, 0.035, 0.24, 1350, 'bandpass', 2);
-      tone(420, 'triangle', 0.085, 0.055, 0.22, 210);
-    },
-    check() {
-      // YoRHa tactical alert siren
-      tone(880, 'sawtooth', 0, 0.11, 0.18, 1174.7);
-      tone(880, 'sawtooth', 0.12, 0.14, 0.2, 1318.5);
-      tone(1760, 'sine', 0.12, 0.16, 0.1);
-    },
-    promote() {
-      // ascending triad + shimmer
-      tone(659.3, 'triangle', 0, 0.09, 0.18);
-      tone(880, 'triangle', 0.07, 0.1, 0.19);
-      tone(1174.7, 'sine', 0.14, 0.12, 0.2);
-      tone(1760, 'sine', 0.21, 0.22, 0.22);
-    },
-    blunder() {
-      // corrupted glitch alert + low drop
-      burstNoise(0, 0.06, 0.35, 750, 'bandpass', 1.2);
-      burstNoise(0.08, 0.08, 0.32, 1900, 'bandpass', 3);
-      tone(370, 'sawtooth', 0, 0.11, 0.22, 260);
-      tone(246.9, 'sawtooth', 0.09, 0.22, 0.24, 110);
-    },
-    brilliant() {
-      // crystalline Pod chime
-      tone(1046.5, 'sine', 0, 0.14, 0.18);
-      tone(1318.5, 'sine', 0.06, 0.16, 0.18);
-      tone(1568, 'sine', 0.12, 0.2, 0.2);
-      tone(2093, 'triangle', 0.18, 0.28, 0.22);
-    },
-    start() {
-      // mission start sequence
-      burstNoise(0, 0.04, 0.16, 2400, 'bandpass', 3);
-      tone(440, 'triangle', 0, 0.08, 0.16);
-      tone(659.3, 'triangle', 0.065, 0.09, 0.18);
-      tone(880, 'sine', 0.13, 0.2, 0.22);
-    },
-    end() {
-      tone(880, 'triangle', 0, 0.12, 0.18);
-      tone(659.3, 'triangle', 0.1, 0.14, 0.18);
-      tone(440, 'sine', 0.2, 0.28, 0.22);
-    },
-    error() {
-      burstNoise(0, 0.045, 0.24, 950, 'bandpass', 2);
-      tone(260, 'sawtooth', 0, 0.09, 0.18, 180);
-    },
-    tick() {
-      tone(1600, 'sine', 0, 0.02, 0.09);
+    // 1. Primary wood board cavity thump (warm low-mid)
+    const body = ctx.createOscillator();
+    const bodyGain = ctx.createGain();
+    body.type = 'sine';
+    body.frequency.setValueAtTime(175 * p, t0);
+    body.frequency.exponentialRampToValueAtTime(72 * p, t0 + 0.065);
+    bodyGain.gain.setValueAtTime(0.0001, t0);
+    bodyGain.gain.linearRampToValueAtTime(amp, t0 + 0.003);
+    bodyGain.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.075);
+    body.connect(bodyGain);
+    bodyGain.connect(master);
+    body.start(t0);
+    body.stop(t0 + 0.08);
+
+    // 2. Hardwood piece resonance (mid-wood timbre)
+    const wood = ctx.createOscillator();
+    const woodGain = ctx.createGain();
+    wood.type = 'triangle';
+    wood.frequency.setValueAtTime(430 * p, t0);
+    wood.frequency.exponentialRampToValueAtTime(195 * p, t0 + 0.038);
+    woodGain.gain.setValueAtTime(0.0001, t0);
+    woodGain.gain.linearRampToValueAtTime(amp * 0.65, t0 + 0.002);
+    woodGain.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.042);
+    wood.connect(woodGain);
+    woodGain.connect(master);
+    wood.start(t0);
+    wood.stop(t0 + 0.048);
+
+    // 3. Short wooden surface tap transient (bandpass noise)
+    if (noiseBuf) {
+      const src = ctx.createBufferSource();
+      src.buffer = noiseBuf;
+      const bp = ctx.createBiquadFilter();
+      bp.type = 'bandpass';
+      bp.frequency.setValueAtTime(780 * p, t0);
+      bp.Q.setValueAtTime(2.4, t0);
+      const lp = ctx.createBiquadFilter();
+      lp.type = 'lowpass';
+      lp.frequency.setValueAtTime(1850, t0);
+      const nGain = ctx.createGain();
+      nGain.gain.setValueAtTime(amp * 0.9, t0);
+      nGain.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.024);
+      src.connect(bp);
+      bp.connect(lp);
+      lp.connect(nGain);
+      nGain.connect(master);
+      src.start(t0);
+      src.stop(t0 + 0.03);
     }
-  };
+  }
 
   const YoRHaAudio = {
     get enabled() { return enabled; },
-    init() { ensureCtx(); },
+    get volume() { return volume; },
+    get bgmEnabled() { return bgmEnabled; },
+    get bgmVolume() { return bgmVolume; },
+
+    init() {
+      preloadClips();
+      ensureCtx();
+      if (bgmWanted && bgmEnabled) {
+        this.startBgm();
+      }
+    },
+
     play(name) {
       if (!enabled) return;
-      if (!ensureCtx()) return;
-      const fn = sounds[name] || sounds.click;
-      try { fn(); } catch (e) { /* ignore audio errors */ }
+      switch (name) {
+        // Wooden board piece sounds
+        case 'move':
+          woodKnock(0, 0.95, 1.0);
+          break;
+        case 'capture':
+          // Slightly sharper initial contact + firm wooden set-down
+          woodKnock(0, 0.7, 1.28);
+          woodKnock(0.028, 1.15, 0.92);
+          break;
+        case 'castle':
+          // King + Rook two-step wooden placement
+          woodKnock(0, 0.95, 0.96);
+          woodKnock(0.11, 0.9, 1.08);
+          break;
+        case 'promote':
+          woodKnock(0, 1.05, 0.95);
+          playClip('core_58', 0.75);
+          break;
+        case 'check':
+          woodKnock(0, 1.05, 1.12);
+          playClip('core_20', 0.75);
+          break;
+        case 'select':
+          // Subtle wooden pick-up tap
+          woodKnock(0, 0.35, 1.35);
+          break;
+        case 'tick':
+          woodKnock(0, 0.28, 1.5);
+          break;
+
+        // NieR CDN UI sounds
+        case 'hover':
+          playClip('core_16', 0.7);
+          break;
+        case 'click':
+          playClip('core_52', 0.85);
+          break;
+        case 'confirm':
+        case 'start':
+        case 'brilliant':
+          playClip('core_58', 0.9);
+          break;
+        case 'cancel':
+          playClip('core_1', 0.85);
+          break;
+        case 'end':
+          playClip('core_32', 0.9);
+          break;
+        case 'blunder':
+        case 'error':
+          playClip('core_76', 0.9);
+          break;
+        default:
+          playClip('core_52', 0.8);
+          break;
+      }
     },
+
     setEnabled(flag) {
       enabled = !!flag;
       if (master && ctx) master.gain.setValueAtTime(enabled ? volume : 0, ctx.currentTime);
+      Object.values(uiClips).forEach(a => { a.volume = enabled ? volume : 0; });
     },
+
     setVolume(v) {
       volume = Math.max(0, Math.min(1, Number(v) || 0));
       if (master && ctx) master.gain.setValueAtTime(enabled ? volume : 0, ctx.currentTime);
+      Object.values(uiClips).forEach(a => { a.volume = enabled ? volume : 0; });
+    },
+
+    startBgm() {
+      bgmWanted = true;
+      const a = ensureBgm();
+      if (!a) return;
+      a.volume = bgmEnabled ? bgmVolume : 0;
+      if (bgmEnabled && a.paused) {
+        a.play().catch(() => {});
+      }
+    },
+
+    stopBgm() {
+      bgmWanted = false;
+      if (bgmAudio && !bgmAudio.paused) {
+        try { bgmAudio.pause(); } catch (e) { /* ignore */ }
+      }
+    },
+
+    setBgmEnabled(flag) {
+      bgmEnabled = !!flag;
+      const a = ensureBgm();
+      if (!a) return;
+      a.volume = bgmEnabled ? bgmVolume : 0;
+      if (bgmEnabled && bgmWanted) {
+        a.play().catch(() => {});
+      } else if (!bgmEnabled && !a.paused) {
+        a.pause();
+      }
+    },
+
+    setBgmVolume(v) {
+      bgmVolume = Math.max(0, Math.min(1, Number(v) || 0));
+      if (bgmAudio) {
+        bgmAudio.volume = bgmEnabled ? bgmVolume : 0;
+      }
     }
   };
 

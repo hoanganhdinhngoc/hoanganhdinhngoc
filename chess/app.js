@@ -1,6 +1,7 @@
 /* =====================================================================
-   YoRHa Tactical Chess System — app.js
-   Global: App — main controller (board, input, game flow, coach, review,
+   Standard Chess & Tactical Analysis System — app.js
+   Global: App — main controller (menu, modals, board, drag-and-drop,
+   0.2s piece animation, game flow, collapsible analysis, review,
    puzzles, archive, settings, i18n re-rendering).
    Depends on: Chess (chess.js 0.10.3), I18N, YoRHaAudio, YStorage, Bots,
                PUZZLES / PUZZLE_CATEGORIES, Engine
@@ -20,7 +21,7 @@
   };
 
   /* ------------------------------------------------------------------
-     Geometric YoRHa piece set (viewBox 0 0 45 45)
+     Chess Piece SVG Set (viewBox 0 0 45 45)
      ------------------------------------------------------------------ */
   const PIECE_PATHS = {
     p: '<circle cx="22.5" cy="12" r="5.5"/><path d="M18 18 L27 18 L25.5 22 L19.5 22 Z"/><path d="M19.5 22 L25.5 22 L29.5 34 L15.5 34 Z"/><rect x="12" y="34" width="21" height="5"/>',
@@ -41,7 +42,8 @@
      State
      ------------------------------------------------------------------ */
   const S = {
-    mode: 'idle',
+    view: 'menu',            // 'menu' | 'game'
+    mode: 'idle',            // 'idle' | 'bot' | 'pvp' | 'puzzle' | 'review'
     chess: new Chess(),
     startFen: Engine.START_FEN,
     orientation: 'w',
@@ -49,7 +51,7 @@
     bot: null,
     white: null, black: null,
     history: [],
-    liveEval: true,
+    liveEval: false,
     timeControl: 'none',
     clock: { enabled: false, w: 0, b: 0, inc: 0, last: 0, timer: null },
     gameOver: false, result: null, termination: null,
@@ -67,7 +69,8 @@
     coachFn: null,
     goFn: null,
     botLineFn: null, lastBotMood: null,
-    puzzleFilter: 'all'
+    puzzleFilter: 'all',
+    pendingAnims: []         // [{ from, to }] queued for 0.2s slide animation
   };
 
   const els = {};
@@ -76,11 +79,12 @@
   let promoResolve = null;
 
   /* ------------------------------------------------------------------
-     Utils
+     Utils & Screen Navigation
      ------------------------------------------------------------------ */
   let toastTimer = null;
   function toast(msg, alert) {
     const t = els.toast;
+    if (!t) return;
     t.textContent = msg;
     t.classList.toggle('alert', !!alert);
     t.classList.remove('hidden');
@@ -89,6 +93,43 @@
   }
   function sound(name) { try { YoRHaAudio.play(name); } catch (e) { /* */ } }
   function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+  function showMenuScreen(force) {
+    if (!force && S.history.length && !S.gameOver && ['bot', 'pvp'].indexOf(S.mode) >= 0) {
+      if (!window.confirm(T('alert.confirmNew'))) return false;
+    }
+    S.moveToken++;
+    S.review.token++;
+    stopClock();
+    Engine.cancelAnalysis();
+    YoRHaAudio.stopBgm();
+    S.view = 'menu';
+    document.body.dataset.view = 'menu';
+    els.screenMenu.classList.remove('hidden');
+    els.screenGame.classList.add('hidden');
+    sound('cancel');
+    return true;
+  }
+
+  function showGameScreen() {
+    S.view = 'game';
+    document.body.dataset.view = 'game';
+    els.screenMenu.classList.add('hidden');
+    els.screenGame.classList.remove('hidden');
+    YoRHaAudio.startBgm();
+    syncAnalysisVisibility();
+  }
+
+  function syncAnalysisVisibility() {
+    const showAnalysis = S.liveEval || S.review.active;
+    if (els.evalBar) els.evalBar.classList.toggle('hidden', !showAnalysis);
+    if (els.paneCoach) els.paneCoach.classList.toggle('hidden', !showAnalysis);
+    if (els.reviewControlsWrap) els.reviewControlsWrap.classList.toggle('hidden', !S.review.active);
+    if (els.paneBot) els.paneBot.classList.toggle('hidden', S.mode !== 'bot');
+    if (els.panePuzzleActive) els.panePuzzleActive.classList.toggle('hidden', S.mode !== 'puzzle');
+    if (els.coachSource) els.coachSource.classList.add('hidden');
+  }
+
   function fmtClock(ms) {
     if (!S.clock.enabled) return '∞';
     ms = Math.max(0, ms);
@@ -113,21 +154,13 @@
   }
   function setStatus(fn, alert) { S.statusFn = fn; S.statusAlert = !!alert; renderStatus(); }
   function renderStatus() {
+    if (!els.status) return;
     els.status.textContent = S.statusFn ? S.statusFn() : T('status.idle');
     els.status.classList.toggle('alert', S.statusAlert);
   }
-  function switchTab(tab) {
-    // desktop
-    const dt = tab === 'settings' ? 'archive' : tab;
-    document.querySelectorAll('.dtab').forEach(b => b.classList.toggle('active', b.dataset.dtab === dt));
-    document.querySelectorAll('#col-right .dpane').forEach(p => p.classList.toggle('dtab-active', p.dataset.dtab === dt));
-    // mobile
-    document.body.dataset.mtab = tab;
-    document.querySelectorAll('.mtab').forEach(b => b.classList.toggle('active', b.dataset.mtab === tab));
-  }
 
   /* ------------------------------------------------------------------
-     Board construction & rendering
+     Board construction, rendering & 0.2s Piece Slide Animation
      ------------------------------------------------------------------ */
   function buildBoard() {
     const board = els.board;
@@ -149,7 +182,52 @@
         squares[sq] = d;
       }
     }
-    els.evalBar.classList.toggle('flipped', S.orientation === 'b');
+    if (els.evalBar) els.evalBar.classList.toggle('flipped', S.orientation === 'b');
+  }
+
+  function queueMoveAnimation(m) {
+    if (!m || !m.from || !m.to) return;
+    const list = [{ from: m.from, to: m.to }];
+    // Also animate rook during castling
+    if (m.flags && m.flags.indexOf('k') >= 0) {
+      const rank = m.color === 'w' ? '1' : '8';
+      list.push({ from: 'h' + rank, to: 'f' + rank });
+    } else if (m.flags && m.flags.indexOf('q') >= 0) {
+      const rank = m.color === 'w' ? '1' : '8';
+      list.push({ from: 'a' + rank, to: 'd' + rank });
+    }
+    S.pendingAnims = list;
+  }
+
+  function runPendingAnimations() {
+    if (!S.pendingAnims || !S.pendingAnims.length) return;
+    const anims = S.pendingAnims.slice();
+    S.pendingAnims = [];
+    anims.forEach(a => {
+      const fromSq = squares[a.from];
+      const toSq = squares[a.to];
+      if (!fromSq || !toSq || !toSq._piece) return;
+      const rFrom = fromSq.getBoundingClientRect();
+      const rTo = toSq.getBoundingClientRect();
+      if (!rFrom.width || !rTo.width) return;
+      const dx = rFrom.left - rTo.left;
+      const dy = rFrom.top - rTo.top;
+      if (Math.abs(dx) < 1 && Math.abs(dy) < 1) return;
+      const pEl = toSq._piece;
+      pEl.style.transition = 'none';
+      pEl.style.transform = 'translate(' + dx + 'px, ' + dy + 'px)';
+      pEl.style.zIndex = '18';
+      void pEl.offsetWidth; // force reflow before 0.2s transition
+      pEl.style.transition = 'transform 0.2s cubic-bezier(0.22, 1, 0.36, 1)';
+      pEl.style.transform = 'translate(0px, 0px)';
+      setTimeout(() => {
+        if (pEl) {
+          pEl.style.transition = '';
+          pEl.style.transform = '';
+          pEl.style.zIndex = '';
+        }
+      }, 215);
+    });
   }
 
   function currentFen() { return S.viewFen || S.chess.fen(); }
@@ -171,9 +249,12 @@
     }
     // last move
     const last = lastMoveForDisplay();
-    if (last) { squares[last.from] && squares[last.from].classList.add('last'); squares[last.to] && squares[last.to].classList.add('last'); }
-    // classification mark
-    if (last && last.cls && squares[last.to]) {
+    if (last) {
+      if (squares[last.from]) squares[last.from].classList.add('last');
+      if (squares[last.to]) squares[last.to].classList.add('last');
+    }
+    // classification mark (only when Analysis is ON or in Review)
+    if (last && last.cls && squares[last.to] && (S.liveEval || S.review.active)) {
       const m = document.createElement('span');
       m.className = 'cls-mark';
       m.style.background = CLS_COLORS[last.cls];
@@ -189,12 +270,18 @@
       }
     }
     // selection
-    if (S.selected && !S.viewFen) {
+    if (S.selected && !S.viewFen && squares[S.selected]) {
       squares[S.selected].classList.add('selected');
       const settings = YStorage.getSettings();
-      if (settings.showLegal) S.legal.forEach(m => { const d = squares[m.to]; d.classList.add('legal'); if (m.captured) d.classList.add('capture'); });
+      if (settings.showLegal) {
+        S.legal.forEach(m => {
+          const d = squares[m.to];
+          if (d) { d.classList.add('legal'); if (m.captured) d.classList.add('capture'); }
+        });
+      }
     }
     if (S.puzzle && S.puzzle.hintSq && squares[S.puzzle.hintSq]) squares[S.puzzle.hintSq].classList.add('hint-sq');
+    runPendingAnimations();
     renderArrows();
     renderPlayers();
   }
@@ -223,6 +310,7 @@
   function clearArrows() { S.arrows = []; renderArrows(); }
   function renderArrows() {
     const g = els.arrowGroup;
+    if (!g) return;
     g.innerHTML = '';
     S.arrows.forEach(a => {
       if (!a || !a.from || !a.to || a.from === a.to) return;
@@ -250,6 +338,7 @@
     fillBar(els.barBottom, botColor);
   }
   function fillBar(bar, color) {
+    if (!bar) return;
     const p = color === 'w' ? S.white : S.black;
     const lbl = playerLabel(p);
     bar.querySelector('.pcolor').className = 'pcolor ' + color;
@@ -281,15 +370,19 @@
 
   /* ---------- eval bar ---------- */
   function updateEvalBar(analysis) {
-    if (!analysis) return;
+    if (!analysis || !els.evalFill || !els.evalText) return;
     const w = Engine.winPercent(analysis.cpWhite);
     els.evalFill.style.height = w.toFixed(1) + '%';
     els.evalText.textContent = Engine.formatEval(analysis.cpWhite, analysis.mate);
   }
-  function resetEvalBar() { els.evalFill.style.height = '50%'; els.evalText.textContent = '0.0'; }
+  function resetEvalBar() {
+    if (!els.evalFill || !els.evalText) return;
+    els.evalFill.style.height = '50%';
+    els.evalText.textContent = '0.0';
+  }
 
   /* ------------------------------------------------------------------
-     Input: pointer drag + tap-to-move (mouse & touch unified)
+     Input: Desktop Drag-and-Drop (Chess.com style) + Touch Support
      ------------------------------------------------------------------ */
   function squareFromPoint(x, y) {
     const r = els.board.getBoundingClientRect();
@@ -316,33 +409,52 @@
     const sq = squareFromPoint(e.clientX, e.clientY);
     if (!sq) return;
     e.preventDefault();
-    if (S.selected && S.legal.some(m => m.to === sq)) { attemptMove(S.selected, sq); return; }
+
+    // Only allow tap-to-move on touch devices; desktop mouse requires drag-and-drop
+    if (e.pointerType !== 'mouse' && S.selected && S.legal.some(m => m.to === sq)) {
+      attemptMove(S.selected, sq, true);
+      return;
+    }
+
     const p = S.chess.get(sq);
     if (p && p.color === S.chess.turn()) {
       const wasSelected = S.selected === sq;
       select(sq);
-      drag = { from: sq, x: e.clientX, y: e.clientY, id: e.pointerId, dragging: false, wasSelected, ghost: null };
+      drag = {
+        from: sq,
+        x: e.clientX,
+        y: e.clientY,
+        id: e.pointerId,
+        pointerType: e.pointerType,
+        dragging: false,
+        wasSelected,
+        ghost: null
+      };
       try { els.board.setPointerCapture(e.pointerId); } catch (x) { /* */ }
     } else if (S.selected) {
       deselect();
     }
   }
+
   function onPointerMove(e) {
     if (!drag || e.pointerId !== drag.id) return;
     const dist = Math.hypot(e.clientX - drag.x, e.clientY - drag.y);
-    if (!drag.dragging && dist > 6) {
+    if (!drag.dragging && dist > 3) {
       drag.dragging = true;
       const g = document.createElement('div');
       g.className = 'drag-ghost';
       const size = els.board.getBoundingClientRect().width / 8;
-      g.style.width = size + 'px'; g.style.height = size + 'px';
+      g.style.width = size + 'px';
+      g.style.height = size + 'px';
       const p = S.chess.get(drag.from);
-      g.innerHTML = pieceSVG(p.color, p.type);
+      if (p) g.innerHTML = pieceSVG(p.color, p.type);
       document.body.appendChild(g);
       drag.ghost = g;
-      squares[drag.from]._piece.classList.add('dragging-src');
+      if (squares[drag.from] && squares[drag.from]._piece) {
+        squares[drag.from]._piece.classList.add('dragging-src');
+      }
     }
-    if (drag.dragging) {
+    if (drag.dragging && drag.ghost) {
       drag.ghost.style.left = e.clientX + 'px';
       drag.ghost.style.top = e.clientY + 'px';
       const over = squareFromPoint(e.clientX, e.clientY);
@@ -350,38 +462,53 @@
       if (over && squares[over]) squares[over].classList.add('drag-over');
     }
   }
+
   function onPointerUp(e) {
     if (!drag || e.pointerId !== drag.id) return;
-    const d = drag; drag = null;
+    const d = drag;
+    drag = null;
     try { els.board.releasePointerCapture(e.pointerId); } catch (x) { /* */ }
     if (d.ghost) d.ghost.remove();
-    if (squares[d.from]) squares[d.from]._piece.classList.remove('dragging-src');
+    if (squares[d.from] && squares[d.from]._piece) {
+      squares[d.from]._piece.classList.remove('dragging-src');
+    }
     Object.values(squares).forEach(s => s.classList.remove('drag-over'));
+
     if (d.dragging) {
       const to = squareFromPoint(e.clientX, e.clientY);
-      if (to && to !== d.from && S.legal.some(m => m.to === to)) attemptMove(d.from, to);
-      else render();
+      const legalMoves = S.chess.moves({ square: d.from, verbose: true });
+      if (to && to !== d.from && legalMoves.some(m => m.to === to)) {
+        attemptMove(d.from, to, true);
+      } else {
+        render();
+      }
     } else if (d.wasSelected) {
       deselect();
     }
   }
+
   function onPointerCancel() {
     if (!drag) return;
     if (drag.ghost) drag.ghost.remove();
-    if (squares[drag.from]) squares[drag.from]._piece.classList.remove('dragging-src');
-    drag = null; render();
+    if (squares[drag.from] && squares[drag.from]._piece) {
+      squares[drag.from]._piece.classList.remove('dragging-src');
+    }
+    drag = null;
+    render();
   }
 
-  async function attemptMove(from, to) {
-    const cands = S.legal.filter(m => m.from === from && m.to === to);
-    if (!cands.length) { sound('error'); return; }
+  async function attemptMove(from, to, animate) {
+    const legalFromSq = S.chess.moves({ square: from, verbose: true });
+    const cands = legalFromSq.filter(m => m.from === from && m.to === to);
+    if (!cands.length) { sound('error'); render(); return; }
     let promotion;
     if (cands.some(m => m.promotion)) {
       promotion = await askPromotion(S.chess.turn());
       if (!promotion) { deselect(); return; }
     }
-    S.selected = null; S.legal = [];
-    playerMove({ from, to, promotion });
+    S.selected = null;
+    S.legal = [];
+    playerMove({ from, to, promotion }, animate !== false);
   }
 
   function askPromotion(color) {
@@ -391,9 +518,16 @@
       box.innerHTML = '';
       ['q', 'r', 'b', 'n'].forEach(t => {
         const b = document.createElement('button');
+        b.type = 'button';
         b.innerHTML = pieceSVG(color, t);
         b.title = I18N.pieceName(t);
-        b.onclick = () => { closeModal('modal-promo'); const r = promoResolve; promoResolve = null; r(t); };
+        b.onclick = (ev) => {
+          ev.stopPropagation();
+          const r = promoResolve;
+          promoResolve = null;
+          closeModal('modal-promo');
+          if (r) r(t);
+        };
         box.appendChild(b);
       });
       openModal('modal-promo');
@@ -424,7 +558,7 @@
     S.clock[color] += S.clock.inc;
   }
 
-  function playerMove(mv) {
+  function playerMove(mv, animate) {
     const fenBefore = S.chess.fen();
     const m = S.chess.move(mv);
     if (!m) { sound('error'); toast(T('alert.illegal'), true); render(); return; }
@@ -434,6 +568,7 @@
     clearArrows();
     S.coach.optimalShown = false;
     if (S.puzzle && S.puzzle.hintSq) S.puzzle.hintSq = null;
+    if (animate !== false) queueMoveAnimation(m);
     render();
     renderMoveList();
     if (S.mode === 'puzzle') { puzzleOnMove(entry); return; }
@@ -473,7 +608,6 @@
     if (!S.coach.entry) {
       S.coachFn = null;
       els.coachEval.textContent = Engine.formatEval(a.cpWhite, a.mate);
-      els.coachSource.textContent = T('ui.source.' + (a.source === 'rules' ? 'stockfish' : a.source)) + (a.depth ? ' · ' + T('ui.depth', { d: a.depth }) : '');
     }
   }
 
@@ -499,6 +633,7 @@
     recordMove(m, fen);
     applyIncrement(m.color);
     moveSound(m);
+    queueMoveAnimation(m);
     render();
     renderMoveList();
     if (S.chess.in_check()) botSay('botCheck');
@@ -603,6 +738,7 @@
     stopClock();
     S.history = []; S.gameOver = false; S.result = null; S.termination = null;
     S.selected = null; S.legal = []; S.viewFen = null; S.arrows = [];
+    S.pendingAnims = [];
     S.coach = { entry: null, optimalShown: false };
     S.review = { active: false, index: 0, fens: [], ready: false, token: S.review.token, summary: null };
     S.puzzle = null; S.matchId = null; S.matchTimestamp = new Date().toISOString();
@@ -611,8 +747,18 @@
     els.evalGraph.classList.add('hidden');
     els.reviewComment.classList.add('hidden');
     els.reviewProgress.classList.add('hidden');
+    if (els.reviewControlsWrap) els.reviewControlsWrap.classList.add('hidden');
     resetCoach();
     resetEvalBar();
+  }
+
+  function openSetupModal(mode) {
+    if (mode) S.setup.mode = mode;
+    document.querySelectorAll('#mode-select .seg-btn').forEach(x => x.classList.toggle('active', x.dataset.mode === S.setup.mode));
+    $('bot-setup').classList.toggle('hidden', S.setup.mode !== 'bot');
+    $('pvp-setup').classList.toggle('hidden', S.setup.mode !== 'pvp');
+    renderBotRoster();
+    openModal('modal-setup');
   }
 
   function newGame(opts) {
@@ -620,7 +766,11 @@
     if (S.history.length && !S.gameOver && ['bot', 'pvp'].indexOf(S.mode) >= 0 && !opts.force) {
       if (!window.confirm(T('alert.confirmNew'))) return;
     }
+    closeModal('modal-setup');
+    closeModal('modal-gameover');
     resetCommon();
+    showGameScreen();
+
     const profile = YStorage.getProfile();
     const mode = opts.mode || S.setup.mode;
     S.mode = mode;
@@ -650,11 +800,11 @@
       YStorage.saveSettings({ timeControl: S.timeControl });
       renderBotCard();
     }
+    syncAnalysisVisibility();
     buildBoard();
     render();
     renderMoveList();
     sound('start');
-    switchTab('coach');
     startTurn();
   }
 
@@ -670,10 +820,16 @@
       const last = S.history[S.history.length - 1];
       n = last.color === S.playerColor ? 1 : 2;
       if (S.history.length < n) n = S.history.length;
-      // if only the bot moved (player is black, first move) nothing to undo
       if (n === 1 && last.color !== S.playerColor) { toast(T('alert.takebackNA')); return; }
     }
-    for (let i = 0; i < n; i++) { S.chess.undo(); S.history.pop(); }
+    let lastUndone = null;
+    for (let i = 0; i < n; i++) {
+      lastUndone = S.chess.undo();
+      S.history.pop();
+    }
+    if (lastUndone) {
+      S.pendingAnims = [{ from: lastUndone.to, to: lastUndone.from }];
+    }
     if (S.gameOver) { S.gameOver = false; S.result = null; S.termination = null; closeModal('modal-gameover'); }
     S.selected = null; S.legal = []; clearArrows();
     S.coach = { entry: null, optimalShown: false };
@@ -698,7 +854,7 @@
   }
 
   /* ------------------------------------------------------------------
-     Live Coach
+     Live Coach & Collapsible Move Analysis
      ------------------------------------------------------------------ */
   function buildCtx(entry, before, after) {
     const idx = S.history.indexOf(entry);
@@ -710,6 +866,7 @@
   }
 
   async function coachEvaluate(entry) {
+    if (!entry) return;
     if (S.mode === 'bot' && entry.color !== S.playerColor) return;
     S.coach.entry = entry;
     S.coach.optimalShown = false;
@@ -751,7 +908,7 @@
     els.coachBadge.className = 'cls-badge cls-none';
     els.coachBadge.innerHTML = '—';
     els.coachEval.textContent = '0.00';
-    els.coachSource.textContent = '';
+    if (els.coachSource) els.coachSource.textContent = '';
     els.coachBest.classList.add('hidden');
     els.btnOptimal.classList.add('hidden');
     els.btnCoachTakeback.classList.add('hidden');
@@ -769,7 +926,7 @@
     els.coachBadge.innerHTML = I18N.CLASS_SYMBOL[c.cls] + '<small>' + I18N.classLabel(c.cls) + '</small>';
     const a = entry.ctx.after;
     els.coachEval.textContent = Engine.formatEval(a.cpWhite, a.mate);
-    els.coachSource.textContent = T('ui.source.' + (a.source === 'rules' ? 'stockfish' : a.source)) + (a.depth ? ' · ' + T('ui.depth', { d: a.depth }) : '');
+    if (els.coachSource) els.coachSource.textContent = '';
     S.coachFn = () => Engine.comment(entry.ctx, entry.cls);
     renderCoachText();
     const suboptimal = !c.isBest && ['good', 'inaccuracy', 'mistake', 'blunder'].indexOf(c.cls) >= 0;
@@ -814,43 +971,42 @@
   }
 
   /* ------------------------------------------------------------------
-     Bot card & dialogue
+     Bot roster & in-game bot banner
      ------------------------------------------------------------------ */
   function renderBotRoster() {
     const box = els.botRoster;
+    if (!box) return;
     box.innerHTML = '';
     Bots.list.forEach(b => {
       const d = document.createElement('button');
+      d.type = 'button';
       d.className = 'bot-chip' + (b.id === S.setup.botId ? ' active' : '');
       d.dataset.bot = b.id;
-      d.innerHTML = '<div class="chip-portrait">' + Bots.portrait(b.id, 56) + '</div><div class="chip-name">' + I18N.pick(b.name) + '</div><div class="chip-elo">Elo ' + b.elo + '</div>';
+      d.innerHTML = '<div class="chip-portrait">' + Bots.portrait(b.id, 46) + '</div><div class="chip-name">' + I18N.pick(b.name) + '</div><div class="chip-elo">Elo ' + b.elo + '</div>';
       d.title = I18N.pick(b.title) + ' — ' + I18N.pick(b.desc);
-      d.onclick = () => { S.setup.botId = b.id; sound('select'); renderBotRoster(); if (S.mode !== 'bot') previewBot(); };
+      d.onclick = () => {
+        S.setup.botId = b.id;
+        sound('select');
+        renderBotRoster();
+      };
       box.appendChild(d);
     });
+    const curBot = Bots.get(S.setup.botId);
+    if (els.botSelectedDesc && curBot) {
+      els.botSelectedDesc.textContent = I18N.pick(curBot.name) + ' (' + I18N.pick(curBot.title) + ' · Elo ' + curBot.elo + '): ' + I18N.pick(curBot.desc);
+    }
   }
-  function previewBot() {
-    const b = Bots.get(S.setup.botId);
-    els.botPortrait.innerHTML = Bots.portrait(b.id, 110);
-    els.botName.textContent = I18N.pick(b.name);
-    els.botElo.textContent = I18N.pick(b.title) + ' · Elo ' + b.elo;
-    S.botLineFn = () => I18N.pick(b.desc);
-    renderBotLine();
-    $('pane-bot').classList.remove('hidden', 'no-bot');
-    els.botDialogue.classList.toggle('hostile', b.tier >= 5);
-  }
+
   function renderBotCard() {
     if (S.mode === 'bot' && S.bot) {
       const b = S.bot;
-      els.botPortrait.innerHTML = Bots.portrait(b.id, 110);
+      els.botPortrait.innerHTML = Bots.portrait(b.id, 46);
       els.botName.textContent = I18N.pick(b.name);
       els.botElo.textContent = I18N.pick(b.title) + ' · Elo ' + b.elo;
-      $('pane-bot').classList.remove('hidden', 'no-bot');
+      els.paneBot.classList.remove('hidden');
       els.botDialogue.classList.toggle('hostile', b.tier >= 5);
-    } else if (S.mode === 'idle') {
-      previewBot();
     } else {
-      $('pane-bot').classList.add('hidden', 'no-bot');
+      els.paneBot.classList.add('hidden');
     }
   }
   function botSay(trigger) {
@@ -861,8 +1017,9 @@
     renderBotLine();
   }
   function renderBotLine() {
+    if (!els.botDialogue) return;
     const t = els.botDialogue.querySelector('.dlg-text');
-    t.textContent = S.botLineFn ? S.botLineFn() : '...';
+    if (t) t.textContent = S.botLineFn ? S.botLineFn() : '...';
   }
 
   /* ------------------------------------------------------------------
@@ -870,6 +1027,7 @@
      ------------------------------------------------------------------ */
   function renderMoveList() {
     const ol = els.moveList;
+    if (!ol) return;
     ol.innerHTML = '';
     const startBlack = S.startFen.split(' ')[1] === 'b';
     const startNo = parseInt(S.startFen.split(' ')[5], 10) || 1;
@@ -918,6 +1076,9 @@
     }
     if (!S.history.length) { toast(T('review.needGame')); return; }
     closeModal('modal-gameover');
+    closeModal('modal-load');
+    showGameScreen();
+
     S.moveToken++;
     stopClock();
     Engine.cancelAnalysis();
@@ -929,7 +1090,7 @@
     S.selected = null; S.legal = [];
     if (S.mode !== 'review') S.reviewFrom = S.mode;
     S.mode = 'review';
-    switchTab('moves');
+    syncAnalysisVisibility();
     setStatus(() => T('status.analyzing'));
     renderBotCard();
     render(); renderMoveList();
@@ -962,7 +1123,6 @@
     els.reviewComment.classList.remove('hidden');
     els.reviewComment.textContent = T('review.done');
     S.reviewCommentFn = () => T('review.done');
-    // persist evaluations into the archive record
     try { const rec = buildMatchRecord(); YStorage.saveMatch(rec); S.matchId = rec.id; renderArchive(); } catch (e) { /* */ }
   }
 
@@ -1021,9 +1181,19 @@
   function reviewGo(index) {
     if (!S.review.active) return;
     const n = S.review.fens.length - 1;
+    const prevIndex = S.review.index;
     index = Math.max(0, Math.min(n, index));
     S.review.index = index;
     S.viewFen = S.review.fens[index];
+
+    if (index === prevIndex + 1 && index > 0) {
+      const h = S.history[index - 1];
+      S.pendingAnims = [{ from: h.uci.slice(0, 2), to: h.uci.slice(2, 4) }];
+    } else if (index === prevIndex - 1 && prevIndex > 0) {
+      const h = S.history[prevIndex - 1];
+      S.pendingAnims = [{ from: h.uci.slice(2, 4), to: h.uci.slice(0, 2) }];
+    }
+
     const arrows = [];
     let commentFn;
     if (index > 0) {
@@ -1058,8 +1228,13 @@
     renderMoveList();
     const cur = $('graph-cursor');
     if (cur) { const x = index / (n || 1) * 300; cur.setAttribute('x1', x); cur.setAttribute('x2', x); }
-    // coach HUD mirrors review
-    if (index > 0 && S.history[index - 1].cls) { S.coach.entry = S.history[index - 1]; S.coach.optimalShown = false; renderCoach(); els.btnOptimal.classList.add('hidden'); els.btnCoachTakeback.classList.add('hidden'); }
+    if (index > 0 && S.history[index - 1].cls) {
+      S.coach.entry = S.history[index - 1];
+      S.coach.optimalShown = false;
+      renderCoach();
+      els.btnOptimal.classList.add('hidden');
+      els.btnCoachTakeback.classList.add('hidden');
+    }
   }
 
   function nextCritical() {
@@ -1077,6 +1252,7 @@
     S.review.token++;
     S.viewFen = null;
     S.arrows = [];
+    syncAnalysisVisibility();
   }
 
   /* ------------------------------------------------------------------
@@ -1089,7 +1265,7 @@
     const w = playerLabel(S.white), b = playerLabel(S.black);
     const ts = S.matchTimestamp || new Date().toISOString();
     const d = new Date(ts);
-    c.header('Event', 'YoRHa Tactical Chess System', 'Site', 'YoRHa Bunker', 'Date',
+    c.header('Event', 'Standard Chess Match', 'Site', 'Local', 'Date',
       d.getFullYear() + '.' + String(d.getMonth() + 1).padStart(2, '0') + '.' + String(d.getDate()).padStart(2, '0'),
       'White', w.name, 'Black', b.name, 'WhiteElo', String(w.elo || ''), 'BlackElo', String(b.elo || ''),
       'Result', S.result || '*', 'TimeControl', S.timeControl || 'none');
@@ -1190,6 +1366,7 @@
 
   function renderArchive() {
     const ul = els.archiveList;
+    if (!ul) return;
     const saves = YStorage.listSaves();
     ul.innerHTML = '';
     if (!saves.length) { ul.innerHTML = '<li class="archive-empty">' + T('archive.empty') + '</li>'; return; }
@@ -1205,7 +1382,14 @@
         (m.accuracy ? ' · ' + m.accuracy.white + '% / ' + m.accuracy.black + '%' : '') + '</div>' +
         '<div class="ar-actions"></div>';
       const act = li.querySelector('.ar-actions');
-      const mkBtn = (label, fn) => { const b = document.createElement('button'); b.className = 'y-btn y-btn-sm'; b.textContent = label; b.onclick = fn; act.appendChild(b); };
+      const mkBtn = (label, fn) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'tool-btn';
+        b.textContent = label;
+        b.onclick = fn;
+        act.appendChild(b);
+      };
       mkBtn(T('btn.load'), () => { startReview(YStorage.getMatch(m.id)); });
       mkBtn(T('btn.export'), () => { const f = YStorage.exportMatch(YStorage.getMatch(m.id)); toast(T('archive.exported', { file: f })); });
       mkBtn(T(m.favorite ? 'btn.unfavorite' : 'btn.favorite'), () => { YStorage.toggleFavorite(m.id); renderArchive(); sound('click'); });
@@ -1226,6 +1410,7 @@
 
   function renderPuzzleFilter() {
     const sel = els.puzzleFilter;
+    if (!sel) return;
     const cur = S.puzzleFilter;
     sel.innerHTML = '';
     const add = (v, label) => { const o = document.createElement('option'); o.value = v; o.textContent = label; sel.appendChild(o); };
@@ -1239,6 +1424,7 @@
 
   function renderPuzzleList() {
     const ul = els.puzzleList;
+    if (!ul) return;
     const solved = YStorage.getSolved();
     ul.innerHTML = '';
     const list = filteredPuzzles();
@@ -1255,22 +1441,27 @@
       li.className = (solved[p.id] ? 'solved' : '') + (S.puzzle && S.puzzle.data.id === p.id ? ' active' : '');
       li.innerHTML = '<span class="pz-state">' + (solved[p.id] ? '✓' : String(i + 1).padStart(2, '0')) + '</span>' +
         '<span>' + escapeHtml(I18N.pick(p.title)) + '</span><span class="pz-rating">' + (p.rating || '') + '</span>';
-      li.onclick = () => loadPuzzle(p.id);
+      li.onclick = () => loadPuzzle(p.id, true);
       ul.appendChild(li);
     });
     const total = (window.PUZZLES || []).length;
-    els.puzzleProgress.textContent = T('puzzle.progress', { s: Object.keys(solved).filter(id => puzzleById(id)).length, n: total });
+    if (els.puzzleProgress) {
+      els.puzzleProgress.textContent = T('puzzle.progress', { s: Object.keys(solved).filter(id => puzzleById(id)).length, n: total });
+    }
     const act = ul.querySelector('li.active');
     if (act) act.scrollIntoView({ block: 'nearest' });
   }
 
-  function loadPuzzle(id) {
+  function loadPuzzle(id, force) {
     const p = puzzleById(id);
     if (!p) return;
-    if (S.history.length && !S.gameOver && ['bot', 'pvp'].indexOf(S.mode) >= 0) {
+    if (!force && S.history.length && !S.gameOver && ['bot', 'pvp'].indexOf(S.mode) >= 0) {
       if (!window.confirm(T('alert.confirmNew'))) return;
     }
+    closeModal('modal-puzzles');
     resetCommon();
+    showGameScreen();
+
     S.mode = 'puzzle';
     S.chess = new Chess();
     if (!S.chess.load(p.fen)) { console.error('Bad puzzle FEN', p.id); return; }
@@ -1280,17 +1471,17 @@
     S.puzzle = { data: p, step: 0, attempts: 0, solved: false, playerColor: color, canonical: null, feedback: null, busy: false, hintSq: null };
     const profile = YStorage.getProfile();
     const human = { name: profile.p1.name, elo: profile.p1.elo, isBot: false, botId: null };
-    const opp = { name: 'YoRHa // PUZZLE', elo: p.rating || '', isBot: false, botId: null };
+    const opp = { name: T('mode.puzzle'), elo: p.rating || '', isBot: false, botId: null };
     S.white = color === 'w' ? human : opp;
     S.black = color === 'w' ? opp : human;
     S.bot = null;
     S.orientation = color;
     renderBotCard();
+    syncAnalysisVisibility();
     buildBoard();
     render(); renderMoveList();
     renderPuzzleInfo();
     renderPuzzleList();
-    switchTab('puzzles');
     sound('start');
     setStatus(() => T('status.puzzle', { title: I18N.pick(p.title), color: sideName(color).toUpperCase() }));
     if (S.liveEval) prefetch();
@@ -1298,7 +1489,8 @@
 
   function renderPuzzleInfo() {
     const box = els.puzzleInfo;
-    if (!S.puzzle) { box.classList.remove('hidden'); box.innerHTML = '<div class="pz-meta">' + T('puzzle.select') + '</div>'; updateCanonicalBtn(); return; }
+    if (!box) return;
+    if (!S.puzzle) { box.innerHTML = '<div class="pz-meta">' + T('puzzle.select') + '</div>'; updateCanonicalBtn(); return; }
     const p = S.puzzle.data;
     const cat = (window.PUZZLE_CATEGORIES || []).find(c => c.id === p.cat);
     const sub = cat && (cat.subs || []).find(s => s.id === p.sub);
@@ -1314,11 +1506,11 @@
       html += '<div class="y-sep"></div><div>' + escapeHtml(I18N.pick(p.explain)) + '</div>';
     }
     box.innerHTML = html;
-    box.classList.remove('hidden');
     updateCanonicalBtn();
   }
   function updateCanonicalBtn() {
     const b = els.btnCanonical;
+    if (!b) return;
     const active = S.puzzle && S.puzzle.canonical && !S.puzzle.canonical.done;
     b.textContent = T(active ? 'btn.canonicalNext' : 'btn.canonical');
   }
@@ -1338,7 +1530,9 @@
       puzzleFeedback('bad', () => T('puzzle.wrong', { move: san }));
       await sleep(900);
       if (S.puzzle !== pz) return;
-      S.chess.undo(); S.history.pop();
+      const undone = S.chess.undo();
+      S.history.pop();
+      if (undone) S.pendingAnims = [{ from: undone.to, to: undone.from }];
       pz.busy = false;
       render(); renderMoveList();
       return;
@@ -1348,7 +1542,7 @@
     puzzleFeedback('ok', () => T('puzzle.correct'));
     sound('confirm');
     pz.busy = true;
-    await sleep(500);
+    await sleep(450);
     if (S.puzzle !== pz) return;
     const reply = pz.data.moves[pz.step];
     const fenBefore = S.chess.fen();
@@ -1357,6 +1551,7 @@
     if (!m) { puzzleSolved(); return; }
     recordMove(m, fenBefore);
     moveSound(m);
+    queueMoveAnimation(m);
     pz.step++;
     render(); renderMoveList();
     if (pz.step >= pz.data.moves.length) { puzzleSolved(); return; }
@@ -1385,7 +1580,7 @@
     puzzleFeedback('info', () => T('puzzle.hint', { piece: I18N.t('piece.pl.' + (p ? p.type : 'p')), square: sq }));
     render();
   }
-  function puzzleRetry() { if (S.puzzle) loadPuzzle(S.puzzle.data.id); }
+  function puzzleRetry() { if (S.puzzle) loadPuzzle(S.puzzle.data.id, true); }
   function puzzleNext() {
     const list = filteredPuzzles();
     if (!list.length) return;
@@ -1393,16 +1588,15 @@
     let idx = S.puzzle ? list.findIndex(p => p.id === S.puzzle.data.id) : -1;
     for (let k = 1; k <= list.length; k++) {
       const p = list[(idx + k) % list.length];
-      if (!solved[p.id] || k === list.length) { loadPuzzle(p.id); return; }
+      if (!solved[p.id] || k === list.length) { loadPuzzle(p.id, true); return; }
     }
-    loadPuzzle(list[(idx + 1) % list.length].id);
+    loadPuzzle(list[(idx + 1) % list.length].id, true);
   }
 
   function puzzleCanonical() {
-    if (S.mode !== 'puzzle' || !S.puzzle) { if (filteredPuzzles().length) loadPuzzle(filteredPuzzles()[0].id); return; }
+    if (S.mode !== 'puzzle' || !S.puzzle) { if (filteredPuzzles().length) loadPuzzle(filteredPuzzles()[0].id, true); return; }
     const pz = S.puzzle;
     if (!pz.canonical || pz.canonical.done) {
-      // reset to puzzle start
       S.moveToken++;
       S.chess = new Chess(); S.chess.load(pz.data.fen);
       S.history = []; S.viewFen = null; S.selected = null; S.legal = [];
@@ -1419,6 +1613,7 @@
     if (!m) { c.done = true; return; }
     recordMove(m, fenBefore);
     moveSound(m);
+    queueMoveAnimation(m);
     c.i++;
     const isPlayer = m.color === pz.playerColor;
     S.arrows = [{ from: m.from, to: m.to, color: isPlayer ? 'cyan' : 'orange' }];
@@ -1432,10 +1627,21 @@
   /* ------------------------------------------------------------------
      Modals, settings & profile
      ------------------------------------------------------------------ */
-  function openModal(id) { $(id).classList.remove('hidden'); }
+  function openModal(id) {
+    const el = $(id);
+    if (!el) return;
+    el.classList.remove('hidden');
+    sound('open');
+  }
   function closeModal(id) {
-    $(id).classList.add('hidden');
-    if (id === 'modal-promo' && promoResolve) { const r = promoResolve; promoResolve = null; r(null); }
+    const el = $(id);
+    if (!el) return;
+    el.classList.add('hidden');
+    if (id === 'modal-promo' && promoResolve) {
+      const r = promoResolve;
+      promoResolve = null;
+      r(null);
+    }
   }
 
   function openProfile() {
@@ -1445,16 +1651,17 @@
     openModal('modal-profile');
   }
   function saveProfile() {
-    const clampElo = v => Math.max(100, Math.min(3500, parseInt(v, 10) || 600));
+    const clampElo = v => Math.max(100, Math.min(3500, parseInt(v, 10) || 800));
     const p = {
-      p1: { name: ($('pf-p1-name').value || 'Commander').trim().slice(0, 24) || 'Commander', elo: clampElo($('pf-p1-elo').value) },
-      p2: { name: ($('pf-p2-name').value || 'Operator').trim().slice(0, 24) || 'Operator', elo: clampElo($('pf-p2-elo').value) },
+      p1: { name: ($('pf-p1-name').value || 'Player 1').trim().slice(0, 24) || 'Player 1', elo: clampElo($('pf-p1-elo').value) },
+      p2: { name: ($('pf-p2-name').value || 'Player 2').trim().slice(0, 24) || 'Player 2', elo: clampElo($('pf-p2-elo').value) },
       onboarded: true
     };
     YStorage.saveProfile(p);
-    // update current non-bot players if game not started
-    if (!S.history.length && S.white && S.black) {
-      [S.white, S.black].forEach((pl, i) => { /* names re-applied on new game */ });
+    if (S.white && !S.white.isBot) { S.white.name = p.p1.name; S.white.elo = p.p1.elo; }
+    if (S.black && !S.black.isBot) {
+      if (S.mode === 'pvp') { S.black.name = p.p2.name; S.black.elo = p.p2.elo; }
+      else { S.black.name = p.p1.name; S.black.elo = p.p1.elo; }
     }
     closeModal('modal-profile');
     toast(T('profile.saved'));
@@ -1465,6 +1672,8 @@
   function syncSettingsUI() {
     const s = YStorage.getSettings();
     document.querySelectorAll('#set-lang .seg-btn').forEach(b => b.classList.toggle('active', b.dataset.lang === I18N.lang));
+    if ($('set-bgm')) $('set-bgm').checked = s.bgm;
+    if ($('set-bgm-volume')) $('set-bgm-volume').value = Math.round((s.bgmVolume != null ? s.bgmVolume : 0.35) * 100);
     $('set-audio').checked = s.audio;
     $('set-volume').value = Math.round(s.volume * 100);
     $('set-live').checked = S.liveEval;
@@ -1474,12 +1683,14 @@
     $('opt-autoflip').checked = s.autoFlip;
     $('set-cloud').checked = s.cloudEval;
     els.board.classList.toggle('no-coords', !s.showCoords);
-    els.btnLang.textContent = I18N.lang === 'vi' ? 'TIẾNG VIỆT [VI]' : 'ENGLISH [EN]';
-    els.btnAudio.textContent = s.audio ? '♪ ON' : '♪ OFF';
+    els.btnLang.textContent = I18N.lang === 'vi' ? 'VI' : 'EN';
+    if (els.btnBgm) els.btnBgm.innerHTML = '<i class="fas fa-music"></i> ' + (s.bgm ? 'ON' : 'OFF');
+    els.btnAudio.innerHTML = '<i class="fas ' + (s.audio ? 'fa-volume-up' : 'fa-volume-mute') + '"></i> ' + (s.audio ? 'ON' : 'OFF');
     const tg = els.toggleLive;
     tg.classList.toggle('on', S.liveEval);
     tg.setAttribute('aria-pressed', S.liveEval);
     tg.querySelector('.tg-state').textContent = S.liveEval ? '[ON]' : '[OFF]';
+    syncAnalysisVisibility();
     renderEngineInfo();
   }
   function renderEngineInfo() {
@@ -1495,9 +1706,25 @@
     YStorage.saveSettings({ liveEval: S.liveEval });
     syncSettingsUI();
     sound(on ? 'confirm' : 'cancel');
-    if (!on) { exitPreview(true); if (!S.review.active) resetEvalBar(); renderCoachText(); }
-    else if (isHumanTurn() && !S.gameOver) prefetch();
-    render(); renderMoveList();
+    if (!on) {
+      exitPreview(true);
+      if (!S.review.active) resetEvalBar();
+      renderCoachText();
+    } else {
+      // Evaluate the latest move or current position immediately when toggled ON
+      const last = S.history[S.history.length - 1];
+      if (last && !last.cls) {
+        coachEvaluate(last);
+      } else if (last && last.cls) {
+        S.coach.entry = last;
+        renderCoach();
+        if (last.ctx && last.ctx.after) updateEvalBar(last.ctx.after);
+      } else if (isHumanTurn() && !S.gameOver) {
+        prefetch();
+      }
+    }
+    render();
+    renderMoveList();
   }
 
   /* ------------------------------------------------------------------
@@ -1507,7 +1734,7 @@
     I18N.apply(document);
     syncSettingsUI();
     renderBotRoster();
-    if (S.mode === 'bot' && S.bot) renderBotCard(); else if (S.mode === 'idle') previewBot();
+    renderBotCard();
     renderBotLine();
     renderStatus();
     renderPlayers();
@@ -1526,17 +1753,29 @@
      Wiring
      ------------------------------------------------------------------ */
   function bind() {
-    // generic UI click sounds
+    // generic UI hover & click sounds matching CDN theme
+    document.addEventListener('mouseover', (e) => {
+      const btn = e.target.closest('.themebutton, .tool-btn, .dropContent, .seg-btn, .bot-chip');
+      if (btn && btn !== bind._lastHover) {
+        bind._lastHover = btn;
+        sound('hover');
+      } else if (!btn) {
+        bind._lastHover = null;
+      }
+    });
+
     document.addEventListener('click', (e) => {
       YoRHaAudio.init();
-      const t = e.target.closest('.y-btn, .seg-btn, .dtab, .mtab');
+      const t = e.target.closest('.themebutton, .tool-btn, .dropContent, .seg-btn');
       if (t) sound('click');
       const close = e.target.closest('[data-close]');
       if (close) closeModal(close.dataset.close);
     });
+
     document.querySelectorAll('.modal').forEach(m => m.addEventListener('click', (e) => {
       if (e.target === m && m.id !== 'modal-promo') closeModal(m.id);
     }));
+
     document.addEventListener('keydown', (e) => {
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
       if (S.review.active) {
@@ -1549,20 +1788,62 @@
       if (e.key === 'Escape') document.querySelectorAll('.modal:not(.hidden)').forEach(m => closeModal(m.id));
     });
 
-    // board input
+    // Main Menu bindings
+    const playBtn = $('menu-btn-play');
+    const playSub = $('menu-play-sub');
+    playBtn.onclick = () => {
+      const isOpen = playSub.classList.toggle('hidden');
+      playBtn.classList.toggle('open', !isOpen);
+    };
+    $('menu-sub-bot').onclick = () => openSetupModal('bot');
+    $('menu-sub-pvp').onclick = () => openSetupModal('pvp');
+    $('menu-sub-puzzles').onclick = () => {
+      renderPuzzleFilter();
+      renderPuzzleList();
+      openModal('modal-puzzles');
+    };
+    $('menu-btn-load').onclick = () => {
+      renderArchive();
+      openModal('modal-load');
+    };
+    $('menu-btn-settings').onclick = () => {
+      syncSettingsUI();
+      openModal('modal-settings');
+    };
+    $('menu-btn-profile').onclick = openProfile;
+
+    // Board input
     els.board.addEventListener('pointerdown', onPointerDown);
     els.board.addEventListener('pointermove', onPointerMove);
     els.board.addEventListener('pointerup', onPointerUp);
     els.board.addEventListener('pointercancel', onPointerCancel);
     els.board.addEventListener('contextmenu', e => e.preventDefault());
 
-    // header
+    // Game Screen Toolbar
+    $('btn-back-menu').onclick = () => showMenuScreen(false);
     els.btnLang.onclick = () => { I18N.setLang(I18N.lang === 'vi' ? 'en' : 'vi'); };
-    els.btnAudio.onclick = () => { const s = YStorage.saveSettings({ audio: !YStorage.getSettings().audio }); YoRHaAudio.setEnabled(s.audio); syncSettingsUI(); sound('confirm'); };
+    if (els.btnBgm) {
+      els.btnBgm.onclick = () => {
+        const s = YStorage.saveSettings({ bgm: !YStorage.getSettings().bgm });
+        YoRHaAudio.setBgmEnabled(s.bgm);
+        if (s.bgm && S.view === 'game') YoRHaAudio.startBgm();
+        syncSettingsUI();
+      };
+    }
+    els.btnAudio.onclick = () => {
+      const s = YStorage.saveSettings({ audio: !YStorage.getSettings().audio });
+      YoRHaAudio.setEnabled(s.audio);
+      syncSettingsUI();
+      sound('confirm');
+    };
+    $('btn-open-load').onclick = () => {
+      renderArchive();
+      openModal('modal-load');
+    };
     $('btn-profile').onclick = openProfile;
     $('btn-settings').onclick = () => { syncSettingsUI(); openModal('modal-settings'); };
 
-    // setup
+    // Setup Modal
     document.querySelectorAll('#mode-select .seg-btn').forEach(b => b.onclick = () => {
       S.setup.mode = b.dataset.mode;
       document.querySelectorAll('#mode-select .seg-btn').forEach(x => x.classList.toggle('active', x === b));
@@ -1574,23 +1855,30 @@
       document.querySelectorAll('#color-select .seg-btn').forEach(x => x.classList.toggle('active', x === b));
     });
     $('btn-start').onclick = () => {
-      if (!YStorage.hasProfile()) { openProfile(); return; }
-      newGame({ mode: S.setup.mode });
+      newGame({ mode: S.setup.mode, force: true });
     };
     $('opt-autoflip').onchange = (e) => { YStorage.saveSettings({ autoFlip: e.target.checked }); syncSettingsUI(); };
 
-    // board controls
-    $('btn-new').onclick = () => { if (S.review.active) exitReview(); switchTab('settings'); if (window.innerWidth >= 1024) newGame({ mode: S.setup.mode }); };
+    // Board controls
+    $('btn-new').onclick = () => {
+      if (S.mode === 'puzzle') {
+        renderPuzzleFilter();
+        renderPuzzleList();
+        openModal('modal-puzzles');
+      } else {
+        openSetupModal(S.setup.mode);
+      }
+    };
     $('btn-flip').onclick = flip;
     $('btn-takeback').onclick = takeback;
     $('btn-resign').onclick = resign;
     els.toggleLive.onclick = () => setLiveEval(!S.liveEval);
 
-    // coach
+    // Coach
     els.btnOptimal.onclick = showOptimal;
     els.btnCoachTakeback.onclick = takeback;
 
-    // review
+    // Review
     $('rv-first').onclick = () => reviewGo(0);
     $('rv-prev').onclick = () => reviewGo(S.review.index - 1);
     $('rv-next').onclick = () => reviewGo(S.review.index + 1);
@@ -1608,23 +1896,41 @@
     $('btn-import').onclick = () => $('file-import').click();
     $('file-import').onchange = (e) => { const f = e.target.files[0]; if (f) importFile(f); e.target.value = ''; };
 
-    // game over
+    // Game Over Modal
     $('btn-go-review').onclick = () => { closeModal('modal-gameover'); startReview(); };
-    $('btn-go-new').onclick = () => { closeModal('modal-gameover'); newGame({ mode: S.setup.mode, force: true }); };
+    $('btn-go-new').onclick = () => { closeModal('modal-gameover'); openSetupModal(S.setup.mode); };
 
-    // puzzles
+    // Puzzles
     els.puzzleFilter.onchange = (e) => { S.puzzleFilter = e.target.value; renderPuzzleList(); };
     $('btn-puzzle-hint').onclick = puzzleHint;
     $('btn-puzzle-retry').onclick = puzzleRetry;
     $('btn-puzzle-next').onclick = puzzleNext;
+    if ($('btn-puzzle-choose')) {
+      $('btn-puzzle-choose').onclick = () => {
+        renderPuzzleFilter();
+        renderPuzzleList();
+        openModal('modal-puzzles');
+      };
+    }
     els.btnCanonical.onclick = puzzleCanonical;
 
-    // tabs
-    document.querySelectorAll('.dtab').forEach(b => b.onclick = () => switchTab(b.dataset.dtab));
-    document.querySelectorAll('.mtab').forEach(b => b.onclick = () => switchTab(b.dataset.mtab));
-
-    // settings modal
+    // Settings Modal
     document.querySelectorAll('#set-lang .seg-btn').forEach(b => b.onclick = () => I18N.setLang(b.dataset.lang));
+    if ($('set-bgm')) {
+      $('set-bgm').onchange = (e) => {
+        YStorage.saveSettings({ bgm: e.target.checked });
+        YoRHaAudio.setBgmEnabled(e.target.checked);
+        if (e.target.checked && S.view === 'game') YoRHaAudio.startBgm();
+        syncSettingsUI();
+      };
+    }
+    if ($('set-bgm-volume')) {
+      $('set-bgm-volume').oninput = (e) => {
+        const v = e.target.value / 100;
+        YStorage.saveSettings({ bgmVolume: v });
+        YoRHaAudio.setBgmVolume(v);
+      };
+    }
     $('set-audio').onchange = (e) => { YStorage.saveSettings({ audio: e.target.checked }); YoRHaAudio.setEnabled(e.target.checked); syncSettingsUI(); };
     $('set-volume').oninput = (e) => { const v = e.target.value / 100; YStorage.saveSettings({ volume: v }); YoRHaAudio.setVolume(v); };
     $('set-volume').onchange = () => sound('confirm');
@@ -1634,7 +1940,7 @@
     $('set-autoflip').onchange = (e) => { YStorage.saveSettings({ autoFlip: e.target.checked }); syncSettingsUI(); };
     $('set-cloud').onchange = (e) => { YStorage.saveSettings({ cloudEval: e.target.checked }); Engine.cloudEnabled = e.target.checked; };
 
-    // profile
+    // Profile Modal
     $('btn-profile-save').onclick = saveProfile;
 
     I18N.onChange(() => applyLanguage());
@@ -1645,12 +1951,18 @@
      Init
      ------------------------------------------------------------------ */
   function init() {
+    els.screenMenu = $('screen-menu');
+    els.screenGame = $('screen-game');
     els.board = $('board');
     els.arrowGroup = $('arrow-group');
     els.evalBar = $('eval-bar'); els.evalFill = $('eval-fill'); els.evalText = $('eval-text');
     els.barTop = $('bar-top'); els.barBottom = $('bar-bottom');
     els.status = $('status-line');
     els.toast = $('toast');
+    els.paneCoach = $('pane-coach');
+    els.paneBot = $('pane-bot');
+    els.panePuzzleActive = $('pane-puzzle-active');
+    els.reviewControlsWrap = $('review-controls-wrap');
     els.coachBadge = $('coach-badge'); els.coachEval = $('coach-eval'); els.coachSource = $('coach-source');
     els.coachText = $('coach-text'); els.coachBest = $('coach-best');
     els.btnOptimal = $('btn-optimal'); els.btnCoachTakeback = $('btn-coach-takeback');
@@ -1659,13 +1971,14 @@
     els.puzzleFilter = $('puzzle-filter'); els.puzzleList = $('puzzle-list'); els.puzzleInfo = $('puzzle-info');
     els.puzzleProgress = $('puzzle-progress'); els.btnCanonical = $('btn-canonical');
     els.archiveList = $('archive-list');
-    els.botRoster = $('bot-roster'); els.botPortrait = $('bot-portrait'); els.botName = $('bot-name');
+    els.botRoster = $('bot-roster'); els.botSelectedDesc = $('bot-selected-desc');
+    els.botPortrait = $('bot-portrait'); els.botName = $('bot-name');
     els.botElo = $('bot-elo'); els.botDialogue = $('bot-dialogue');
-    els.btnLang = $('btn-lang'); els.btnAudio = $('btn-audio'); els.toggleLive = $('toggle-live');
+    els.btnLang = $('btn-lang'); els.btnBgm = $('btn-bgm'); els.btnAudio = $('btn-audio'); els.toggleLive = $('toggle-live');
     els.tcSelect = $('tc-select');
 
     const settings = YStorage.getSettings();
-    S.liveEval = settings.liveEval;
+    S.liveEval = !!settings.liveEval;
     S.setup.botId = Bots.get(settings.lastBot) ? settings.lastBot : 'cadet';
     S.setup.color = settings.lastColor || 'w';
     document.querySelectorAll('#color-select .seg-btn').forEach(x => x.classList.toggle('active', x.dataset.color === S.setup.color));
@@ -1673,6 +1986,8 @@
     Engine.cloudEnabled = settings.cloudEval;
     YoRHaAudio.setEnabled(settings.audio);
     YoRHaAudio.setVolume(settings.volume);
+    YoRHaAudio.setBgmEnabled(settings.bgm !== false);
+    YoRHaAudio.setBgmVolume(settings.bgmVolume != null ? settings.bgmVolume : 0.35);
 
     const profile = YStorage.getProfile();
     S.white = { name: profile.p1.name, elo: profile.p1.elo, isBot: false, botId: null };
@@ -1682,7 +1997,7 @@
     buildBoard();
     applyLanguage();
     render();
-    switchTab(window.innerWidth < 1024 ? 'settings' : 'coach');
+    syncAnalysisVisibility();
 
     setStatus(() => T('status.engineLoading'));
     Engine.init().then(kind => {
@@ -1690,13 +2005,12 @@
       if (S.mode === 'idle') setStatus(() => T('status.engineReady', { engine: kind.toUpperCase() }) + ' ' + T('status.idle'));
       if (kind === 'mini') toast(T('alert.engineFail'), true);
     });
-
-    if (!YStorage.hasProfile()) setTimeout(openProfile, 300);
   }
 
   window.App = {
     state: S,
     init,
+    showMenuScreen, showGameScreen,
     newGame, loadPuzzle, startReview, applyLanguage, render,
     drawArrows, clearArrows, takeback, resign, flip, showOptimal,
     reviewGo, nextCritical, buildMatchRecord, onPlayerMove: playerMove

@@ -433,9 +433,7 @@
   function describeMove(fen, uci) {
     const c = newChess(fen); if (!c || !uci) return uci || '';
     const m = c.move(parseUci(uci)); if (!m) return uci;
-    if (m.flags.indexOf('k') >= 0) return I18N.t('coach.moveFmtCastleK');
-    if (m.flags.indexOf('q') >= 0) return I18N.t('coach.moveFmtCastleQ');
-    return I18N.t('coach.moveFmt', { piece: I18N.pieceName(m.piece), from: m.from, to: m.to }) + ' (' + m.san + ')';
+    return m.san;
   }
 
   function moveInfo(fen, uci) {

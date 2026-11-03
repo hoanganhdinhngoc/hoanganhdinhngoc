@@ -58,10 +58,39 @@ PUZZLES.forEach((p, idx) => {
 });
 
 console.log('Counts by category:', byCat);
+
+// Verify DOM IDs in app.js exist in index.html
+const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
+const appJs = fs.readFileSync(path.join(root, 'app.js'), 'utf8');
+const idMatches = [...appJs.matchAll(/\$\('([^']+)'\)/g)].map(m => m[1]);
+const missingIds = [...new Set(idMatches)].filter(id => id !== 'graph-cursor' && !html.includes('id="' + id + '"'));
+if (missingIds.length) {
+  errors.push('Missing HTML IDs referenced in app.js: ' + missingIds.join(', '));
+}
+
+// Verify data-i18n keys in index.html exist in i18n.js
+vm.runInContext(fs.readFileSync(path.join(root, 'i18n.js'), 'utf8'), sandbox);
+const I18N = sandbox.window.I18N;
+const i18nKeys = [...html.matchAll(/data-i18n(?:-title)?="([^"]+)"/g)].map(m => m[1]);
+const missingKeys = [...new Set(i18nKeys)].filter(k => !I18N.dict.vi[k] || !I18N.dict.en[k]);
+if (missingKeys.length) {
+  errors.push('Missing i18n keys in index.html: ' + missingKeys.join(', '));
+}
+
+// Verify pawn promotion in chess.js
+['q', 'r', 'b', 'n'].forEach(promo => {
+  const pc = new Chess('4k3/P7/8/8/8/8/8/4K3 w - - 0 1');
+  const m = pc.move({ from: 'a7', to: 'a8', promotion: promo });
+  if (!m || m.promotion !== promo || pc.get('a8').type !== promo) {
+    errors.push('Pawn promotion failed for piece: ' + promo);
+  }
+});
+
 if (errors.length) {
   console.error('Validation errors (' + errors.length + '):');
   errors.forEach(e => console.error(' -', e));
   process.exit(1);
 } else {
+  console.log('DOM IDs verified, i18n keys verified, pawn promotion verified.');
   console.log('ALL 100 PUZZLES VALIDATED SUCCESSFULLY!');
 }

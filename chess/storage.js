@@ -17,8 +17,8 @@
   };
 
   const DEFAULT_PROFILE = {
-    p1: { name: 'Commander', elo: 600 },
-    p2: { name: 'Operator', elo: 600 },
+    p1: { name: 'Player 1', elo: 600 },
+    p2: { name: 'Player 2', elo: 600 },
     onboarded: false,
     updatedAt: null
   };
@@ -26,8 +26,10 @@
   const DEFAULT_SETTINGS = {
     lang: 'vi',
     audio: true,
-    volume: 0.6,
-    liveEval: true,
+    volume: 0.7,
+    bgm: true,
+    bgmVolume: 0.35,
+    liveEval: false,
     autoFlip: false,
     showLegal: true,
     showCoords: true,
@@ -69,11 +71,11 @@
     }
     return {
       p1: {
-        name: (p.p1 && p.p1.name ? String(p.p1.name).trim() : 'Commander') || 'Commander',
+        name: (p.p1 && p.p1.name ? String(p.p1.name).trim() : 'Player 1') || 'Player 1',
         elo: clampElo(p.p1 && p.p1.elo, 600)
       },
       p2: {
-        name: (p.p2 && p.p2.name ? String(p.p2.name).trim() : 'Operator') || 'Operator',
+        name: (p.p2 && p.p2.name ? String(p.p2.name).trim() : 'Player 2') || 'Player 2',
         elo: clampElo(p.p2 && p.p2.elo, 600)
       },
       onboarded: !!p.onboarded,
@@ -85,11 +87,11 @@
     const cur = getProfile();
     const merged = {
       p1: {
-        name: (profile && profile.p1 && profile.p1.name ? String(profile.p1.name).trim() : cur.p1.name) || 'Commander',
+        name: (profile && profile.p1 && profile.p1.name ? String(profile.p1.name).trim() : cur.p1.name) || 'Player 1',
         elo: clampElo(profile && profile.p1 ? profile.p1.elo : cur.p1.elo, cur.p1.elo)
       },
       p2: {
-        name: (profile && profile.p2 && profile.p2.name ? String(profile.p2.name).trim() : cur.p2.name) || 'Operator',
+        name: (profile && profile.p2 && profile.p2.name ? String(profile.p2.name).trim() : cur.p2.name) || 'Player 2',
         elo: clampElo(profile && profile.p2 ? profile.p2.elo : cur.p2.elo, cur.p2.elo)
       },
       onboarded: profile && profile.onboarded != null ? !!profile.onboarded : true,
@@ -183,7 +185,7 @@
     const hh = pad2(d.getHours());
     const mi = pad2(d.getMinutes());
     const ss = pad2(d.getSeconds());
-    return 'YoRHa_Chess_' + yyyy + '-' + mm + '-' + dd + '_' + hh + '-' + mi + '-' + ss + '.json';
+    return 'Chess_Match_' + yyyy + '-' + mm + '-' + dd + '_' + hh + '-' + mi + '-' + ss + '.json';
   }
 
   function exportMatch(match) {
