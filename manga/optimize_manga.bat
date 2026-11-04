@@ -1,8 +1,8 @@
 @echo off
 chcp 65001 >nul
-title Manga Library Optimizer
+title Manga Library - R2 Cloud Sync
 echo ========================================================
-echo   Manga Library - PDF Auto Splitter ^& Optimizer
+echo   Manga Library - Metadata Builder ^& Cloudflare R2 Sync
 echo ========================================================
 echo.
 python "%~dp0process_manga.py"

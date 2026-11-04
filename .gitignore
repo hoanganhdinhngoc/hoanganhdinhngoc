@@ -1,5 +1,9 @@
-# Manga backup originals
+# Manga local library & R2 credentials (stored on Cloudflare R2, never committed to GitHub)
+manga/library/
 manga/.originals/
 .originals/
+manga/.r2_env
+manga/.r2_sync_cache.json
+.env
 __pycache__/
 *.pyc

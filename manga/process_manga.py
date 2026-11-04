@@ -1,261 +1,341 @@
-import os
-import sys
-import math
-import shutil
-import re
-import json
+"""
+Manga Library — Automatic Metadata Builder & Private Cloudflare R2 Sync
+========================================================================
+Chức năng:
+  1. Không còn cắt nhỏ file PDF (< 25MB) vì Cloudflare R2 hỗ trợ file nguyên bản (lên tới 5TB/file).
+  2. Nếu phát hiện folder truyện mới chưa có `meta.txt`, tự động tạo sẵn file `meta.txt` mẫu.
+  3. Nếu phát hiện folder truyện mới chưa có `thumbnail.(jpg|png|webp)`, tự động trích xuất trang 1
+     của tập PDF đầu tiên làm `thumbnail.jpg`.
+  4. Tự động đếm số trang của từng tập PDF (có lưu cache cục bộ để lần chạy sau siêu nhanh) và
+     đóng gói toàn bộ thông tin thư viện thành `catalog.json`.
+  5. Tự động đồng bộ (Upload file mới/sửa đổi & Xóa file thừa) lên Private Bucket Cloudflare R2.
+"""
 
-# Đảm bảo in tiếng Việt trên console Windows không bị lỗi encoding
-if sys.platform == "win32":
+import os
+import re
+import sys
+import json
+import time
+import mimetypes
+from pathlib import Path
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
+try:
+    import pymupdf as fitz
+except ImportError:
     try:
-        sys.stdout.reconfigure(encoding='utf-8')
-        sys.stderr.reconfigure(encoding='utf-8')
+        import fitz
+    except ImportError:
+        print("[!] Chưa cài đặt thư viện PyMuPDF. Đang tự động cài đặt...")
+        os.system(f'"{sys.executable}" -m pip install pymupdf')
+        import pymupdf as fitz
+
+try:
+    import boto3
+    from botocore.config import Config
+except ImportError:
+    print("[!] Chưa cài đặt thư viện boto3. Đang tự động cài đặt...")
+    os.system(f'"{sys.executable}" -m pip install boto3')
+    import boto3
+    from botocore.config import Config
+
+SCRIPT_DIR = Path(__file__).resolve().parent
+LIBRARY_DIR = SCRIPT_DIR / "library"
+ENV_FILE = SCRIPT_DIR / ".r2_env"
+CACHE_FILE = SCRIPT_DIR / ".r2_sync_cache.json"
+
+THUMB_REGEX = re.compile(r"^thumbnail\.(jpg|jpeg|png|webp|gif)$", re.IGNORECASE)
+
+
+def load_env(env_path: Path) -> dict:
+    env = {}
+    if env_path.exists():
+        for line in env_path.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            k, v = line.split("=", 1)
+            env[k.strip()] = v.strip()
+    return env
+
+
+def load_cache() -> dict:
+    if CACHE_FILE.exists():
+        try:
+            return json.loads(CACHE_FILE.read_text(encoding="utf-8"))
+        except Exception:
+            pass
+    return {"pages": {}}
+
+
+def save_cache(cache: dict):
+    try:
+        CACHE_FILE.write_text(json.dumps(cache, ensure_ascii=False, indent=2), encoding="utf-8")
     except Exception:
         pass
 
-try:
-    import pymupdf
-except ImportError:
-    print("[ERROR] Thư viện 'pymupdf' chưa được cài đặt.")
-    print("Vui lòng chạy lệnh: pip install pymupdf")
-    sys.exit(1)
 
-# Ngưỡng kích thước tối đa cho mỗi file PDF (Cloudflare Pages limit là 25 MiB)
-# Đặt ngưỡng an toàn là 22 MB để đảm bảo không bao giờ bị reject
-MAX_SIZE_BYTES = 22 * 1024 * 1024  # 22 MB
-TARGET_PART_SIZE = 18 * 1024 * 1024  # 18 MB cho mỗi phần
+def natural_sort_key(s: str):
+    return [int(text) if text.isdigit() else text.lower() for text in re.split(r"(\d+)", s)]
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-LIBRARY_DIR = os.path.join(BASE_DIR, "library")
-BACKUP_DIR = os.path.join(BASE_DIR, ".originals")
 
-def is_part_file(filename):
-    """Kiểm tra xem file có phải là file đã được chia nhỏ (.partX.pdf) hay không"""
-    return bool(re.search(r'\.part\d+\.pdf$', filename, re.IGNORECASE))
+def ensure_meta_and_thumbnail(folder_path: Path, pdf_files: list[Path]):
+    """Tự động tạo meta.txt và thumbnail.jpg nếu folder truyện mới chưa có."""
+    meta_path = folder_path / "meta.txt"
+    if not meta_path.exists():
+        default_title = folder_path.name.replace("-", " ").replace("_", " ").title()
+        meta_content = f"{default_title}\nUnknown Author\n2026\n"
+        meta_path.write_text(meta_content, encoding="utf-8")
+        print(f"  [+] Đã tạo meta.txt mẫu cho: {folder_path.name}")
 
-def split_pdf_file(pdf_path):
-    file_size = os.path.getsize(pdf_path)
-    file_name = os.path.basename(pdf_path)
-    folder_path = os.path.dirname(pdf_path)
-    rel_folder = os.path.relpath(folder_path, LIBRARY_DIR)
+    has_thumb = any(THUMB_REGEX.match(f.name) for f in folder_path.iterdir() if f.is_file())
+    if not has_thumb and pdf_files:
+        first_pdf = pdf_files[0]
+        thumb_path = folder_path / "thumbnail.jpg"
+        try:
+            with fitz.open(first_pdf) as doc:
+                if len(doc) > 0:
+                    page = doc[0]
+                    pix = page.get_pixmap(matrix=fitz.Matrix(1.2, 1.2), alpha=False)
+                    pix.save(str(thumb_path))
+                    print(f"  [+] Đã tự động trích xuất thumbnail.jpg từ: {first_pdf.name}")
+        except Exception as e:
+            print(f"  [!] Không thể tạo thumbnail tự động cho {folder_path.name}: {e}")
 
-    size_mb = file_size / (1024 * 1024)
-    print(f"\n[PHÁT HIỆN FILE LỚN] {file_name} ({size_mb:.2f} MB > 22 MB)")
 
-    doc = pymupdf.open(pdf_path)
-    total_pages = len(doc)
-    print(f"  -> Tổng số trang: {total_pages} trang")
+def get_pdf_page_count(pdf_path: Path, cache: dict) -> int:
+    stat = pdf_path.stat()
+    rel_key = str(pdf_path.relative_to(LIBRARY_DIR)).replace("\\", "/")
+    sig = f"{stat.st_size}:{int(stat.st_mtime)}"
 
-    base_name = re.sub(r'\.pdf$', '', file_name, flags=re.IGNORECASE)
+    cached = cache.get("pages", {}).get(rel_key)
+    if cached and cached.get("sig") == sig and cached.get("pages", 0) > 0:
+        return cached["pages"]
 
-    # Tính toán số lượng part cần chia
-    num_parts = max(2, math.ceil(file_size / TARGET_PART_SIZE))
+    pages = 0
+    try:
+        with fitz.open(pdf_path) as doc:
+            pages = len(doc)
+    except Exception as e:
+        print(f"  [!] Lỗi đọc số trang {pdf_path.name}: {e}")
 
-    while True:
-        pages_per_part = math.ceil(total_pages / num_parts)
-        temp_parts = []
-        all_ok = True
+    cache.setdefault("pages", {})[rel_key] = {"sig": sig, "pages": pages}
+    return pages
 
-        for i in range(1, num_parts + 1):
-            start_p = (i - 1) * pages_per_part
-            end_p = min(i * pages_per_part - 1, total_pages - 1)
-            if start_p > end_p:
+
+def build_local_catalog(cache: dict) -> tuple[dict, dict[str, Path]]:
+    """Quét toàn bộ manga/library, tạo catalog.json và danh sách file cần đồng bộ lên R2."""
+    publications = []
+    local_files_map: dict[str, Path] = {}
+
+    folders = sorted(
+        [d for d in LIBRARY_DIR.iterdir() if d.is_dir() and not d.name.startswith(".")],
+        key=lambda d: natural_sort_key(d.name),
+    )
+
+    for folder in folders:
+        folder_id = folder.name
+
+        # Nếu còn sót file .partX.pdf cũ thì bỏ qua cảnh báo
+        pdf_files = sorted(
+            [
+                f
+                for f in folder.iterdir()
+                if f.is_file()
+                and f.suffix.lower() == ".pdf"
+                and not re.search(r"\.part\d+\.pdf$", f.name, re.IGNORECASE)
+            ],
+            key=lambda f: natural_sort_key(f.stem),
+        )
+
+        ensure_meta_and_thumbnail(folder, pdf_files)
+
+        # Đọc meta.txt
+        title = folder_id.replace("-", " ").replace("_", " ")
+        author = ""
+        year = ""
+        meta_path = folder / "meta.txt"
+        if meta_path.exists():
+            lines = [ln.strip() for ln in meta_path.read_text(encoding="utf-8", errors="replace").splitlines()]
+            if len(lines) > 0 and lines[0]:
+                title = lines[0]
+            if len(lines) > 1 and lines[1]:
+                author = lines[1]
+            if len(lines) > 2 and lines[2]:
+                year = lines[2]
+            local_files_map[f"{folder_id}/meta.txt"] = meta_path
+
+        # Tìm thumbnail
+        thumb_key = None
+        for f in folder.iterdir():
+            if f.is_file() and THUMB_REGEX.match(f.name):
+                thumb_key = f"{folder_id}/{f.name}"
+                local_files_map[thumb_key] = f
                 break
 
-            part_filename = f"{base_name}.part{i}.pdf"
-            part_path = os.path.join(folder_path, part_filename)
+        chapters = []
+        for pdf_file in pdf_files:
+            r2_key = f"{folder_id}/{pdf_file.name}"
+            local_files_map[r2_key] = pdf_file
+            pages = get_pdf_page_count(pdf_file, cache)
+            chapters.append(
+                {
+                    "name": pdf_file.stem,
+                    "file": r2_key,
+                    "size": pdf_file.stat().st_size,
+                    "pages": pages,
+                }
+            )
 
-            part_doc = pymupdf.open()
-            part_doc.insert_pdf(doc, from_page=start_p, to_page=end_p)
-            part_doc.save(part_path, deflate=True)
-            part_doc.close()
+        publications.append(
+            {
+                "id": folder_id,
+                "title": title,
+                "author": author,
+                "year": year,
+                "thumbnail": thumb_key,
+                "chapters": chapters,
+            }
+        )
+        print(f"  [OK] {title} ({folder_id}): {len(chapters)} tập")
 
-            p_size = os.path.getsize(part_path)
-            temp_parts.append((part_path, p_size, start_p + 1, end_p + 1))
+    publications.sort(key=lambda p: natural_sort_key(p["title"]))
+    catalog = {
+        "version": 1,
+        "generatedAt": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "publications": publications,
+    }
+    return catalog, local_files_map
 
-            if p_size > MAX_SIZE_BYTES:
-                all_ok = False
 
-        if all_ok:
-            break
-        else:
-            # Nếu có part vẫn vượt 22MB, xóa các part vừa tạo và tăng số lượng part
-            for p_path, _, _, _ in temp_parts:
-                if os.path.exists(p_path):
-                    os.remove(p_path)
-            num_parts += 1
-            print(f"  -> Tăng số phần chia thành {num_parts} để đảm bảo mỗi file < 22 MB...")
+def guess_content_type(filename: str) -> str:
+    lower = filename.lower()
+    if lower.endswith(".pdf"):
+        return "application/pdf"
+    if lower.endswith(".jpg") or lower.endswith(".jpeg"):
+        return "image/jpeg"
+    if lower.endswith(".png"):
+        return "image/png"
+    if lower.endswith(".webp"):
+        return "image/webp"
+    if lower.endswith(".gif"):
+        return "image/gif"
+    if lower.endswith(".txt"):
+        return "text/plain; charset=utf-8"
+    if lower.endswith(".json"):
+        return "application/json; charset=utf-8"
+    ct, _ = mimetypes.guess_type(filename)
+    return ct or "application/octet-stream"
 
-    doc.close()
 
-    print(f"  -> Đã chia thành công thành {len(temp_parts)} phần:")
-    for p_path, p_size, s_p, e_p in temp_parts:
-        p_mb = p_size / (1024 * 1024)
-        print(f"     + {os.path.basename(p_path)}: {p_mb:.2f} MB (Trang {s_p} - {e_p})")
+def sync_to_r2(catalog: dict, local_files_map: dict[str, Path], env: dict):
+    endpoint_url = env.get("R2_ENDPOINT_URL")
+    bucket_name = env.get("R2_BUCKET_NAME", "manga-library")
+    access_key = env.get("R2_ACCESS_KEY_ID")
+    secret_key = env.get("R2_SECRET_ACCESS_KEY")
 
-    # Sao lưu file gốc vào thư mục .originals
-    dest_backup_folder = os.path.join(BACKUP_DIR, rel_folder)
-    os.makedirs(dest_backup_folder, exist_ok=True)
-    backup_file_path = os.path.join(dest_backup_folder, file_name)
-
-    print(f"  -> Di chuyển file gốc an toàn vào thư mục backup: .originals/{rel_folder}")
-    if os.path.exists(backup_file_path):
-        os.remove(backup_file_path)
-    shutil.move(pdf_path, backup_file_path)
-    print(f"  [XONG] Hoàn tất xử lý: {file_name}")
-
-def update_meta_valid_count(meta_path, folder_name, count):
-    """Cập nhật hoặc thêm dòng 'X valid file' vào cuối file meta.txt"""
-    lines = []
-    if os.path.exists(meta_path):
-        try:
-            with open(meta_path, 'r', encoding='utf-8') as f:
-                lines = [l.strip() for l in f if l.strip()]
-        except Exception:
-            pass
-
-    # Nếu file meta.txt chưa có, tạo cấu trúc chuẩn với tên truyện
-    if not lines:
-        lines = [folder_name]
-
-    # Loại bỏ bất kỳ dòng 'X valid file' hoặc 'X resized file' cũ nào nếu có
-    clean_lines = [l for l in lines if not re.match(r'^\d+\s+(?:valid|resized)\s+file', l, re.IGNORECASE)]
-
-    # Thêm dòng mới vào cuối
-    clean_lines.append(f"{count} valid file")
-
-    with open(meta_path, 'w', encoding='utf-8') as f:
-        f.write("\n".join(clean_lines) + "\n")
-
-PARTS_MANIFEST = "parts.json"
-
-def sync_parts_manifest(folder_path):
-    """Ghi file parts.json: số trang của từng file .partX.pdf trong folder.
-    Web dùng file này để đánh số trang liên tục cho cả tập mà không phải tải hết các part.
-    Chỉ ghi lại khi danh sách part thay đổi (ví dụ sau khi chia file hoặc đổi tên)."""
-    manifest_path = os.path.join(folder_path, PARTS_MANIFEST)
-    part_files = sorted(f for f in os.listdir(folder_path) if is_part_file(f))
-
-    if not part_files:
-        if os.path.exists(manifest_path):
-            os.remove(manifest_path)
-            return "removed"
-        return None
-
-    old = {}
-    if os.path.exists(manifest_path):
-        try:
-            with open(manifest_path, "r", encoding="utf-8") as f:
-                old = json.load(f)
-        except Exception:
-            old = {}
-    if sorted(old.keys()) == part_files:
-        return None  # đã đồng bộ
-
-    data = {}
-    for pf in part_files:
-        doc = pymupdf.open(os.path.join(folder_path, pf))
-        data[pf] = len(doc)
-        doc.close()
-    with open(manifest_path, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=1)
-    return "written"
-
-def process_library():
-    print("=" * 65)
-    print(" MANGA LIBRARY - CÔNG CỤ TỰ ĐỘNG CHIA & TỐI ƯU PDF")
-    print("=" * 65)
-    print(f"Thư mục library: {LIBRARY_DIR}\n")
-
-    if not os.path.exists(LIBRARY_DIR):
-        print("[ERROR] Không tìm thấy thư mục library!")
+    if not endpoint_url or not access_key or not secret_key:
+        print("\n[!] Thiếu cấu hình R2 trong file manga/.r2_env!")
         return
 
-    folders = [f for f in os.listdir(LIBRARY_DIR) if os.path.isdir(os.path.join(LIBRARY_DIR, f))]
-    folders.sort()
+    s3 = boto3.client(
+        "s3",
+        endpoint_url=endpoint_url,
+        aws_access_key_id=access_key,
+        aws_secret_access_key=secret_key,
+        region_name="auto",
+        config=Config(signature_version="s3v4", max_pool_connections=16),
+    )
 
-    total_scanned = 0
-    total_skipped = 0
-    total_processed = 0
+    print(f"\n[*] Đang kiểm tra danh sách file hiện có trên Cloudflare R2 ({bucket_name})...")
+    remote_objects: dict[str, int] = {}
+    paginator = s3.get_paginator("list_objects_v2")
+    for page in paginator.paginate(Bucket=bucket_name):
+        for obj in page.get("Contents", []):
+            remote_objects[obj["Key"]] = obj["Size"]
 
-    for folder_name in folders:
-        folder_path = os.path.join(LIBRARY_DIR, folder_name)
-        
-        # Đếm các file PDF hiện tại trong thư mục
-        pdf_files = [f for f in os.listdir(folder_path) if f.lower().endswith('.pdf') and os.path.isfile(os.path.join(folder_path, f))]
-        current_pdf_count = len(pdf_files)
+    to_upload: list[tuple[str, Path, int]] = []
+    for key, path in local_files_map.items():
+        local_size = path.stat().st_size
+        if remote_objects.get(key) != local_size:
+            to_upload.append((key, path, local_size))
 
-        if current_pdf_count == 0:
-            continue
+    to_delete = [
+        key for key in remote_objects.keys() if key != "catalog.json" and key not in local_files_map
+    ]
 
-        total_scanned += 1
-        meta_path = os.path.join(folder_path, "meta.txt")
+    total_upload_bytes = sum(item[2] for item in to_upload)
+    print(
+        f"[*] Cần tải lên R2: {len(to_upload)} file ({total_upload_bytes / (1024*1024):.1f} MB) | "
+        f"Đã đồng bộ sẵn: {len(local_files_map) - len(to_upload)} file | "
+        f"Cần xóa khỏi R2: {len(to_delete)} file"
+    )
 
-        # Tự động đổi tên các file txt cũ (nếu có) thành meta.txt
-        if not os.path.exists(meta_path):
-            old_txts = [f for f in os.listdir(folder_path) if f.lower().endswith('.txt')]
-            if old_txts:
-                old_p = os.path.join(folder_path, old_txts[0])
-                os.rename(old_p, meta_path)
+    if to_upload:
+        start_time = time.time()
+        completed_count = 0
+        uploaded_bytes = 0
 
-        # Đọc thông tin từ file meta.txt
-        cached_count = None
-        if os.path.exists(meta_path):
-            try:
-                with open(meta_path, 'r', encoding='utf-8') as f:
-                    for line in f:
-                        m = re.match(r'^\s*(\d+)\s+(?:valid|resized)\s+file', line, re.IGNORECASE)
-                        if m:
-                            cached_count = int(m.group(1))
-            except Exception:
-                pass
+        def upload_one(item: tuple[str, Path, int]):
+            key, path, size = item
+            ct = guess_content_type(path.name)
+            s3.upload_file(
+                str(path),
+                bucket_name,
+                key,
+                ExtraArgs={"ContentType": ct},
+            )
+            return key, size
 
-        # Kiểm tra điều kiện bỏ qua
-        if cached_count is not None and cached_count == current_pdf_count:
-            print(f"[BỎ QUA] {folder_name}: Đã tối ưu ({current_pdf_count} valid file)")
-            if sync_parts_manifest(folder_path) == "written":
-                print(f"  [ĐÃ CẬP NHẬT] {PARTS_MANIFEST} (danh sách part thay đổi)")
-            total_skipped += 1
-            continue
+        with ThreadPoolExecutor(max_workers=6) as pool:
+            futures = [pool.submit(upload_one, item) for item in to_upload]
+            for fut in as_completed(futures):
+                key, size = fut.result()
+                completed_count += 1
+                uploaded_bytes += size
+                elapsed = max(0.1, time.time() - start_time)
+                speed_mb = (uploaded_bytes / (1024 * 1024)) / elapsed
+                pct = (uploaded_bytes / max(1, total_upload_bytes)) * 100
+                print(
+                    f"  -> [{completed_count}/{len(to_upload)}] ({pct:5.1f}% | {speed_mb:.1f} MB/s) Đã tải lên: {key}"
+                )
 
-        # Nếu số lượng không khớp hoặc chưa từng tối ưu
-        if cached_count is not None:
-            print(f"\n[PHÁT HIỆN THAY ĐỔI] {folder_name}: Có {current_pdf_count} file PDF (trước đó là {cached_count}) -> Bắt đầu quét...")
-        else:
-            print(f"\n[QUÉT MỚI] {folder_name}: {current_pdf_count} file PDF -> Bắt đầu kiểm tra...")
+    if to_delete:
+        for key in to_delete:
+            s3.delete_object(Bucket=bucket_name, Key=key)
+            print(f"  [-] Đã xóa file cũ trên R2: {key}")
 
-        # Tìm các file lớn hơn MAX_SIZE_BYTES
-        large_files = []
-        for pf in pdf_files:
-            p_full = os.path.join(folder_path, pf)
-            if is_part_file(pf):
-                continue
-            if os.path.getsize(p_full) > MAX_SIZE_BYTES:
-                large_files.append(p_full)
+    # Upload catalog.json cuối cùng
+    catalog_bytes = json.dumps(catalog, ensure_ascii=False, indent=2).encode("utf-8")
+    s3.put_object(
+        Bucket=bucket_name,
+        Key="catalog.json",
+        Body=catalog_bytes,
+        ContentType="application/json; charset=utf-8",
+    )
+    print("[+] Đã cập nhật catalog.json lên Cloudflare R2 thành công!")
 
-        if large_files:
-            print(f"  -> Có {len(large_files)} file vượt quá 22 MB cần chia nhỏ...")
-            for lf in large_files:
-                split_pdf_file(lf)
-            total_processed += 1
-        else:
-            print(f"  -> Tất cả {current_pdf_count} file đều đã <= 22 MB.")
 
-        # Cập nhật lại số lượng file PDF thực tế sau khi xử lý vào meta.txt
-        updated_pdfs = [f for f in os.listdir(folder_path) if f.lower().endswith('.pdf') and os.path.isfile(os.path.join(folder_path, f))]
-        final_count = len(updated_pdfs)
-        update_meta_valid_count(meta_path, folder_name, final_count)
-        if sync_parts_manifest(folder_path) == "written":
-            print(f"  [ĐÃ CẬP NHẬT] {PARTS_MANIFEST}")
-        print(f"  [ĐÃ CẬP NHẬT] meta.txt -> '{final_count} valid file'")
+def main():
+    if not LIBRARY_DIR.exists():
+        print(f"[!] Không tìm thấy thư mục: {LIBRARY_DIR}")
+        return
 
-    print("\n" + "=" * 65)
-    print(f" [HOÀN THÀNH TẤT CẢ]")
-    print(f" - Tổng số bộ truyện: {total_scanned}")
-    print(f" - Bỏ qua (đã tối ưu từ trước): {total_skipped}")
-    print(f" - Đã kiểm tra / xử lý: {total_scanned - total_skipped}")
-    print(" Giờ anh có thể yên tâm 'git add .', 'git commit' và 'git push'!")
-    print("=" * 65)
+    print("========================================================")
+    print("  MANGA LIBRARY — QUÉT METADATA & ĐỒNG BỘ CLOUDFLARE R2 ")
+    print("========================================================\n")
+
+    cache = load_cache()
+    catalog, local_files_map = build_local_catalog(cache)
+    save_cache(cache)
+
+    env = load_env(ENV_FILE)
+    sync_to_r2(catalog, local_files_map, env)
+
+    print("\n========================================================")
+    print("  HOÀN TẤT ĐỒNG BỘ THƯ VIỆN TRUYỆN LÊN CLOUDFLARE R2!")
+    print("========================================================")
+
 
 if __name__ == "__main__":
-    process_library()
+    main()

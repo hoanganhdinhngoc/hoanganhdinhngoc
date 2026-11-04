@@ -4,6 +4,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noimageindex">
+    <meta name="googlebot" content="noindex, nofollow, noarchive, nosnippet, noimageindex">
     <link rel="icon" href="https://hoanganhdinhngoc.github.io/cdn/images/Koi-Kanji.png">
     <title>Manga Library</title>
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
@@ -529,14 +531,11 @@
 
     <script>
     // ===========================================================
-    // CONFIG
+    // CONFIG (Cloudflare R2 Private Gateway)
     // ===========================================================
     const CONFIG = {
-        GITHUB_OWNER:   'hoanganhdinhngoc',
-        GITHUB_REPO:    'hoanganhdinhngoc',
-        BRANCH:         'main',
-        BASE_FOLDER:    'manga/library',
-        PREVIEW_DOMAIN: 'https://hoanganhdinhngoc.pages.dev'
+        API_BASE:       '/api/manga',
+        CLIENT_HEADER:  { 'X-Manga-Client': 'nier-reader-v1' }
     };
 
     // ===========================================================
@@ -780,96 +779,54 @@
             return (!isNaN(na) && !isNaN(nb)) ? na - nb : a.localeCompare(b);
         });
     }
-    const rawUrl = path => CONFIG.PREVIEW_DOMAIN + '/' + path;
+    const rawUrl = path => CONFIG.API_BASE + '/file/' + String(path).split('/').map(s => encodeURIComponent(s)).join('/');
 
     // ===========================================================
-    // GITHUB API
+    // CLOUDFLARE R2 PRIVATE GATEWAY API
     // ===========================================================
     async function fetchLibraryData() {
-        const url = `https://api.github.com/repos/${CONFIG.GITHUB_OWNER}/${CONFIG.GITHUB_REPO}/git/trees/${CONFIG.BRANCH}?recursive=1`;
-        const res = await fetch(url);
-        if (!res.ok) throw new Error('GitHub API ' + res.status);
-        return (await res.json()).tree;
+        const res = await fetch(CONFIG.API_BASE + '/catalog', {
+            headers: CONFIG.CLIENT_HEADER,
+            cache: 'no-cache'
+        });
+        if (!res.ok) throw new Error('R2 Gateway ' + res.status);
+        return await res.json();
     }
 
-    async function buildPublications(tree) {
-        const base = CONFIG.BASE_FOLDER;
-        const pubFolders = new Set();
-        tree.forEach(item => {
-            if (!item.path.startsWith(base + '/')) return;
-            const parts = item.path.slice(base.length + 1).split('/');
-            if (parts[0]) pubFolders.add(parts[0]);
-        });
-
+    async function buildPublications(catalogData) {
+        const rawList = (catalogData && catalogData.publications) ? catalogData.publications : [];
         const publications = [];
-        for (const folder of pubFolders) {
-            const fp = base + '/' + folder;
-            const children = tree.filter(item =>
-                item.path.startsWith(fp + '/') && !item.path.slice(fp.length + 1).includes('/')
-            );
-            const pdfFiles = numericSort(
-                children.filter(i => i.path.toLowerCase().endsWith('.pdf') && i.type === 'blob')
-                        .map(i => i.path.slice(fp.length + 1))
-            );
-            if (!pdfFiles.length) continue;
 
-            // Group files into logical chapters (combine .partX.pdf files into single chapter)
-            const chapterMap = new Map();
-            for (const file of pdfFiles) {
-                const partMatch = file.match(/^(.*?)\.part(\d+)\.pdf$/i);
-                let baseName, partNum;
-                if (partMatch) {
-                    baseName = partMatch[1];
-                    partNum = parseInt(partMatch[2]);
-                } else {
-                    baseName = file.replace(/\.pdf$/i, '');
-                    partNum = 1;
-                }
-                if (!chapterMap.has(baseName)) {
-                    chapterMap.set(baseName, { name: baseName, parts: [] });
-                }
-                chapterMap.get(baseName).parts.push({ file, partNum });
-            }
+        for (const item of rawList) {
+            const folder = item.id;
+            const rawChapters = item.chapters || item.pdfs || [];
+            if (!rawChapters.length) continue;
 
-            const chapters = [];
-            for (const [name, ch] of chapterMap.entries()) {
-                ch.parts.sort((a, b) => a.partNum - b.partNum);
-                chapters.push({
-                    name: ch.name,
-                    files: ch.parts.map(p => p.file)
-                });
-            }
-
-            chapters.sort((a, b) => {
-                const na = parseInt(a.name), nb = parseInt(b.name);
-                return (!isNaN(na) && !isNaN(nb)) ? na - nb : a.name.localeCompare(b.name);
+            const chapters = rawChapters.map(ch => {
+                const relFile = ch.file ? ch.file.split('/').pop() : (ch.name + '.pdf');
+                return {
+                    name: ch.name || relFile.replace(/\.pdf$/i, ''),
+                    files: [relFile],
+                    pages: ch.pages || 0,
+                    size: ch.size || 0
+                };
             });
 
-            const thumbItem = children.find(i =>
-                i.type === 'blob' &&
-                /^thumbnail\.(jpg|jpeg|png|webp|gif)$/i.test(i.path.slice(fp.length + 1))
-            );
-            const thumbnail = thumbItem ? rawUrl(thumbItem.path) : null;
-
-            let title = folder, author = '', year = '';
-            const txtItem = children.find(i => i.type === 'blob' && i.path.toLowerCase().endsWith('/meta.txt'))
-                         || children.find(i => i.type === 'blob' && i.path.toLowerCase().endsWith('.txt'));
-            if (txtItem) {
-                try {
-                    const r = await fetch(rawUrl(txtItem.path));
-                    if (r.ok) {
-                        const rawLines = (await r.text()).split(/\r?\n/).map(l => l.trim()).filter(Boolean);
-                        const lines = rawLines.filter(l => !/^\d+\s+(?:valid|resized)\s+file/i.test(l));
-                        if (lines[0]) title  = lines[0];
-                        if (lines[1]) author = lines[1];
-                        if (lines[2]) year   = lines[2];
-                    }
-                } catch(e) {}
-            }
-            const hasPartsManifest = children.some(i => i.type === 'blob' && i.path.toLowerCase().endsWith('/parts.json'));
-            publications.push({ id:folder, folderPath:fp, thumbnail, title, author, year, files:pdfFiles, chapters:chapters, hasPartsManifest });
+            const thumbnail = item.thumbnail ? rawUrl(item.thumbnail) : null;
+            publications.push({
+                id: folder,
+                folderPath: folder,
+                thumbnail,
+                title: item.title || folder,
+                author: item.author || '',
+                year: item.year || '',
+                files: chapters.map(c => c.files[0]),
+                chapters,
+                hasPartsManifest: false
+            });
         }
-        publications.sort((a,b) => a.title.localeCompare(b.title));
+
+        publications.sort((a, b) => a.title.localeCompare(b.title));
         return publications;
     }
 
@@ -1192,9 +1149,9 @@
         }
 
         const firstFile = chapter.files[0];
-        const pdfUrl = rawUrl(pub.folderPath) + '/' + firstFile;
+        const pdfUrl = partUrl(pub, firstFile);
         try {
-            const pdf  = await pdfjsLib.getDocument(pdfUrl).promise;
+            const pdf  = await getDoc(pdfUrl);
             const page = await pdf.getPage(1);
             const dpr  = Math.min(window.devicePixelRatio || 1, 2);
             const vp1  = page.getViewport({ scale: 1 });
@@ -1222,20 +1179,24 @@
     }
 
     // ===========================================================
-    // CHAPTER MODEL — a chapter made of several .partX.pdf files is
-    // treated as ONE continuous document with GLOBAL page numbers.
+    // CHAPTER MODEL — R2 HTTP Range Request Streaming
     // ===========================================================
     // chapterInfo = { chIdx, parts:[{url, numPages}], offsets:[0, n1, n1+n2, ...], total }
     let chapterInfo = null;
     const docCache  = new Map();              // url -> Promise<PDFDocumentProxy>
     const pcKey     = url => 'manga_pc_' + url; // cached page count per part file
 
-    const partUrl = (pub, file) => rawUrl(pub.folderPath) + '/' + file;
+    const partUrl = (pub, file) => rawUrl(pub.folderPath + '/' + file);
 
     // Open a PDF lazily: with range requests only the needed bytes are fetched
     function getDoc(url) {
         if (!docCache.has(url)) {
-            const p = pdfjsLib.getDocument({ url, disableAutoFetch: true, rangeChunkSize: 524288 }).promise.then(doc => {
+            const p = pdfjsLib.getDocument({
+                url,
+                httpHeaders: CONFIG.CLIENT_HEADER,
+                disableAutoFetch: true,
+                rangeChunkSize: 524288
+            }).promise.then(doc => {
                 try { localStorage.setItem(pcKey(url), doc.numPages); } catch(e) {}
                 return doc;
             });
@@ -1260,28 +1221,13 @@
         return v > 0 ? v : null;
     }
 
-    // parts.json (written by optimize_manga.bat) = page count of every .partX.pdf,
-    // so page numbers are known without downloading the parts first.
-    const partsManifestCache = new Map(); // pub.id -> Promise<object>
-    function loadPartsManifest(pub) {
-        if (!pub.hasPartsManifest) return Promise.resolve({});
-        if (!partsManifestCache.has(pub.id)) {
-            partsManifestCache.set(pub.id,
-                fetch(rawUrl(pub.folderPath) + '/parts.json', { cache: 'no-cache' })
-                    .then(r => r.ok ? r.json() : {})
-                    .then(m => { const n = {}; for (const k in m) n[k.normalize('NFC')] = m[k]; return n; })
-                    .catch(() => ({})));
-        }
-        return partsManifestCache.get(pub.id);
-    }
-
     async function loadChapterInfo(pub, chIdx) {
-        const files = pub.chapters[chIdx].files;
+        const ch    = pub.chapters[chIdx];
+        const files = ch.files;
         const urls  = files.map(f => partUrl(pub, f));
         releaseDocsExcept(urls);
-        const manifest = files.length > 1 ? await loadPartsManifest(pub) : {};
         const counts = await Promise.all(urls.map(async (url, i) =>
-            (manifest[files[i].normalize('NFC')] > 0 ? manifest[files[i].normalize('NFC')] : null)
+            (files.length === 1 && ch.pages > 0 ? ch.pages : null)
             || getCachedPageCount(url)
             || (await getDoc(url)).numPages
         ));
