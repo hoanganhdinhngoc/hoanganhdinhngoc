@@ -253,15 +253,25 @@
   const cloudMiss = new Set();
   let cloudBlockedUntil = 0;
 
+  let lastMultiPV = null;
+  let lastSkill = null;
+
   function bootWorker(factory, timeoutMs) {
     return new Promise((resolve, reject) => {
       let w;
       try { w = factory(); } catch (e) { reject(e); return; }
+      let gotUci = false;
       const timer = setTimeout(() => { try { w.terminate(); } catch (e) { /* */ } reject(new Error('timeout')); }, timeoutMs);
       w.onerror = (e) => { clearTimeout(timer); try { w.terminate(); } catch (x) { /* */ } reject(e); };
       w.onmessage = (e) => {
         const line = typeof e.data === 'string' ? e.data : '';
-        if (line.indexOf('uciok') === 0) { clearTimeout(timer); resolve(w); }
+        if (!gotUci && line.indexOf('uciok') === 0) {
+          gotUci = true;
+          w.postMessage('isready');
+        } else if (gotUci && line.indexOf('readyok') === 0) {
+          clearTimeout(timer);
+          resolve(w);
+        }
       };
       w.postMessage('uci');
     });
@@ -276,18 +286,19 @@
     });
     for (const f of factories) {
       try {
-        const w = await bootWorker(f, 20000);
+        const w = await bootWorker(f, 6000);
         worker = w;
+        lastMultiPV = null;
+        lastSkill = null;
         worker.onmessage = onWorkerMessage;
         worker.onerror = () => { console.warn('[Engine] worker crashed → mini'); fallbackToMini(); };
-        send('setoption name Threads value ' + profile.threads);
-        send('setoption name Hash value ' + profile.hash);
-        send('isready');
         engineKind = 'stockfish';
+        pump();
         return 'stockfish';
       } catch (e) { console.warn('[Engine] worker boot failed', e); }
     }
     engineKind = 'mini';
+    pump();
     return 'mini';
   }
 
@@ -295,7 +306,13 @@
     engineKind = 'mini';
     try { worker && worker.terminate(); } catch (e) { /* */ }
     worker = null;
-    if (currentJob) { const j = currentJob; currentJob = null; runMini(j); }
+    if (currentJob) {
+      const j = currentJob;
+      clearTimeout(j.timer);
+      clearTimeout(j.killTimer);
+      currentJob = null;
+      runMini(j);
+    }
     pump();
   }
 
@@ -318,6 +335,7 @@
       job.depth = Math.max(job.depth, depth);
     } else if (line.indexOf('bestmove') === 0) {
       clearTimeout(job.timer);
+      clearTimeout(job.killTimer);
       const best = line.split(' ')[1];
       currentJob = null;
       finishJob(job, best);
@@ -343,16 +361,23 @@
     const job = queue.shift();
     if (job.cancelled) { job.resolve(null); pump(); return; }
     currentJob = job;
-    if (engineKind === 'mini') { currentJob = null; runMini(job); return; }
+    if (engineKind === 'mini' || !worker) { currentJob = null; runMini(job); return; }
     job.lines = {}; job.depth = 0;
     const o = job.options;
-    send('setoption name MultiPV value ' + (o.multiPV || 1));
-    send('setoption name Skill Level value ' + (o.skill != null ? o.skill : 20));
-    send('setoption name UCI_LimitStrength value ' + (o.limitStrength ? 'true' : 'false'));
-    if (o.limitStrength && o.elo) send('setoption name UCI_Elo value ' + o.elo);
+    const mpv = o.multiPV || 1;
+    const skill = o.skill != null ? o.skill : 20;
+    if (mpv !== lastMultiPV) { send('setoption name MultiPV value ' + mpv); lastMultiPV = mpv; }
+    if (skill !== lastSkill) { send('setoption name Skill Level value ' + skill); lastSkill = skill; }
     send('position fen ' + job.fen);
     send('go depth ' + o.depth + ' movetime ' + o.movetime);
-    job.timer = setTimeout(() => { send('stop'); }, o.movetime + 3500);
+    const stopAfter = Math.max(300, o.movetime || 500) + 1000;
+    job.timer = setTimeout(() => { send('stop'); }, stopAfter);
+    job.killTimer = setTimeout(() => {
+      if (currentJob === job) {
+        console.warn('[Engine] worker search timed out → fallbackToMini');
+        fallbackToMini();
+      }
+    }, stopAfter + 1200);
   }
 
   function runMini(job) {
@@ -642,12 +667,18 @@
           return a;
         }
       }
-      await this.ready;
+      await Promise.race([this.ready, new Promise(r => setTimeout(r, 2000))]);
       const depth = opts.depth || profile.depth;
       const movetime = opts.movetime || profile.movetime;
-      const raw = await enqueue(fen, { multiPV, depth, movetime, skill: 20, limitStrength: false, miniDepth: 2 }, 'analysis', opts.priority, opts.tag);
+      let raw;
+      if (!engineKind) {
+        const lines = MiniEngine.analyze(fen, 2);
+        raw = { lines: lines.slice(0, multiPV), best: lines[0] ? lines[0].uci : null, depth: 2 };
+      } else {
+        raw = await enqueue(fen, { multiPV, depth, movetime, skill: 20, limitStrength: false, miniDepth: 2 }, 'analysis', opts.priority, opts.tag);
+      }
       if (!raw) return null;
-      const a = buildAnalysis(fen, raw, engineKind === 'mini' ? 'mini' : 'stockfish');
+      const a = buildAnalysis(fen, raw, (!engineKind || engineKind === 'mini') ? 'mini' : 'stockfish');
       if (a.lines.length) cache.set(key, a);
       return a;
     },
@@ -655,18 +686,26 @@
     peek(fen) { return cache.get(fenKey(fen)) || null; },
 
     async getBotMove(fen, bot) {
-      await this.ready;
+      this.cancelAnalysis('prefetch');
+      await Promise.race([this.ready, new Promise(r => setTimeout(r, 1500))]);
       const c = newChess(fen);
       const legal = c.moves({ verbose: true });
       if (!legal.length) return null;
       const u = bot.uci;
       const multiPV = Math.max(1, u.multiPV || 1);
-      const raw = await enqueue(fen, {
-        multiPV, depth: Math.min(u.depth, isMobile ? 14 : 22),
-        movetime: isMobile ? Math.min(u.movetime, profile.maxMovetime) : u.movetime,
-        skill: u.skill, limitStrength: !!u.limitStrength, elo: u.elo,
-        miniDepth: bot.tier <= 2 ? 1 : 2
-      }, 'bot', 'high', 'bot');
+      const miniDepth = bot.tier <= 2 ? 1 : 2;
+      let raw;
+      if (!engineKind) {
+        const lines = MiniEngine.analyze(fen, miniDepth);
+        raw = { lines: lines.slice(0, multiPV), best: lines[0] ? lines[0].uci : null, depth: miniDepth };
+      } else {
+        raw = await enqueue(fen, {
+          multiPV, depth: Math.min(u.depth, isMobile ? 12 : 20),
+          movetime: isMobile ? Math.min(u.movetime, profile.maxMovetime) : u.movetime,
+          skill: u.skill, limitStrength: !!u.limitStrength, elo: u.elo,
+          miniDepth
+        }, 'bot', 'high', 'bot');
+      }
       const toUci = m => m.from + m.to + (m.promotion || '');
       if (!raw || !raw.lines || !raw.lines.length) {
         return raw && raw.best && raw.best !== '(none)' ? raw.best : toUci(legal[Math.floor(Math.random() * legal.length)]);

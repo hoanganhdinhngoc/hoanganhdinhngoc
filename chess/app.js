@@ -572,9 +572,9 @@
     render();
     renderMoveList();
     if (S.mode === 'puzzle') { puzzleOnMove(entry); return; }
-    if (S.liveEval) coachEvaluate(entry);
     if (checkGameEnd()) return;
     startTurn();
+    if (S.liveEval) coachEvaluate(entry);
   }
 
   function startTurn() {
@@ -602,7 +602,7 @@
   async function prefetch() {
     const fen = S.chess.fen();
     const token = S.moveToken;
-    const a = await Engine.analyze(fen, { multiPV: 2, tag: 'live' });
+    const a = await Engine.analyze(fen, { multiPV: 2, tag: 'prefetch', priority: 'normal' });
     if (!a || token !== S.moveToken || S.chess.fen() !== fen) return;
     updateEvalBar(a);
     if (!S.coach.entry) {
@@ -877,8 +877,8 @@
     els.btnOptimal.classList.add('hidden');
     els.btnCoachTakeback.classList.add('hidden');
     els.coachBest.classList.add('hidden');
-    const before = await Engine.analyze(entry.fenBefore, { multiPV: 2, tag: 'live', priority: 'high' });
-    const after = await Engine.analyze(entry.fenAfter, { multiPV: 2, tag: 'live', priority: 'high' });
+    const before = await Engine.analyze(entry.fenBefore, { multiPV: 2, tag: 'coach', priority: 'normal' });
+    const after = await Engine.analyze(entry.fenAfter, { multiPV: 2, tag: 'coach', priority: 'normal' });
     if (!before || !after || S.history.indexOf(entry) < 0) return;
     entry.ctx = buildCtx(entry, before, after);
     entry.cls = Engine.classifyMove(entry.ctx);
@@ -1978,7 +1978,8 @@
     els.tcSelect = $('tc-select');
 
     const settings = YStorage.getSettings();
-    S.liveEval = !!settings.liveEval;
+    S.liveEval = false;
+    YStorage.saveSettings({ liveEval: false });
     S.setup.botId = Bots.get(settings.lastBot) ? settings.lastBot : 'cadet';
     S.setup.color = settings.lastColor || 'w';
     document.querySelectorAll('#color-select .seg-btn').forEach(x => x.classList.toggle('active', x.dataset.color === S.setup.color));
