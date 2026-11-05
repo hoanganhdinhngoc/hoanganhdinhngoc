@@ -730,6 +730,7 @@ button, input, select {
 /* ---------------- Right Column: Single Move / Analysis Box ---------------- */
 .side-column {
   min-width: 0;
+  overflow-anchor: none;
 }
 
 .side-box {
@@ -899,6 +900,7 @@ button, input, select {
   max-height: 360px;
   min-height: 220px;
   overflow-y: auto;
+  overflow-anchor: none;
   display: grid;
   grid-template-columns: 44px 1fr 1fr;
   align-content: start;

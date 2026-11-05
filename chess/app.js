@@ -602,7 +602,7 @@
   async function prefetch() {
     const fen = S.chess.fen();
     const token = S.moveToken;
-    const a = await Engine.analyze(fen, { multiPV: 2, tag: 'prefetch', priority: 'normal' });
+    const a = await Engine.analyze(fen, { multiPV: 3, tag: 'prefetch', priority: 'normal' });
     if (!a || token !== S.moveToken || S.chess.fen() !== fen) return;
     updateEvalBar(a);
     if (!S.coach.entry) {
@@ -877,8 +877,8 @@
     els.btnOptimal.classList.add('hidden');
     els.btnCoachTakeback.classList.add('hidden');
     els.coachBest.classList.add('hidden');
-    const before = await Engine.analyze(entry.fenBefore, { multiPV: 2, tag: 'coach', priority: 'normal' });
-    const after = await Engine.analyze(entry.fenAfter, { multiPV: 2, tag: 'coach', priority: 'normal' });
+    const before = await Engine.analyze(entry.fenBefore, { multiPV: 3, tag: 'coach', priority: 'normal' });
+    const after = await Engine.analyze(entry.fenAfter, { multiPV: 3, tag: 'coach', priority: 'normal' });
     if (!before || !after || S.history.indexOf(entry) < 0) return;
     entry.ctx = buildCtx(entry, before, after);
     entry.cls = Engine.classifyMove(entry.ctx);
@@ -1064,7 +1064,15 @@
       no++;
     }
     const cur = ol.querySelector('.current');
-    if (cur) cur.scrollIntoView({ block: 'nearest' });
+    if (cur) {
+      const olRect = ol.getBoundingClientRect();
+      const curRect = cur.getBoundingClientRect();
+      if (curRect.bottom > olRect.bottom) {
+        ol.scrollTop += (curRect.bottom - olRect.bottom);
+      } else if (curRect.top < olRect.top) {
+        ol.scrollTop -= (olRect.top - curRect.top);
+      }
+    }
   }
 
   /* ------------------------------------------------------------------
@@ -1102,7 +1110,7 @@
     for (let i = 0; i < n; i++) {
       fill.style.width = (i / n * 100) + '%';
       txt.textContent = T('review.analyzing', { i: i + 1, n });
-      let a = await Engine.analyze(S.review.fens[i], { multiPV: 2, depth: Engine.profile.reviewDepth, movetime: Engine.profile.reviewMovetime, tag: 'review' });
+      let a = await Engine.analyze(S.review.fens[i], { multiPV: 3, depth: Engine.profile.reviewDepth, movetime: Engine.profile.reviewMovetime, tag: 'review' });
       if (token !== S.review.token) return;
       if (!a) a = { fen: S.review.fens[i], source: 'mini', depth: 0, lines: [], bestUci: null, cpWhite: i ? analyses[i - 1].cpWhite : 0, mate: null };
       analyses[i] = a;

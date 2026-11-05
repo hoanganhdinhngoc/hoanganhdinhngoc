@@ -24,8 +24,8 @@
     (navigator.maxTouchPoints > 1 && Math.min(window.innerWidth, window.innerHeight) < 900);
   const cores = navigator.hardwareConcurrency || 2;
   const profile = isMobile
-    ? { threads: 1, depth: 13, movetime: 550, minMovetime: 400, maxMovetime: 700, hash: 16, reviewMovetime: 350, reviewDepth: 12 }
-    : { threads: Math.max(1, Math.min(4, cores - 1)), depth: 16, movetime: 1000, minMovetime: 800, maxMovetime: 1200, hash: 32, reviewMovetime: 600, reviewDepth: 15 };
+    ? { threads: 1, depth: 10, movetime: 380, minMovetime: 280, maxMovetime: 550, hash: 16, reviewMovetime: 280, reviewDepth: 10 }
+    : { threads: Math.max(1, Math.min(4, cores - 1)), depth: 12, movetime: 520, minMovetime: 400, maxMovetime: 750, hash: 32, reviewMovetime: 380, reviewDepth: 12 };
 
   /* ------------------------------------------------------------------
      Small opening book (UCI lines from the initial position)
@@ -303,7 +303,6 @@
   }
 
   function fallbackToMini() {
-    engineKind = 'mini';
     try { worker && worker.terminate(); } catch (e) { /* */ }
     worker = null;
     if (currentJob) {
@@ -313,6 +312,9 @@
       currentJob = null;
       runMini(j);
     }
+    // Attempt to respawn Stockfish worker in the background instead of staying on MiniEngine forever
+    engineKind = 'mini';
+    initWorker().catch(() => {});
     pump();
   }
 
@@ -370,14 +372,14 @@
     if (skill !== lastSkill) { send('setoption name Skill Level value ' + skill); lastSkill = skill; }
     send('position fen ' + job.fen);
     send('go depth ' + o.depth + ' movetime ' + o.movetime);
-    const stopAfter = Math.max(300, o.movetime || 500) + 1000;
+    const stopAfter = Math.max(300, o.movetime || 500) + 1200;
     job.timer = setTimeout(() => { send('stop'); }, stopAfter);
     job.killTimer = setTimeout(() => {
       if (currentJob === job) {
-        console.warn('[Engine] worker search timed out → fallbackToMini');
+        console.warn('[Engine] worker search timed out → restarting worker');
         fallbackToMini();
       }
-    }, stopAfter + 1200);
+    }, stopAfter + 4000);
   }
 
   function runMini(job) {
@@ -482,6 +484,57 @@
     return names.slice(0, -1).join(', ') + I18N.t('coach.join') + names[names.length - 1];
   }
 
+  /* Check how much net material (in pawns) the move `uci` wins on its destination square */
+  function netCaptureGain(fen, uci) {
+    const c = newChess(fen); if (!c || !uci) return 0;
+    const mv = c.move(parseUci(uci));
+    if (!mv || !mv.captured) return 0;
+    const capturedVal = VAL[mv.captured] || 0;
+    const attackerVal = VAL[mv.promotion || mv.piece] || 1;
+    const fenAfter = c.fen();
+    const defenderColor = mv.color === 'w' ? 'b' : 'w';
+    const recap = minAttacker(fenAfter, mv.to, defenderColor);
+    if (!recap) return capturedVal; // completely undefended
+    return Math.max(0, capturedVal - attackerVal);
+  }
+
+  /* Check if `attackerColor` can profitably capture (gain >= 2 pawns) the piece on `sq` in `fen` */
+  function canProfitablyCaptureSquare(fen, sq, attackerColor) {
+    const parts = fen.split(' ');
+    parts[1] = attackerColor;
+    parts[3] = '-';
+    const c = newChess(parts.join(' '));
+    if (!c) return false;
+    const target = c.get(sq);
+    if (!target || target.color === attackerColor) return false;
+    const att = minAttacker(parts.join(' '), sq, attackerColor);
+    if (!att) return false;
+    const gain = netCaptureGain(parts.join(' '), att.from + att.to + (att.promotion || ''));
+    return gain >= 2;
+  }
+
+  /* Verify on the actual board whether `bestUci` genuinely saves or defends `playedHang` */
+  function bestMoveActuallyDefends(fenBefore, bestUci, playedHang, playerColor) {
+    if (!playedHang || !playedHang.square || !bestUci) return false;
+    const cBefore = newChess(fenBefore);
+    if (!cBefore) return false;
+    const existing = cBefore.get(playedHang.square);
+    // The threatened piece must have already existed on that square before the move
+    if (!existing || existing.color !== playerColor || existing.type !== playedHang.type) return false;
+
+    const info = moveInfo(fenBefore, bestUci);
+    if (!info) return false;
+    const opponentColor = playerColor === 'w' ? 'b' : 'w';
+
+    // Case 1: bestUci moves the threatened piece itself to a safe square
+    if (info.m.from === playedHang.square) {
+      return !canProfitablyCaptureSquare(info.fenAfter, info.m.to, opponentColor);
+    }
+    // Case 2: bestUci defends the square, blocks the line of attack, or captures the attacker
+    // so that after bestUci, the opponent can no longer profitably capture on playedHang.square
+    return !canProfitablyCaptureSquare(info.fenAfter, playedHang.square, opponentColor);
+  }
+
   function bestMoveReason(ctx, cls, playedHang) {
     const { fenBefore, before, color, ply } = ctx;
     const bestUci = before.bestUci;
@@ -494,9 +547,13 @@
     if (m.promotion) return I18N.t('b.promote', { move });
     const fork = (m.piece !== 'k') ? forkTargets(info.fenAfter, m.to, m.piece, info.check) : null;
     if (fork) return I18N.t('b.fork', { move, targets: joinNames(fork) });
-    if (m.captured && VAL[m.captured] >= 3) return I18N.t('b.capture', { move, piece: I18N.t('piece.pl.' + m.captured) });
+    if (m.captured && VAL[m.captured] >= 3 && netCaptureGain(fenBefore, bestUci) >= 2) {
+      return I18N.t('b.capture', { move, piece: I18N.t('piece.pl.' + m.captured) });
+    }
     if (info.check) return I18N.t('b.check', { move });
-    if (playedHang && playedHang.square !== m.to) return I18N.t('b.defend', { move, piece: I18N.t('piece.pl.' + playedHang.type), square: playedHang.square });
+    if (playedHang && bestMoveActuallyDefends(fenBefore, bestUci, playedHang, color)) {
+      return I18N.t('b.defend', { move, piece: I18N.t('piece.pl.' + playedHang.type), square: playedHang.square });
+    }
     if (m.flags.indexOf('k') >= 0 || m.flags.indexOf('q') >= 0) return I18N.t('b.castle', { move });
     if (m.captured) return I18N.t('b.capture', { move, piece: I18N.t('piece.pl.' + m.captured) });
     if (ply <= 24 && CENTER.has(m.to)) return I18N.t('b.center', { move });
@@ -520,31 +577,41 @@
     if (before.mate != null && before.mate * sign > 0 && !(after && after.mate != null && after.mate * sign > 0)) {
       return { key: 'r.missedMate', params: { n: Math.abs(before.mate) }, hang: null };
     }
-    // hangs a piece: opponent's best reply captures material
+    // hangs a piece: opponent's best reply profitably wins material (not an equal trade!)
     if (reply) {
       const ri = moveInfo(info.fenAfter, reply);
-      if (ri && ri.m.captured && VAL[ri.m.captured] >= 3) {
+      const netGain = ri && ri.m.captured ? netCaptureGain(info.fenAfter, reply) : 0;
+      if (ri && ri.m.captured && VAL[ri.m.captured] >= 3 && netGain >= 2) {
+        if (ri.m.to === info.m.to) {
+          // Player moved their own piece directly onto an attacked square
+          return {
+            key: 'r.movedIntoAttack',
+            params: { piece: I18N.t('piece.pl.' + ri.m.captured), square: ri.m.to, reply: replySan },
+            hang: null
+          };
+        }
         const hang = { type: ri.m.captured, square: ri.m.to };
         return { key: 'r.hangs', params: { piece: I18N.t('piece.pl.' + hang.type), square: hang.square, reply: replySan }, hang };
       }
     }
-    // missed capture
+    // missed profitable capture
     const bi = moveInfo(fenBefore, before.bestUci);
-    if (bi && bi.m.captured && VAL[bi.m.captured] >= 3 && !info.m.captured) {
+    if (bi && bi.m.captured && VAL[bi.m.captured] >= 3 && netCaptureGain(fenBefore, before.bestUci) >= 2 && !info.m.captured) {
       return { key: 'r.missedCapture', params: { piece: I18N.t('piece.pl.' + bi.m.captured), square: bi.m.to }, hang: null };
     }
     // center
-    if (ply <= 24 && bi && (CENTER.has(bi.m.to) || EXT_CENTER.has(bi.m.to)) && !CENTER.has(info.m.to) &&
+    if (ply <= 20 && bi && (CENTER.has(bi.m.to) || EXT_CENTER.has(bi.m.to)) && !CENTER.has(info.m.to) &&
       ('ah'.indexOf(info.m.to[0]) >= 0 || info.m.to[1] === (color === 'w' ? '1' : '8') || !EXT_CENTER.has(info.m.to))) {
       return { key: 'r.center', params: {}, hang: null };
     }
-    // king safety: pawn push in front of own castled king
-    if (info.m.piece === 'p') {
+    // king safety: pawn push in front of own castled king in opening/middlegame
+    if (ply <= 36 && info.m.piece === 'p') {
       const cc = newChess(fenBefore);
+      const backRank = color === 'w' ? 7 : 0;
       const board = cc.board();
       let kf = null;
-      for (let r = 0; r < 8; r++) for (let f = 0; f < 8; f++) {
-        const p = board[r][f];
+      for (let f = 0; f < 8; f++) {
+        const p = board[backRank][f];
         if (p && p.type === 'k' && p.color === color) kf = 'abcdefgh'[f];
       }
       const shelter = kf === 'g' || kf === 'h' ? 'fgh' : (kf === 'b' || kf === 'c' || kf === 'a') ? 'abc' : '';
@@ -565,13 +632,20 @@
       return label + I18N.t('r.brilliant', { piece: I18N.t('piece.pl.' + (info ? info.m.piece : 'n')) }) + ' ' + cap(I18N.t('coach.gain', { eval: evalStr })) + '.';
     }
     if (c.cls === 'great') return label + I18N.t('r.great') + ' ' + cap(I18N.t('coach.gain', { eval: evalStr })) + '.';
-    if (c.cls === 'best') return label + I18N.t('r.best') + ' ' + cap(I18N.t('coach.gain', { eval: evalStr })) + '.';
+    if (c.cls === 'best') {
+      const bestMsg = c.isBest ? I18N.t('r.best') : I18N.t('r.bestAlt', { best: c.bestSan || '' });
+      return label + bestMsg + ' ' + cap(I18N.t('coach.gain', { eval: evalStr })) + '.';
+    }
     if (c.cls === 'book') return label + I18N.t('r.book') + ' ' + cap(I18N.t('coach.gain', { eval: evalStr })) + '.';
 
     const pr = playedReason(ctx, c);
     let reasonText;
     if (c.cls === 'good') {
       reasonText = I18N.t('r.good');
+      if (!c.isBest && ctx.before && ctx.before.bestUci) {
+        return label + reasonText + ' ' + bestMoveReason(ctx, c.cls, null);
+      }
+      return label + reasonText;
     } else {
       const reason = I18N.t(pr.key, pr.params);
       const dropPawns = (sign * (c.evalBefore - c.evalAfter)) / 100;
@@ -593,32 +667,50 @@
     const { fenBefore, uci, color, ply, before, after, uciHistory } = ctx;
     const sign = color === 'w' ? 1 : -1;
     const evalBefore = before ? before.cpWhite : 0;
-    const evalAfter = after ? after.cpWhite : evalBefore;
-    const winBefore = winPercent(sign * evalBefore);
-    const winAfter = winPercent(sign * evalAfter);
+    let evalAfter = after ? after.cpWhite : evalBefore;
     const bestUci = before ? before.bestUci : null;
     const isBest = sameMove(uci, bestUci);
-    let winDrop = Math.max(0, winBefore - winAfter);
-    if (isBest) winDrop = Math.min(winDrop, 1);
-    const cpl = Math.max(0, Math.min(1000, sign * (clampCp(evalBefore) - clampCp(evalAfter))));
+
+    // If the played move is already present in `before.lines` (same search depth & horizon),
+    // use its direct evaluation from `before.lines` to avoid odd/even ply horizon noise.
+    if (before && before.lines && before.lines.length) {
+      const matchedLine = before.lines.find(l => sameMove(l.uci, uci));
+      if (matchedLine) {
+        evalAfter = matchedLine.cpWhite;
+      }
+    }
+    if (isBest) {
+      evalAfter = evalBefore;
+    }
+
+    const winBefore = winPercent(sign * evalBefore);
+    const winAfter = winPercent(sign * evalAfter);
+    let winDrop = isBest ? 0 : Math.max(0, winBefore - winAfter);
+    const cpl = isBest ? 0 : Math.max(0, Math.min(1000, sign * (clampCp(evalBefore) - clampCp(evalAfter))));
     let cls;
 
     const startStd = ctx.startFen ? fenKey(ctx.startFen) === fenKey(START_FEN) : true;
-    if (startStd && ply <= 20 && uciHistory && isBookLine(uciHistory) && winDrop <= 7) cls = 'book';
-    else if (isBest || winDrop <= 2) {
+    if (startStd && ply <= 20 && uciHistory && isBookLine(uciHistory) && winDrop <= 6 && cpl <= 55) {
+      cls = 'book';
+    } else if (isBest || (cpl <= 12 && winDrop <= 1.2)) {
       cls = 'best';
-      if (winAfter >= 40 && isSacrifice(fenBefore, uci) && winDrop <= 2) cls = 'brilliant';
+      if (winAfter >= 40 && isSacrifice(fenBefore, uci) && cpl <= 25 && winDrop <= 2.5) cls = 'brilliant';
       else if (isBest && before && before.lines && before.lines.length > 1) {
         const w1 = winPercent(sign * before.lines[0].cpWhite);
         const w2 = winPercent(sign * before.lines[1].cpWhite);
         if (w1 - w2 >= 15 && winAfter > 30 && winBefore < 98) cls = 'great';
       }
-    } else if (winDrop <= 7) cls = 'good';
-    else if (winDrop <= 14) cls = 'inaccuracy';
-    else if (winDrop <= 25) cls = 'mistake';
-    else cls = 'blunder';
+    } else if (winDrop <= 6.5 && cpl <= 65) {
+      cls = 'good';
+    } else if (winDrop <= 14 && cpl <= 145) {
+      cls = 'inaccuracy';
+    } else if (winDrop <= 25 && cpl <= 280) {
+      cls = 'mistake';
+    } else {
+      cls = 'blunder';
+    }
 
-    const critical = ['brilliant', 'inaccuracy', 'mistake', 'blunder'].indexOf(cls) >= 0 || (!isBest && winDrop >= 5 && cls !== 'book');
+    const critical = ['brilliant', 'inaccuracy', 'mistake', 'blunder'].indexOf(cls) >= 0 || (!isBest && winDrop >= 6 && cls !== 'book');
     return {
       cls, cpl: Math.round(cpl), winDrop: Math.round(winDrop * 10) / 10,
       evalBefore, evalAfter, winBefore, winAfter,
@@ -641,7 +733,7 @@
   const Engine = {
     isMobile, profile, ready, START_FEN, VAL,
     get kind() { return engineKind; },
-    cloudEnabled: true,
+    cloudEnabled: false,
 
     init() {
       if (this._inited) return this.ready;
@@ -652,14 +744,14 @@
 
     async analyze(fen, opts) {
       opts = opts || {};
-      const multiPV = opts.multiPV || 2;
+      const multiPV = opts.multiPV || 3;
       const key = fenKey(fen);
       const over = isGameOverFen(fen);
       if (over) return { fen, source: 'rules', depth: 0, lines: [], bestUci: null, cpWhite: over.cpWhite, mate: over.mate };
       const cached = cache.get(key);
-      if (cached && (cached.lines.length >= Math.min(multiPV, 2) || cached.source === 'cloud')) return cached;
+      if (cached && cached.lines.length >= Math.min(multiPV, 2)) return cached;
 
-      if (opts.useCloud !== false && this.cloudEnabled) {
+      if (opts.useCloud === true && this.cloudEnabled) {
         const cl = await cloudEval(fen, multiPV);
         if (cl) {
           const a = buildAnalysis(fen, cl, 'cloud');
