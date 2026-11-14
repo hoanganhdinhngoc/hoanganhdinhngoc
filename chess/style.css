@@ -152,9 +152,16 @@ button, input, select {
   letter-spacing: 0.6px;
 }
 
-.themebutton:hover:not(:disabled) {
+@media (hover: hover) and (pointer: fine) {
+  .themebutton:hover:not(:disabled) {
+    color: var(--nier-text-light);
+    background-position: left bottom;
+  }
+}
+
+.themebutton:active:not(:disabled) {
   color: var(--nier-text-light);
-  background-position: left bottom;
+  background: var(--nier-bg-btn);
 }
 
 .themebutton:disabled {
@@ -180,10 +187,17 @@ button, input, select {
   transition: background 0.15s, color 0.15s, padding-left 0.15s;
 }
 
-.dropContent:hover {
+@media (hover: hover) and (pointer: fine) {
+  .dropContent:hover {
+    color: var(--nier-text-light);
+    background: var(--nier-bg-btn);
+    padding-left: 22px;
+  }
+}
+
+.dropContent:active {
   color: var(--nier-text-light);
   background: var(--nier-bg-btn);
-  padding-left: 22px;
 }
 
 /* ---------------- Main Menu Screen ---------------- */
@@ -359,13 +373,17 @@ button, input, select {
   user-select: none;
 }
 
-.tool-btn:hover:not(:disabled) {
-  color: var(--nier-text-light);
-  background-position: left bottom;
+@media (hover: hover) and (pointer: fine) {
+  .tool-btn:hover:not(:disabled) {
+    color: var(--nier-text-light);
+    background-position: left bottom;
+  }
 }
 
 .tool-btn:active:not(:disabled) {
   transform: translateY(1px);
+  color: var(--nier-text-light);
+  background: var(--nier-bg-btn);
 }
 
 .tool-btn.on {
@@ -412,12 +430,12 @@ button, input, select {
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-/* White Player Bar: Light background, all internal elements Dark */
+/* White Player Bar: NieR light background, dark contrast stripe & dark internal elements */
 .player-bar.side-w {
-  background: #EFECE6;
-  color: #3B3831;
-  border-color: #3B3831;
-  border-left: 5px solid #3B3831;
+  background: var(--nier-text-light);
+  color: var(--nier-dark);
+  border-color: var(--nier-dark);
+  border-left: 6px solid var(--nier-dark);
 }
 
 .player-bar.side-w .pname,
@@ -425,20 +443,20 @@ button, input, select {
 .player-bar.side-w .pcaptured,
 .player-bar.side-w .pcaptured .adv,
 .player-bar.side-w .pclock {
-  color: #3B3831;
+  color: var(--nier-dark);
 }
 
 .player-bar.side-w .pclock {
-  border-color: #3B3831;
-  background: rgba(59, 56, 49, 0.08);
+  border-color: var(--nier-dark);
+  background: rgba(75, 67, 64, 0.1);
 }
 
-/* Black Player Bar: Dark background, all internal elements Light */
+/* Black Player Bar: NieR dark background, light contrast stripe & light internal elements */
 .player-bar.side-b {
-  background: #3B3831;
-  color: #EFECE6;
-  border-color: #3B3831;
-  border-left: 5px solid #CEC8B0;
+  background: var(--nier-dark);
+  color: var(--nier-text-light);
+  border-color: var(--nier-dark);
+  border-left: 6px solid var(--nier-text-light);
 }
 
 .player-bar.side-b .pname,
@@ -446,27 +464,30 @@ button, input, select {
 .player-bar.side-b .pcaptured,
 .player-bar.side-b .pcaptured .adv,
 .player-bar.side-b .pclock {
-  color: #EFECE6;
+  color: var(--nier-text-light);
 }
 
 .player-bar.side-b .pclock {
-  border-color: #EFECE6;
-  background: rgba(239, 236, 230, 0.12);
-}
-
-.player-bar.active-turn {
-  border-left-color: var(--brilliant-cyan);
+  border-color: var(--nier-text-light);
+  background: rgba(211, 206, 187, 0.12);
 }
 
 .player-bar .pcolor {
-  width: 14px;
-  height: 14px;
-  border: 1.5px solid currentColor;
+  width: 22px;
+  height: 22px;
+  border: none;
+  background: transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   flex: none;
 }
 
-.player-bar .pcolor.w { background: #EFECE6; border-color: #3B3831; }
-.player-bar .pcolor.b { background: #3B3831; border-color: #EFECE6; }
+.player-bar .pcolor svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
 
 .player-bar .pname {
   font-weight: 700;
@@ -513,8 +534,10 @@ button, input, select {
   cursor: pointer;
 }
 
-.player-bar .pclock.pausable:hover {
-  opacity: 0.85;
+@media (hover: hover) and (pointer: fine) {
+  .player-bar .pclock.pausable:hover {
+    opacity: 0.85;
+  }
 }
 
 .player-bar .pclock.pausable:active {
@@ -802,10 +825,27 @@ button, input, select {
 }
 
 .analysis-toggle-btn {
-  background: rgba(216, 210, 186, 0.9);
-  border-color: var(--nier-text-light);
   padding: 5px 10px;
   font-size: 11px;
+}
+
+.analysis-toggle-btn:not(.on) {
+  background: var(--nier-text-light);
+  color: var(--nier-dark);
+  border-color: var(--nier-dark);
+}
+
+.analysis-toggle-btn.on {
+  background: var(--nier-dark);
+  color: var(--nier-text-light);
+  border-color: var(--nier-text-light);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .analysis-toggle-btn:not(.on):hover {
+    background: var(--nier-bg-btn);
+    color: var(--nier-text-light);
+  }
 }
 
 .side-box-body {
@@ -987,8 +1027,10 @@ button, input, select {
   border-bottom: 1px dotted var(--ink-faint);
 }
 
-.move-list .mv:hover {
-  background: rgba(255, 255, 255, 0.55);
+@media (hover: hover) and (pointer: fine) {
+  .move-list .mv:hover {
+    background: rgba(75, 67, 64, 0.16);
+  }
 }
 
 .move-list .mv.current {
@@ -1196,16 +1238,108 @@ button, input, select {
   width: 100%;
   padding: 9px 11px;
   color: var(--nier-dark);
-  background: rgba(235, 230, 210, 0.75);
-  border: 2px solid rgba(100, 98, 86, 1);
+  background-color: var(--nier-text-light);
+  border: 2px solid var(--nier-dark);
   outline: none;
   font-family: var(--font);
   font-size: 13px;
+  font-weight: 600;
 }
 
 .popup-input:focus {
   border-color: var(--nier-dark);
-  background: rgba(255, 255, 255, 0.9);
+  background-color: #dcd7c4;
+  color: var(--nier-dark);
+  box-shadow: inset 3px 0 0 var(--nier-dark);
+}
+
+.popup-input:-webkit-autofill,
+.popup-input:-webkit-autofill:hover,
+.popup-input:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--nier-dark);
+  -webkit-box-shadow: 0 0 0 1000px var(--nier-text-light) inset;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+select.popup-input option {
+  background-color: var(--nier-text-light);
+  color: var(--nier-dark);
+}
+
+/* Custom NieR Select Dropdown */
+.nier-select-wrap {
+  position: relative;
+  width: 100%;
+}
+
+.nier-select-native {
+  display: none !important;
+}
+
+.nier-select-trigger {
+  width: 100%;
+  padding: 9px 11px;
+  color: var(--nier-dark);
+  background: var(--nier-text-light);
+  border: 2px solid var(--nier-dark);
+  font-family: var(--font);
+  font-size: 13px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.nier-select-trigger.open {
+  background: var(--nier-dark);
+  color: var(--nier-text-light);
+}
+
+.nier-select-menu {
+  position: absolute;
+  top: calc(100% + 2px);
+  left: 0;
+  right: 0;
+  z-index: 8500;
+  background: var(--nier-text-light);
+  border: 2px solid var(--nier-dark);
+  box-shadow: 2px 3px 8px rgba(75, 67, 64, 0.35);
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.nier-select-option {
+  display: block;
+  width: 100%;
+  padding: 8px 11px;
+  border: none;
+  border-bottom: 1px dotted rgba(75, 67, 64, 0.3);
+  background: var(--nier-text-light);
+  color: var(--nier-dark);
+  font-family: var(--font);
+  font-size: 13px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.nier-select-option:last-child {
+  border-bottom: none;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .nier-select-option:hover {
+    background: rgba(75, 67, 64, 0.16);
+  }
+}
+
+.nier-select-option.active {
+  background: var(--nier-dark);
+  color: var(--nier-text-light);
+  font-weight: 700;
 }
 
 .popup-button-group {
@@ -1252,7 +1386,9 @@ button, input, select {
 }
 
 .seg-btn:last-child { border-right: none; }
-.seg-btn:hover { background: rgba(78, 73, 58, 0.15); }
+@media (hover: hover) and (pointer: fine) {
+  .seg-btn:hover { background: rgba(78, 73, 58, 0.15); }
+}
 .seg-btn.active { background: var(--nier-bg-btn); color: var(--nier-text-light); }
 
 .check-row {
@@ -1265,11 +1401,33 @@ button, input, select {
   font-weight: 600;
 }
 
-.check-row input {
-  accent-color: var(--nier-dark);
-  width: 16px;
-  height: 16px;
+.check-row input[type="checkbox"] {
+  -webkit-appearance: none;
+  appearance: none;
+  position: relative;
+  width: 18px;
+  height: 18px;
+  flex: none;
+  background: var(--nier-text-light);
+  border: 2px solid var(--nier-dark);
   cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.check-row input[type="checkbox"]:checked {
+  background: var(--nier-dark);
+}
+
+.check-row input[type="checkbox"]:checked::after {
+  content: "";
+  position: absolute;
+  left: 4px;
+  top: 1px;
+  width: 5px;
+  height: 9px;
+  border: solid var(--nier-text-light);
+  border-width: 0 2.2px 2.2px 0;
+  transform: rotate(45deg);
 }
 
 .row {
@@ -1326,8 +1484,10 @@ button, input, select {
   transition: background 0.15s, color 0.15s;
 }
 
-.bot-chip:hover {
-  background: rgba(255, 255, 255, 0.7);
+@media (hover: hover) and (pointer: fine) {
+  .bot-chip:hover {
+    background: rgba(75, 67, 64, 0.16);
+  }
 }
 
 .bot-chip.active {
@@ -1400,8 +1560,10 @@ button, input, select {
   font-size: 13px;
 }
 
-.puzzle-list li:hover {
-  background: rgba(255, 255, 255, 0.7);
+@media (hover: hover) and (pointer: fine) {
+  .puzzle-list li:hover {
+    background: rgba(75, 67, 64, 0.16);
+  }
 }
 
 .puzzle-list li.active {
@@ -1570,7 +1732,11 @@ button, input, select {
   left: 0;
   bottom: 0;
   width: min(78vw, 290px);
-  background: #dbd5bf;
+  background-color: var(--nier-beige);
+  background-image:
+    linear-gradient(90deg, rgba(198, 192, 170, 0.5) 30%, transparent 30%),
+    linear-gradient(rgba(198, 192, 170, 0.5) 30%, transparent 30%);
+  background-size: 5px 5px;
   border-right: 3px solid var(--nier-dark);
   box-shadow: 4px 0 18px rgba(0, 0, 0, 0.4);
   z-index: 8900;
@@ -1629,14 +1795,16 @@ button, input, select {
   padding: 12px 14px;
   border: 1.5px solid var(--nier-dark);
   border-left: 5px solid var(--nier-dark);
-  background: rgba(239, 236, 230, 0.75);
+  background: linear-gradient(to right, #4e493a 50%, rgba(216, 210, 186, 0.85) 50%);
+  background-size: 200% 100%;
+  background-position: right bottom;
   color: var(--nier-dark);
   font-family: var(--font);
   font-size: 13px;
   font-weight: 700;
   text-align: left;
   cursor: pointer;
-  transition: background 0.15s, color 0.15s;
+  transition: background-position 0.2s ease-out, color 0.2s ease-out;
 }
 
 .mobile-drawer-item i {
@@ -1644,10 +1812,27 @@ button, input, select {
   text-align: center;
 }
 
-.mobile-drawer-item:hover,
+@media (hover: hover) and (pointer: fine) {
+  .mobile-drawer-item:hover {
+    background-position: left bottom;
+    color: var(--nier-text-light);
+  }
+}
+
 .mobile-drawer-item:active {
   background: var(--nier-bg-btn);
   color: var(--nier-text-light);
+}
+
+/* Post-Game Review Mode UI Rules */
+body[data-mode="review"] .side-box-header {
+  display: none !important;
+}
+
+body[data-mode="review"] .coach-actions,
+body[data-mode="review"] #coach-best,
+body[data-mode="review"] #review-comment {
+  display: none !important;
 }
 
 /* Full-Board Pause Cover Overlay (0.2s fade in / fade out) */
@@ -1769,6 +1954,12 @@ button, input, select {
   letter-spacing: 0.5px;
 }
 
+@media (min-width: 1081px) {
+  .pause-hold-bar {
+    display: none;
+  }
+}
+
 /* ---------------- Responsive (Tablet & Mobile) ---------------- */
 @media (max-width: 1080px) {
   :root {
@@ -1778,6 +1969,11 @@ button, input, select {
   /* When Analysis is ON on mobile, scale board harmoniously so Board + 2 Player Bars + 4 Buttons + Full Analysis Box all fit on ONE screen without scrolling */
   body[data-live-eval="true"] {
     --board-size: max(236px, min(88vw, calc(100dvh - 340px), 356px));
+  }
+
+  /* In Post-Game Review on mobile, scale board so Board + 2 Bars + Eval Box + Nav Controls + Timeline Graph all fit on ONE screen */
+  body[data-mode="review"] {
+    --board-size: max(220px, min(86vw, calc(100dvh - 360px), 340px));
   }
 
   .coreSystem {
@@ -1848,8 +2044,8 @@ button, input, select {
   }
 
   .player-bar .pcolor {
-    width: 11px;
-    height: 11px;
+    width: 18px;
+    height: 18px;
   }
 
   .player-bar .pname {
@@ -1884,6 +2080,11 @@ button, input, select {
     width: 100%;
   }
 
+  .side-box-body .board-controls {
+    margin-top: 2px;
+    margin-bottom: 2px;
+  }
+
   .board-controls .tool-btn {
     padding: 6px 4px;
     min-height: 30px;
@@ -1914,6 +2115,38 @@ button, input, select {
 
   .coach-box {
     padding: 7px 9px;
+  }
+
+  /* Fixed-height Evaluation box during Mobile Review so comment length never shifts nav buttons */
+  body[data-mode="review"] .coach-box {
+    height: 88px;
+    min-height: 88px;
+    max-height: 88px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    padding: 6px 9px;
+  }
+
+  body[data-mode="review"] .coach-top {
+    margin-bottom: 3px;
+    gap: 6px;
+  }
+
+  body[data-mode="review"] .cls-badge {
+    height: 32px;
+    min-width: 48px;
+    font-size: 12px;
+  }
+
+  body[data-mode="review"] .coach-eval {
+    font-size: 14px;
+  }
+
+  body[data-mode="review"] .coach-text {
+    font-size: 11px;
+    line-height: 1.28;
   }
 
   .coach-top {
@@ -1964,6 +2197,32 @@ button, input, select {
     padding: 5px 9px;
     min-height: 28px;
     font-size: 10.5px;
+  }
+
+  .review-controls-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .review-nav {
+    gap: 4px;
+  }
+
+  .review-nav .tool-btn {
+    padding: 4px 6px;
+    min-height: 26px;
+    font-size: 10.5px;
+  }
+
+  #rv-critical {
+    margin-top: 4px;
+    padding: 5px 8px;
+    font-size: 10.5px;
+  }
+
+  .eval-graph {
+    height: 52px;
   }
 
   .move-list {

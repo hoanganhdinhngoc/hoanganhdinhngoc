@@ -264,7 +264,10 @@
                 </div>
               </div>
 
-              <!-- Collapsible Live Analysis HUD (Hidden when Analysis is OFF) -->
+              <!-- Post-Game Review Progress -->
+              <div id="review-progress" class="review-progress hidden"><div class="rp-fill"></div><span class="rp-text"></span></div>
+
+              <!-- Collapsible Live Analysis HUD / Review Move Evaluation -->
               <div id="pane-coach" class="coach-box hidden">
                 <div class="coach-top">
                   <div id="coach-badge" class="cls-badge cls-none">—</div>
@@ -282,10 +285,7 @@
                 </div>
               </div>
 
-              <!-- Post-Game Review Summary & Graph (Shown when reviewing) -->
-              <div id="review-progress" class="review-progress hidden"><div class="rp-fill"></div><span class="rp-text"></span></div>
-              <div id="review-summary" class="review-summary hidden"></div>
-              <svg id="eval-graph" class="eval-graph hidden" viewBox="0 0 300 80" preserveAspectRatio="none"></svg>
+              <!-- Post-Game Review Navigation -->
               <div id="review-controls-wrap" class="review-controls-wrap hidden">
                 <div id="review-nav" class="review-nav">
                   <button id="rv-first" class="tool-btn" type="button">|&lt;</button>
@@ -294,8 +294,12 @@
                   <button id="rv-last" class="tool-btn" type="button">&gt;|</button>
                 </div>
                 <button id="rv-critical" class="themebutton y-btn-block" type="button" data-i18n="btn.nextCritical">&gt;&gt; NƯỚC QUAN TRỌNG TIẾP THEO</button>
-                <div id="review-comment" class="review-comment hidden"></div>
               </div>
+              <div id="review-comment" class="review-comment hidden"></div>
+
+              <!-- Post-Game Review Timeline Graph & Summary -->
+              <svg id="eval-graph" class="eval-graph hidden" viewBox="0 0 300 80" preserveAspectRatio="none"></svg>
+              <div id="review-summary" class="review-summary hidden"></div>
 
               <!-- Standard Algebraic Notation Move List -->
               <ol id="move-list" class="move-list"></ol>
@@ -480,6 +484,20 @@
           <button id="btn-go-review" class="themebutton popup-btn" type="button" data-i18n="btn.review">PHÂN TÍCH VÁN ĐẤU</button>
           <button id="btn-go-new" class="themebutton popup-btn" type="button" data-i18n="btn.new">VÁN MỚI</button>
           <button class="themebutton popup-btn" type="button" data-close="modal-gameover" data-i18n="btn.close">ĐÓNG</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 8. Confirmation Modal -->
+  <div id="modal-confirm" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="popupSection modal-box modal-small">
+      <h2 id="confirm-title" class="popupSectionTitle" data-i18n="ui.confirm">XÁC NHẬN</h2>
+      <div class="popup-boxContent">
+        <p id="confirm-text" class="go-text"></p>
+        <div class="popup-button-group">
+          <button id="btn-confirm-yes" class="themebutton popup-btn" type="button" data-i18n="btn.confirm">XÁC NHẬN</button>
+          <button id="btn-confirm-no" class="themebutton popup-btn" type="button" data-i18n="btn.cancel">HỦY</button>
         </div>
       </div>
     </div>

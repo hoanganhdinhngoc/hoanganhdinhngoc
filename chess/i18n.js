@@ -27,6 +27,8 @@
     'drawer.settings': 'Cài Đặt',
     'pause.title': 'Pause',
     'pause.hold': 'Hold 3s to resume',
+    'pause.click': 'Click to resume',
+    'ui.confirm': 'XÁC NHẬN',
 
     'ui.newOperation': 'THIẾT LẬP VÁN ĐẤU',
     'ui.gameMode': 'Chế độ chơi',
@@ -232,6 +234,8 @@
     'drawer.settings': 'Settings',
     'pause.title': 'Pause',
     'pause.hold': 'Hold 3s to resume',
+    'pause.click': 'Click to resume',
+    'ui.confirm': 'CONFIRM',
 
     'ui.newOperation': 'GAME SETUP',
     'ui.gameMode': 'Game Mode',

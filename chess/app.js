@@ -78,6 +78,7 @@
   let squares = {};
   let drag = null;
   let promoResolve = null;
+  let confirmResolve = null;
   let pauseHoldRaf = null;
   let pauseHoldStart = 0;
 
@@ -96,6 +97,34 @@
   }
   function sound(name) { try { YoRHaAudio.play(name); } catch (e) { /* */ } }
   function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+  function askConfirm(msg) {
+    return new Promise(resolve => {
+      if (confirmResolve) {
+        const prev = confirmResolve;
+        confirmResolve = null;
+        prev(false);
+      }
+      confirmResolve = resolve;
+      const txt = $('confirm-text');
+      if (txt) txt.textContent = msg;
+      const yesBtn = $('btn-confirm-yes');
+      const noBtn = $('btn-confirm-no');
+      const finish = (ans) => {
+        const r = confirmResolve;
+        confirmResolve = null;
+        closeModal('modal-confirm');
+        if (r) r(ans);
+      };
+      if (yesBtn) yesBtn.onclick = () => { sound('confirm'); finish(true); };
+      if (noBtn) noBtn.onclick = () => { sound('cancel'); finish(false); };
+      openModal('modal-confirm');
+    });
+  }
+
+  function isMobilePauseMode() {
+    return window.matchMedia('(max-width: 1080px), (hover: none) and (pointer: coarse)').matches;
+  }
 
   function openMobileDrawer() {
     if (els.mobileDrawer) els.mobileDrawer.classList.add('open');
@@ -145,6 +174,9 @@
     stopClock();
     S.paused = true;
     cancelPauseHold();
+    if (els.pauseHoldText) {
+      els.pauseHoldText.textContent = T(isMobilePauseMode() ? 'pause.hold' : 'pause.click');
+    }
     if (els.pauseCover) {
       els.pauseCover.classList.add('active');
       els.pauseCover.setAttribute('aria-hidden', 'false');
@@ -164,6 +196,11 @@
   function startPauseHold(e) {
     if (!S.paused) return;
     if (e && e.button !== undefined && e.button !== 0 && e.pointerType === 'mouse') return;
+    if (!isMobilePauseMode()) {
+      if (e) e.preventDefault();
+      resumeGame();
+      return;
+    }
     if (e) e.preventDefault();
     cancelPauseHold();
     pauseHoldStart = performance.now();
@@ -181,14 +218,15 @@
     pauseHoldRaf = requestAnimationFrame(tick);
   }
 
-  function showMenuScreen(force) {
+  async function showMenuScreen(force) {
     if (!force && S.history.length && !S.gameOver && ['bot', 'pvp'].indexOf(S.mode) >= 0) {
-      if (!window.confirm(T('alert.confirmNew'))) return false;
+      if (!(await askConfirm(T('alert.confirmNew')))) return false;
     }
     closeMobileDrawer();
     clearPauseCover();
     S.moveToken++;
     S.review.token++;
+    if (S.review.active) exitReview();
     stopClock();
     Engine.cancelAnalysis();
     YoRHaAudio.stopBgm();
@@ -210,15 +248,30 @@
     syncAnalysisVisibility();
   }
 
+  function syncBoardControlsPlacement() {
+    const ctrl = els.boardControls;
+    const colCenter = els.colCenter;
+    const sideBody = els.sideBoxBody;
+    if (!ctrl || !colCenter || !sideBody) return;
+    if (S.review.active && window.innerWidth <= 1080) {
+      const fileAct = sideBody.querySelector('.file-actions');
+      if (ctrl.parentNode !== sideBody) sideBody.insertBefore(ctrl, fileAct || null);
+    } else if (ctrl.parentNode !== colCenter) {
+      colCenter.appendChild(ctrl);
+    }
+  }
+
   function syncAnalysisVisibility() {
     const showAnalysis = S.liveEval || S.review.active;
     document.body.dataset.liveEval = showAnalysis ? 'true' : 'false';
+    document.body.dataset.mode = S.review.active ? 'review' : S.mode;
     if (els.evalBar) els.evalBar.classList.toggle('hidden', !showAnalysis);
     if (els.paneCoach) els.paneCoach.classList.toggle('hidden', !showAnalysis);
     if (els.reviewControlsWrap) els.reviewControlsWrap.classList.toggle('hidden', !S.review.active);
     if (els.paneBot) els.paneBot.classList.toggle('hidden', S.mode !== 'bot');
     if (els.panePuzzleActive) els.panePuzzleActive.classList.toggle('hidden', S.mode !== 'puzzle');
     if (els.coachSource) els.coachSource.classList.add('hidden');
+    syncBoardControlsPlacement();
   }
 
   function fmtClock(ms) {
@@ -434,7 +487,11 @@
     bar.classList.toggle('side-b', color === 'b');
     const p = color === 'w' ? S.white : S.black;
     const lbl = playerLabel(p);
-    bar.querySelector('.pcolor').className = 'pcolor ' + color;
+    const pc = bar.querySelector('.pcolor');
+    if (pc) {
+      pc.className = 'pcolor ' + color;
+      pc.innerHTML = pieceSVG(color, 'k');
+    }
     bar.querySelector('.pname').textContent = lbl.name;
     bar.querySelector('.pelo').textContent = lbl.elo ? '(' + lbl.elo + ')' : '';
     const clk = bar.querySelector('.pclock');
@@ -448,7 +505,10 @@
       bar === els.barBottom
     );
     clk.classList.toggle('pausable', isOwnClock);
-    clk.onclick = isOwnClock ? () => pauseGame() : null;
+    clk.onclick = isOwnClock ? () => {
+      if (S.paused && !isMobilePauseMode()) resumeGame();
+      else pauseGame();
+    } : null;
     const active = inMatch && S.chess.turn() === color;
     bar.classList.toggle('active-turn', active);
     // captured material (pieces this side has taken)
@@ -852,6 +912,7 @@
     els.reviewComment.classList.add('hidden');
     els.reviewProgress.classList.add('hidden');
     if (els.reviewControlsWrap) els.reviewControlsWrap.classList.add('hidden');
+    syncBoardControlsPlacement();
     resetCoach();
     resetEvalBar();
   }
@@ -862,13 +923,14 @@
     $('bot-setup').classList.toggle('hidden', S.setup.mode !== 'bot');
     $('pvp-setup').classList.toggle('hidden', S.setup.mode !== 'pvp');
     renderBotRoster();
+    if (els.tcSelect) syncCustomSelect(els.tcSelect);
     openModal('modal-setup');
   }
 
-  function newGame(opts) {
+  async function newGame(opts) {
     opts = opts || {};
     if (S.history.length && !S.gameOver && ['bot', 'pvp'].indexOf(S.mode) >= 0 && !opts.force) {
-      if (!window.confirm(T('alert.confirmNew'))) return;
+      if (!(await askConfirm(T('alert.confirmNew')))) return;
     }
     closeModal('modal-setup');
     closeModal('modal-gameover');
@@ -945,10 +1007,10 @@
     startTurn();
   }
 
-  function resign() {
+  async function resign() {
     if (checkPausedBlock()) return;
     if (['bot', 'pvp'].indexOf(S.mode) < 0 || S.gameOver) return;
-    if (!window.confirm(T('alert.confirmResign'))) return;
+    if (!(await askConfirm(T('alert.confirmResign')))) return;
     const loser = S.mode === 'bot' ? S.playerColor : S.chess.turn();
     endGame(loser === 'w' ? '0-1' : '1-0', 'resign');
   }
@@ -1025,7 +1087,7 @@
   function renderCoachText() {
     els.coachText.textContent = S.coachFn ? S.coachFn() : T(S.liveEval ? 'coach.idle' : 'coach.off');
   }
-  function renderCoach() {
+  function renderCoach(customTextFn) {
     const entry = S.coach.entry;
     if (!entry || !entry.cls) { renderCoachText(); return; }
     const c = entry.cls;
@@ -1034,8 +1096,14 @@
     const a = entry.ctx.after;
     els.coachEval.textContent = Engine.formatEval(a.cpWhite, a.mate);
     if (els.coachSource) els.coachSource.textContent = '';
-    S.coachFn = () => Engine.comment(entry.ctx, entry.cls);
+    S.coachFn = customTextFn || (() => Engine.comment(entry.ctx, entry.cls));
     renderCoachText();
+    if (S.review.active) {
+      els.coachBest.classList.add('hidden');
+      els.btnOptimal.classList.add('hidden');
+      els.btnCoachTakeback.classList.add('hidden');
+      return;
+    }
     const suboptimal = !c.isBest && ['good', 'inaccuracy', 'mistake', 'blunder'].indexOf(c.cls) >= 0;
     els.btnOptimal.classList.toggle('hidden', !suboptimal);
     els.btnOptimal.textContent = T(S.coach.optimalShown ? 'btn.hideOptimal' : 'btn.showOptimal');
@@ -1206,6 +1274,10 @@
     S.selected = null; S.legal = [];
     if (S.mode !== 'review') S.reviewFrom = S.mode;
     S.mode = 'review';
+    S.coach.entry = null;
+    resetCoach();
+    S.coachFn = () => T('status.analyzing');
+    renderCoachText();
     syncAnalysisVisibility();
     setStatus(() => T('status.analyzing'));
     renderBotCard();
@@ -1236,9 +1308,7 @@
     renderSummary();
     renderGraph();
     reviewGo(0);
-    els.reviewComment.classList.remove('hidden');
-    els.reviewComment.textContent = T('review.done');
-    S.reviewCommentFn = () => T('review.done');
+    if (els.reviewComment) els.reviewComment.classList.add('hidden');
     try { const rec = buildMatchRecord(); YStorage.saveMatch(rec); S.matchId = rec.id; renderArchive(); } catch (e) { /* */ }
   }
 
@@ -1332,12 +1402,11 @@
         sound('move');
       }
     } else {
-      commentFn = () => T('review.start');
+      commentFn = () => T('review.start') + (S.review.ready ? ' ' + T('review.done') : '');
       if (S.review.analyses) updateEvalBar(S.review.analyses[0]);
     }
     S.reviewCommentFn = commentFn;
-    els.reviewComment.classList.remove('hidden');
-    els.reviewComment.textContent = commentFn();
+    if (els.reviewComment) els.reviewComment.classList.add('hidden');
     S.arrows = arrows;
     setStatus(() => T('status.reviewing', { ply: S.review.index, total: S.review.fens.length - 1 }));
     render();
@@ -1347,9 +1416,19 @@
     if (index > 0 && S.history[index - 1].cls) {
       S.coach.entry = S.history[index - 1];
       S.coach.optimalShown = false;
-      renderCoach();
+      renderCoach(commentFn);
+    } else {
+      S.coach.entry = null;
+      S.coach.optimalShown = false;
+      els.coachBadge.className = 'cls-badge cls-none';
+      els.coachBadge.innerHTML = '—';
+      const a0 = (index > 0 && S.review.analyses && S.review.analyses[index]) || (S.review.analyses && S.review.analyses[0]);
+      els.coachEval.textContent = a0 ? Engine.formatEval(a0.cpWhite, a0.mate) : '0.00';
+      S.coachFn = commentFn;
+      renderCoachText();
       els.btnOptimal.classList.add('hidden');
       els.btnCoachTakeback.classList.add('hidden');
+      els.coachBest.classList.add('hidden');
     }
   }
 
@@ -1536,6 +1615,7 @@
       (cat.subs || []).forEach(s => add(cat.id + ':' + s.id, '   └ ' + I18N.pick(s.name)));
     });
     sel.value = cur;
+    syncCustomSelect(sel);
   }
 
   function renderPuzzleList() {
@@ -1568,11 +1648,11 @@
     if (act) act.scrollIntoView({ block: 'nearest' });
   }
 
-  function loadPuzzle(id, force) {
+  async function loadPuzzle(id, force) {
     const p = puzzleById(id);
     if (!p) return;
     if (!force && S.history.length && !S.gameOver && ['bot', 'pvp'].indexOf(S.mode) >= 0) {
-      if (!window.confirm(T('alert.confirmNew'))) return;
+      if (!(await askConfirm(T('alert.confirmNew')))) return;
     }
     closeModal('modal-puzzles');
     resetCommon();
@@ -1747,6 +1827,74 @@
   }
 
   /* ------------------------------------------------------------------
+     Custom NieR Dropdowns
+     ------------------------------------------------------------------ */
+  function syncCustomSelect(selectEl) {
+    if (!selectEl) return;
+    let wrap = selectEl.parentNode;
+    if (!wrap || !wrap.classList.contains('nier-select-wrap')) {
+      wrap = document.createElement('div');
+      wrap.className = 'nier-select-wrap';
+      selectEl.parentNode.insertBefore(wrap, selectEl);
+      wrap.appendChild(selectEl);
+      selectEl.classList.add('nier-select-native');
+    }
+    let trigger = wrap._trigger;
+    let menu = wrap._menu;
+    if (!trigger) {
+      trigger = document.createElement('button');
+      trigger.type = 'button';
+      trigger.className = 'nier-select-trigger';
+      menu = document.createElement('div');
+      menu.className = 'nier-select-menu hidden';
+      wrap.appendChild(trigger);
+      wrap.appendChild(menu);
+      wrap._trigger = trigger;
+      wrap._menu = menu;
+      trigger.onclick = (e) => {
+        e.stopPropagation();
+        const wasOpen = !menu.classList.contains('hidden');
+        document.querySelectorAll('.nier-select-menu').forEach(m => m.classList.add('hidden'));
+        document.querySelectorAll('.nier-select-trigger').forEach(t => t.classList.remove('open'));
+        if (!wasOpen) {
+          menu.classList.remove('hidden');
+          trigger.classList.add('open');
+        }
+        sound('click');
+      };
+    }
+    if (!syncCustomSelect._docBound) {
+      syncCustomSelect._docBound = true;
+      document.addEventListener('click', (e) => {
+        if (!e.target.closest('.nier-select-wrap')) {
+          document.querySelectorAll('.nier-select-menu').forEach(m => m.classList.add('hidden'));
+          document.querySelectorAll('.nier-select-trigger').forEach(t => t.classList.remove('open'));
+        }
+      });
+    }
+    const opts = Array.from(selectEl.options);
+    const selectedOpt = opts[selectEl.selectedIndex] || opts[0];
+    trigger.innerHTML = '<span>' + escapeHtml(selectedOpt ? selectedOpt.textContent : '') + '</span><i class="fas fa-chevron-down"></i>';
+    menu.innerHTML = '';
+    opts.forEach(opt => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'nier-select-option' + (opt.value === selectEl.value ? ' active' : '');
+      btn.textContent = opt.textContent;
+      btn.onclick = (e) => {
+        e.stopPropagation();
+        selectEl.value = opt.value;
+        selectEl.dispatchEvent(new Event('change', { bubbles: true }));
+        menu.classList.add('hidden');
+        trigger.classList.remove('open');
+        sound('select');
+        syncCustomSelect(selectEl);
+      };
+      menu.appendChild(btn);
+    });
+  }
+
+  /* ------------------------------------------------------------------
      Modals, settings & profile
      ------------------------------------------------------------------ */
   function openModal(id) {
@@ -1763,6 +1911,11 @@
       const r = promoResolve;
       promoResolve = null;
       r(null);
+    }
+    if (id === 'modal-confirm' && confirmResolve) {
+      const r = confirmResolve;
+      confirmResolve = null;
+      r(false);
     }
   }
 
@@ -1854,14 +2007,24 @@
      ------------------------------------------------------------------ */
   function applyLanguage() {
     I18N.apply(document);
+    if (els.pauseHoldText) {
+      els.pauseHoldText.textContent = T(isMobilePauseMode() ? 'pause.hold' : 'pause.click');
+    }
+    if (els.tcSelect) syncCustomSelect(els.tcSelect);
     syncSettingsUI();
     renderBotRoster();
     renderBotCard();
     renderBotLine();
     renderStatus();
     renderPlayers();
-    if (S.coach.entry && S.coach.entry.cls) renderCoach(); else renderCoachText();
-    if (S.review.active && S.reviewCommentFn) els.reviewComment.textContent = S.reviewCommentFn();
+    if (S.coach.entry && S.coach.entry.cls) {
+      renderCoach(S.review.active ? S.reviewCommentFn : null);
+    } else if (S.review.active && S.reviewCommentFn) {
+      S.coachFn = S.reviewCommentFn;
+      renderCoachText();
+    } else {
+      renderCoachText();
+    }
     if (S.review.summary) renderSummary();
     renderMoveList();
     renderPuzzleFilter();
@@ -2082,7 +2245,13 @@
     $('btn-profile-save').onclick = saveProfile;
 
     I18N.onChange(() => applyLanguage());
-    window.addEventListener('resize', () => { if (drag) onPointerCancel(); });
+    window.addEventListener('resize', () => {
+      if (drag) onPointerCancel();
+      syncBoardControlsPlacement();
+      if (S.paused && els.pauseHoldText) {
+        els.pauseHoldText.textContent = T(isMobilePauseMode() ? 'pause.hold' : 'pause.click');
+      }
+    });
   }
 
   /* ------------------------------------------------------------------
@@ -2092,8 +2261,12 @@
     els.screenMenu = $('screen-menu');
     els.screenGame = $('screen-game');
     els.board = $('board');
+    els.colCenter = $('col-center');
+    els.boardControls = $('board-controls');
+    els.sideBoxBody = document.querySelector('#col-right .side-box-body');
     els.pauseCover = $('board-pause-cover');
     els.pauseHoldFill = $('pause-hold-fill');
+    els.pauseHoldText = els.pauseCover ? els.pauseCover.querySelector('.pause-hold-text') : null;
     els.mobileDrawer = $('mobile-drawer');
     els.mobileDrawerBackdrop = $('mobile-drawer-backdrop');
     els.arrowGroup = $('arrow-group');
