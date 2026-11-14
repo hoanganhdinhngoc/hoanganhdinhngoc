@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#ccc6b0" />
-  <title>CDN || Chess</title>
+  <title>CDN || NieR Chess</title>
   <link rel="icon" href="https://hoanganhdinhngoc.github.io/cdn/images/Koi-Kanji.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -46,7 +46,7 @@
           </div>
         </div>
 
-        <h1 class="title-main" data-i18n="ui.title">CỜ VUA</h1>
+        <h1 class="title-main" data-i18n="ui.title">NieR Chess</h1>
         <p class="menu-subtitle" data-i18n="ui.subtitle">CỜ VUA TIÊU CHUẨN & PHÂN TÍCH CHIẾN THUẬT</p>
 
         <!-- Vertical Menu List -->
@@ -88,14 +88,21 @@
     <div id="screen-game" class="game-screen hidden">
       <!-- Top Command Bar -->
       <header class="nier-toolbar">
-        <div class="toolbar-group">
+        <!-- Mobile Compact Header (Burger left, NieR Chess right) -->
+        <button id="btn-mobile-menu" class="tool-btn mobile-burger-btn" type="button" aria-label="Menu">
+          <i class="fas fa-bars"></i>
+        </button>
+        <span class="mobile-toolbar-brand">NieR Chess</span>
+
+        <!-- Desktop Header Groups -->
+        <div class="toolbar-group desktop-toolbar-group">
           <button id="btn-back-menu" class="tool-btn" type="button">
             <i class="fas fa-bars"></i> <span data-i18n="btn.menu">MENU CHÍNH</span>
           </button>
           <span class="toolbar-divider"></span>
           <span id="status-line" class="toolbar-status" data-i18n="status.idle">Chọn chế độ chơi từ menu để bắt đầu.</span>
         </div>
-        <div class="toolbar-group">
+        <div class="toolbar-group desktop-toolbar-group">
           <button id="btn-lang" class="tool-btn" type="button" data-i18n-title="settings.language" title="Language">VI</button>
           <button id="btn-bgm" class="tool-btn" type="button" data-i18n-title="settings.bgm" title="Music"><i class="fas fa-music"></i> ON</button>
           <button id="btn-audio" class="tool-btn" type="button" data-i18n-title="settings.audio" title="Audio"><i class="fas fa-volume-up"></i> ON</button>
@@ -104,6 +111,29 @@
           <button id="btn-settings" class="tool-btn" type="button" data-i18n="btn.settings">CÀI ĐẶT</button>
         </div>
       </header>
+
+      <!-- Mobile Slide-out Left Drawer -->
+      <div id="mobile-drawer-backdrop" class="mobile-drawer-backdrop"></div>
+      <aside id="mobile-drawer" class="mobile-drawer" aria-label="Game Menu">
+        <div class="mobile-drawer-header">
+          <span class="mobile-drawer-title">NieR Chess</span>
+          <button id="btn-drawer-close" class="mobile-drawer-close" type="button" aria-label="Close">&times;</button>
+        </div>
+        <nav class="mobile-drawer-nav">
+          <button id="drawer-btn-menu" class="mobile-drawer-item" type="button">
+            <i class="fas fa-home"></i> <span data-i18n="drawer.toMain">Về Menu Chính</span>
+          </button>
+          <button id="drawer-btn-load" class="mobile-drawer-item" type="button">
+            <i class="fas fa-folder-open"></i> <span data-i18n="drawer.load">Tải / Lưu Trữ Ván Cờ</span>
+          </button>
+          <button id="drawer-btn-profile" class="mobile-drawer-item" type="button">
+            <i class="fas fa-user"></i> <span data-i18n="drawer.profile">Hồ Sơ Người Chơi</span>
+          </button>
+          <button id="drawer-btn-settings" class="mobile-drawer-item" type="button">
+            <i class="fas fa-sliders-h"></i> <span data-i18n="drawer.settings">Cài Đặt</span>
+          </button>
+        </nav>
+      </aside>
 
       <!-- 2-Column Game Layout: Large Board (Left) + Single Move/Analysis Box (Right) -->
       <main class="game-workspace">
@@ -144,6 +174,40 @@
                   </defs>
                   <g id="arrow-group"></g>
                 </svg>
+
+                <!-- Full-Board Pause Cover Overlay (Fade in/out 0.2s, Hold 3s to resume) -->
+                <div id="board-pause-cover" class="board-pause-cover" aria-hidden="true">
+                  <div class="pause-center-content">
+                    <div class="pause-emblem" aria-hidden="true">
+                      <div class="pause-emblem-piece">
+                        <svg viewBox="0 0 45 45" xmlns="http://www.w3.org/2000/svg">
+                          <g fill="#EFECE6" stroke="#3B3831" stroke-width="1.6" stroke-linejoin="miter">
+                            <rect x="21" y="3" width="3" height="12"/><rect x="17.5" y="6.5" width="10" height="3"/>
+                            <path d="M14 34 L12 21 L22.5 16 L33 21 L31 34 Z"/>
+                            <rect x="11" y="34" width="23" height="5"/>
+                            <path d="M13.5 27 L31.5 27 M22.5 16 L22.5 34" fill="none" stroke="#3B3831" stroke-width="1.2"/>
+                          </g>
+                        </svg>
+                      </div>
+                      <div class="pause-emblem-piece">
+                        <svg viewBox="0 0 45 45" xmlns="http://www.w3.org/2000/svg">
+                          <g fill="#3B3831" stroke="#CEC8B0" stroke-width="1.6" stroke-linejoin="miter">
+                            <path d="M13 34 L17 26 L22.5 22 L21.5 19.5 L15 24.5 L11 22.5 L11 18.5 L18 11 L18 6.5 L21 9 L24 6.5 L31 13.5 L33.5 22 L31.5 34 Z"/>
+                            <rect x="11" y="34" width="23" height="5"/>
+                            <rect x="18.5" y="13.5" width="2.5" height="2.5" fill="#CEC8B0" stroke="none"/>
+                            <path d="M26 12 L29.5 22.5 L28 34" fill="none" stroke="#CEC8B0" stroke-width="1.2"/>
+                          </g>
+                        </svg>
+                      </div>
+                    </div>
+                    <div class="pause-title" data-i18n="pause.title">Pause</div>
+                    <div class="pause-brand">NieR Chess</div>
+                  </div>
+                  <div class="pause-hold-wrap">
+                    <div class="pause-hold-bar"><div id="pause-hold-fill" class="pause-hold-fill"></div></div>
+                    <div class="pause-hold-text" data-i18n="pause.hold">Hold 3s to resume</div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

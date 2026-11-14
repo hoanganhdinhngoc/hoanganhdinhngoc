@@ -14,7 +14,7 @@
       id: 'cadet',
       tier: 1,
       elo: 400,
-      name: { vi: 'Người Mới (400)', en: 'Beginner (400)' },
+      name: { vi: 'Người Mới', en: 'Beginner' },
       title: { vi: 'Cấp độ 1 // Tập sự', en: 'Level 1 // Novice' },
       desc: {
         vi: 'Mới làm quen với luật cờ. Thường đi quân ngẫu nhiên, ít bảo vệ quân và dễ bỏ sót các đòn bắt quân trực tiếp.',
@@ -28,7 +28,7 @@
       id: 'scout',
       tier: 2,
       elo: 700,
-      name: { vi: 'Sơ Cấp (700)', en: 'Casual (700)' },
+      name: { vi: 'Sơ Cấp', en: 'Casual' },
       title: { vi: 'Cấp độ 2 // Phong trào', en: 'Level 2 // Casual Player' },
       desc: {
         vi: 'Biết phát triển quân nhẹ và nhập thành cơ bản, nhưng tính toán ngắn (1–2 nước) và đôi khi mắc lỗi bỏ quân.',
@@ -42,7 +42,7 @@
       id: 'tactician',
       tier: 3,
       elo: 1000,
-      name: { vi: 'Trung Cấp (1000)', en: 'Club Player (1000)' },
+      name: { vi: 'Trung Cấp', en: 'Club Player' },
       title: { vi: 'Cấp độ 3 // Câu lạc bộ', en: 'Level 3 // Club Intermediate' },
       desc: {
         vi: 'Nắm vững các đòn chiến thuật cơ bản như chĩa đôi, ghim quân và xiên quân. Khai thác nhanh các nước đi sơ hở.',
@@ -56,7 +56,7 @@
       id: 'veteran',
       tier: 4,
       elo: 1400,
-      name: { vi: 'Khá Giỏi (1400)', en: 'Tournament (1400)' },
+      name: { vi: 'Khá Giỏi', en: 'Tournament' },
       title: { vi: 'Cấp độ 4 // Đấu giải', en: 'Level 4 // Tournament Player' },
       desc: {
         vi: 'Chơi chắc chắn ở khai cuộc, biết kiểm soát trung tâm, phối hợp các quân nặng trên cột mở và ít khi mất quân không.',
@@ -70,7 +70,7 @@
       id: 'master',
       tier: 5,
       elo: 1800,
-      name: { vi: 'Kiện Tướng (1800)', en: 'Candidate Master (1800)' },
+      name: { vi: 'Kiện Tướng', en: 'Candidate Master' },
       title: { vi: 'Cấp độ 5 // Kiện tướng dự bị', en: 'Level 5 // Candidate Master' },
       desc: {
         vi: 'Tính toán sâu các tổ hợp chiến thuật nhiều nước, đánh giá tốt cấu trúc tốt và chuyển hóa ưu thế nhỏ ở cờ tàn.',
@@ -84,7 +84,7 @@
       id: 'warlord',
       tier: 6,
       elo: 2300,
-      name: { vi: 'Đại Kiện Tướng (2300)', en: 'Grandmaster (2300)' },
+      name: { vi: 'Đại Kiện Tướng', en: 'Grandmaster' },
       title: { vi: 'Cấp độ 6 // Đại kiện tướng', en: 'Level 6 // Grandmaster' },
       desc: {
         vi: 'Kết hợp nhuần nhuyễn giữa chiến lược dài hạn và tính toán chiến thuật chính xác. Trừng phạt ngay cả những nước đi hơi thụ động.',
@@ -98,7 +98,7 @@
       id: 'supreme',
       tier: 7,
       elo: 2850,
-      name: { vi: 'Siêu Đại Kiện Tướng (2850)', en: 'Maximum Engine (2850)' },
+      name: { vi: 'Siêu Đại Kiện Tướng', en: 'Maximum Engine' },
       title: { vi: 'Cấp độ 7 // Sức mạnh tối đa', en: 'Level 7 // Maximum Strength' },
       desc: {
         vi: 'Tính toán ở độ sâu tối đa không giới hạn sức mạnh. Luôn tìm ra nước đi tối ưu trong cả thế trận phức tạp lẫn cờ tàn kỹ thuật.',

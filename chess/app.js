@@ -54,6 +54,7 @@
     liveEval: false,
     timeControl: 'none',
     clock: { enabled: false, w: 0, b: 0, inc: 0, last: 0, timer: null },
+    paused: false,
     gameOver: false, result: null, termination: null,
     selected: null, legal: [],
     arrows: [],
@@ -77,6 +78,8 @@
   let squares = {};
   let drag = null;
   let promoResolve = null;
+  let pauseHoldRaf = null;
+  let pauseHoldStart = 0;
 
   /* ------------------------------------------------------------------
      Utils & Screen Navigation
@@ -94,10 +97,96 @@
   function sound(name) { try { YoRHaAudio.play(name); } catch (e) { /* */ } }
   function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
+  function openMobileDrawer() {
+    if (els.mobileDrawer) els.mobileDrawer.classList.add('open');
+    if (els.mobileDrawerBackdrop) els.mobileDrawerBackdrop.classList.add('open');
+    sound('open');
+  }
+
+  function closeMobileDrawer() {
+    if (els.mobileDrawer) els.mobileDrawer.classList.remove('open');
+    if (els.mobileDrawerBackdrop) els.mobileDrawerBackdrop.classList.remove('open');
+  }
+
+  function checkPausedBlock() {
+    if (!S.paused) return false;
+    toast(T('alert.pausedNA'), true);
+    sound('error');
+    return true;
+  }
+
+  function cancelPauseHold() {
+    if (pauseHoldRaf) {
+      cancelAnimationFrame(pauseHoldRaf);
+      pauseHoldRaf = null;
+    }
+    pauseHoldStart = 0;
+    if (els.pauseHoldFill) els.pauseHoldFill.style.width = '0%';
+  }
+
+  function clearPauseCover() {
+    cancelPauseHold();
+    S.paused = false;
+    if (els.pauseCover) {
+      els.pauseCover.classList.remove('active');
+      els.pauseCover.setAttribute('aria-hidden', 'true');
+    }
+  }
+
+  function pauseGame() {
+    if (S.paused || S.gameOver || S.review.active || ['bot', 'pvp', 'puzzle'].indexOf(S.mode) < 0) return;
+    if (drag) onPointerCancel();
+    if (S.clock.enabled && S.clock.timer) {
+      const now = Date.now();
+      const turn = S.chess.turn();
+      S.clock[turn] = Math.max(0, S.clock[turn] - (now - S.clock.last));
+      S.clock.last = now;
+    }
+    stopClock();
+    S.paused = true;
+    cancelPauseHold();
+    if (els.pauseCover) {
+      els.pauseCover.classList.add('active');
+      els.pauseCover.setAttribute('aria-hidden', 'false');
+    }
+    renderPlayers();
+    sound('select');
+  }
+
+  function resumeGame() {
+    if (!S.paused) return;
+    clearPauseCover();
+    sound('confirm');
+    startClock();
+    renderPlayers();
+  }
+
+  function startPauseHold(e) {
+    if (!S.paused) return;
+    if (e && e.button !== undefined && e.button !== 0 && e.pointerType === 'mouse') return;
+    if (e) e.preventDefault();
+    cancelPauseHold();
+    pauseHoldStart = performance.now();
+    const tick = (now) => {
+      if (!S.paused || !pauseHoldStart) return;
+      const elapsed = now - pauseHoldStart;
+      const pct = Math.min(100, (elapsed / 3000) * 100);
+      if (els.pauseHoldFill) els.pauseHoldFill.style.width = pct.toFixed(1) + '%';
+      if (elapsed >= 3000) {
+        resumeGame();
+        return;
+      }
+      pauseHoldRaf = requestAnimationFrame(tick);
+    };
+    pauseHoldRaf = requestAnimationFrame(tick);
+  }
+
   function showMenuScreen(force) {
     if (!force && S.history.length && !S.gameOver && ['bot', 'pvp'].indexOf(S.mode) >= 0) {
       if (!window.confirm(T('alert.confirmNew'))) return false;
     }
+    closeMobileDrawer();
+    clearPauseCover();
     S.moveToken++;
     S.review.token++;
     stopClock();
@@ -112,6 +201,7 @@
   }
 
   function showGameScreen() {
+    closeMobileDrawer();
     S.view = 'game';
     document.body.dataset.view = 'game';
     els.screenMenu.classList.add('hidden');
@@ -122,6 +212,7 @@
 
   function syncAnalysisVisibility() {
     const showAnalysis = S.liveEval || S.review.active;
+    document.body.dataset.liveEval = showAnalysis ? 'true' : 'false';
     if (els.evalBar) els.evalBar.classList.toggle('hidden', !showAnalysis);
     if (els.paneCoach) els.paneCoach.classList.toggle('hidden', !showAnalysis);
     if (els.reviewControlsWrap) els.reviewControlsWrap.classList.toggle('hidden', !S.review.active);
@@ -150,7 +241,7 @@
     return false;
   }
   function canInteract() {
-    return ['bot', 'pvp', 'puzzle'].indexOf(S.mode) >= 0 && !S.gameOver && !S.viewFen && isHumanTurn() && !promoResolve;
+    return !S.paused && ['bot', 'pvp', 'puzzle'].indexOf(S.mode) >= 0 && !S.gameOver && !S.viewFen && isHumanTurn() && !promoResolve;
   }
   function setStatus(fn, alert) { S.statusFn = fn; S.statusAlert = !!alert; renderStatus(); }
   function renderStatus() {
@@ -339,6 +430,8 @@
   }
   function fillBar(bar, color) {
     if (!bar) return;
+    bar.classList.toggle('side-w', color === 'w');
+    bar.classList.toggle('side-b', color === 'b');
     const p = color === 'w' ? S.white : S.black;
     const lbl = playerLabel(p);
     bar.querySelector('.pcolor').className = 'pcolor ' + color;
@@ -347,7 +440,16 @@
     const clk = bar.querySelector('.pclock');
     clk.textContent = S.clock.enabled ? fmtClock(S.clock[color]) : '∞';
     clk.classList.toggle('low', S.clock.enabled && S.clock[color] < 20000);
-    const active = !S.gameOver && ['bot', 'pvp', 'puzzle'].indexOf(S.mode) >= 0 && !S.review.active && S.chess.turn() === color;
+    const inMatch = !S.gameOver && !S.review.active && ['bot', 'pvp', 'puzzle'].indexOf(S.mode) >= 0;
+    const isOwnClock = inMatch && (
+      S.mode === 'pvp' ||
+      (S.mode === 'bot' && color === S.playerColor) ||
+      (S.mode === 'puzzle' && S.puzzle && color === S.puzzle.playerColor) ||
+      bar === els.barBottom
+    );
+    clk.classList.toggle('pausable', isOwnClock);
+    clk.onclick = isOwnClock ? () => pauseGame() : null;
+    const active = inMatch && S.chess.turn() === color;
     bar.classList.toggle('active-turn', active);
     // captured material (pieces this side has taken)
     const fen = currentFen().split(' ')[0];
@@ -623,6 +725,7 @@
     const [dmin, dmax] = bot.thinkDelay || [300, 900];
     const wait = dmin + Math.random() * (dmax - dmin) - (Date.now() - t0);
     if (wait > 0) await sleep(wait);
+    while (S.paused && !S.gameOver && token === S.moveToken) { await sleep(100); }
     if (token !== S.moveToken || S.gameOver || S.mode !== 'bot' || S.chess.fen() !== fen) return;
     let m = uci ? S.chess.move(Engine.parseUci(uci)) : null;
     if (!m) {
@@ -705,7 +808,7 @@
     S.clock = { enabled: true, w: min * 60000, b: min * 60000, inc: (inc || 0) * 1000, last: 0, timer: null };
   }
   function startClock() {
-    if (!S.clock.enabled || S.gameOver) return;
+    if (!S.clock.enabled || S.gameOver || S.paused) return;
     if (S.history.length === 0) return; // clock starts after first move
     S.clock.last = Date.now();
     if (S.clock.timer) return;
@@ -713,7 +816,7 @@
   }
   function stopClock() { if (S.clock.timer) { clearInterval(S.clock.timer); S.clock.timer = null; } }
   function tickClock() {
-    if (S.gameOver || !S.clock.enabled || S.review.active) { stopClock(); return; }
+    if (S.gameOver || S.paused || !S.clock.enabled || S.review.active) { stopClock(); return; }
     const now = Date.now();
     const turn = S.chess.turn();
     S.clock[turn] -= now - S.clock.last;
@@ -736,6 +839,7 @@
     S.review.token++;
     Engine.cancelAnalysis();
     stopClock();
+    clearPauseCover();
     S.history = []; S.gameOver = false; S.result = null; S.termination = null;
     S.selected = null; S.legal = []; S.viewFen = null; S.arrows = [];
     S.pendingAnims = [];
@@ -809,6 +913,7 @@
   }
 
   function takeback() {
+    if (checkPausedBlock()) return;
     if (S.mode === 'puzzle') { puzzleRetry(); return; }
     if (['bot', 'pvp'].indexOf(S.mode) < 0 || !S.history.length || S.review.active) { toast(T('alert.takebackNA')); return; }
     if (S.gameOver && (S.termination === 'resign' || S.termination === 'timeout')) { toast(T('alert.takebackNA')); return; }
@@ -841,6 +946,7 @@
   }
 
   function resign() {
+    if (checkPausedBlock()) return;
     if (['bot', 'pvp'].indexOf(S.mode) < 0 || S.gameOver) return;
     if (!window.confirm(T('alert.confirmResign'))) return;
     const loser = S.mode === 'bot' ? S.playerColor : S.chess.turn();
@@ -848,6 +954,7 @@
   }
 
   function flip() {
+    if (checkPausedBlock()) return;
     S.orientation = S.orientation === 'w' ? 'b' : 'w';
     buildBoard(); render();
     sound('click');
@@ -945,6 +1052,7 @@
   }
 
   function showOptimal() {
+    if (checkPausedBlock()) return;
     const entry = S.coach.entry;
     if (!entry || !entry.cls || !entry.cls.bestUci) return;
     if (S.coach.optimalShown) { exitPreview(); return; }
@@ -1577,6 +1685,7 @@
   }
 
   function puzzleHint() {
+    if (checkPausedBlock()) return;
     if (S.mode !== 'puzzle' || !S.puzzle || S.puzzle.solved) return;
     const mv = S.puzzle.data.moves[S.puzzle.step];
     if (!mv) return;
@@ -1588,8 +1697,12 @@
     puzzleFeedback('info', () => T('puzzle.hint', { piece: I18N.t('piece.pl.' + (p ? p.type : 'p')), square: sq }));
     render();
   }
-  function puzzleRetry() { if (S.puzzle) loadPuzzle(S.puzzle.data.id, true); }
+  function puzzleRetry() {
+    if (checkPausedBlock()) return;
+    if (S.puzzle) loadPuzzle(S.puzzle.data.id, true);
+  }
   function puzzleNext() {
+    if (checkPausedBlock()) return;
     const list = filteredPuzzles();
     if (!list.length) return;
     const solved = YStorage.getSolved();
@@ -1602,6 +1715,7 @@
   }
 
   function puzzleCanonical() {
+    if (checkPausedBlock()) return;
     if (S.mode !== 'puzzle' || !S.puzzle) { if (filteredPuzzles().length) loadPuzzle(filteredPuzzles()[0].id, true); return; }
     const pz = S.puzzle;
     if (!pz.canonical || pz.canonical.done) {
@@ -1829,6 +1943,21 @@
 
     // Game Screen Toolbar
     $('btn-back-menu').onclick = () => showMenuScreen(false);
+    if ($('btn-mobile-menu')) $('btn-mobile-menu').onclick = openMobileDrawer;
+    if ($('btn-drawer-close')) $('btn-drawer-close').onclick = closeMobileDrawer;
+    if (els.mobileDrawerBackdrop) els.mobileDrawerBackdrop.onclick = closeMobileDrawer;
+    if ($('drawer-btn-menu')) $('drawer-btn-menu').onclick = () => { closeMobileDrawer(); showMenuScreen(false); };
+    if ($('drawer-btn-load')) $('drawer-btn-load').onclick = () => { closeMobileDrawer(); renderArchive(); openModal('modal-load'); };
+    if ($('drawer-btn-profile')) $('drawer-btn-profile').onclick = () => { closeMobileDrawer(); openProfile(); };
+    if ($('drawer-btn-settings')) $('drawer-btn-settings').onclick = () => { closeMobileDrawer(); syncSettingsUI(); openModal('modal-settings'); };
+
+    if (els.pauseCover) {
+      els.pauseCover.addEventListener('pointerdown', startPauseHold);
+      els.pauseCover.addEventListener('pointerup', cancelPauseHold);
+      els.pauseCover.addEventListener('pointercancel', cancelPauseHold);
+      els.pauseCover.addEventListener('pointerleave', cancelPauseHold);
+      els.pauseCover.addEventListener('contextmenu', e => e.preventDefault());
+    }
     els.btnLang.onclick = () => { I18N.setLang(I18N.lang === 'vi' ? 'en' : 'vi'); };
     if (els.btnBgm) {
       els.btnBgm.onclick = () => {
@@ -1869,6 +1998,7 @@
 
     // Board controls
     $('btn-new').onclick = () => {
+      if (checkPausedBlock()) return;
       if (S.mode === 'puzzle') {
         renderPuzzleFilter();
         renderPuzzleList();
@@ -1962,6 +2092,10 @@
     els.screenMenu = $('screen-menu');
     els.screenGame = $('screen-game');
     els.board = $('board');
+    els.pauseCover = $('board-pause-cover');
+    els.pauseHoldFill = $('pause-hold-fill');
+    els.mobileDrawer = $('mobile-drawer');
+    els.mobileDrawerBackdrop = $('mobile-drawer-backdrop');
     els.arrowGroup = $('arrow-group');
     els.evalBar = $('eval-bar'); els.evalFill = $('eval-fill'); els.evalText = $('eval-text');
     els.barTop = $('bar-top'); els.barBottom = $('bar-bottom');

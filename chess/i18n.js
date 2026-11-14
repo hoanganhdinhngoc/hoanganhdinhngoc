@@ -12,7 +12,7 @@
 
   const vi = {
     /* ---------- Main Menu & UI ---------- */
-    'ui.title': 'CỜ VUA',
+    'ui.title': 'NieR Chess',
     'ui.subtitle': 'CỜ VUA TIÊU CHUẨN & PHÂN TÍCH CHIẾN THUẬT',
     'menu.play': 'CHƠI NGAY',
     'menu.playBot': 'Chơi với Máy (Bot)',
@@ -21,6 +21,12 @@
     'menu.load': 'TẢI VÁN CỜ / LƯU TRỮ',
     'menu.settings': 'CÀI ĐẶT',
     'menu.profile': 'HỒ SƠ NGƯỜI CHƠI',
+    'drawer.toMain': 'Về Menu Chính',
+    'drawer.load': 'Tải / Lưu Trữ Ván Cờ',
+    'drawer.profile': 'Hồ Sơ Người Chơi',
+    'drawer.settings': 'Cài Đặt',
+    'pause.title': 'Pause',
+    'pause.hold': 'Hold 3s to resume',
 
     'ui.newOperation': 'THIẾT LẬP VÁN ĐẤU',
     'ui.gameMode': 'Chế độ chơi',
@@ -202,6 +208,7 @@
     'alert.noMoves': 'Chưa có nước đi nào.',
     'alert.engineFail': 'Không tải được Stockfish Worker, đang dùng bộ tính toán dự phòng.',
     'alert.takebackNA': 'Không thể đi lại ở thời điểm này.',
+    'alert.pausedNA': 'Không khả dụng khi đang tạm dừng (Pause).',
     'alert.illegal': 'Nước đi không hợp lệ.',
 
     /* ---------- Pieces ---------- */
@@ -210,7 +217,7 @@
   };
 
   const en = {
-    'ui.title': 'CHESS',
+    'ui.title': 'NieR Chess',
     'ui.subtitle': 'STANDARD CHESS & TACTICAL ANALYSIS',
     'menu.play': 'PLAY',
     'menu.playBot': 'Play vs. Computer (Bot)',
@@ -219,6 +226,12 @@
     'menu.load': 'LOAD / SAVED GAMES',
     'menu.settings': 'SETTINGS',
     'menu.profile': 'PLAYER PROFILE',
+    'drawer.toMain': 'To Main Menu',
+    'drawer.load': 'Load / Saved Games',
+    'drawer.profile': 'Profile',
+    'drawer.settings': 'Settings',
+    'pause.title': 'Pause',
+    'pause.hold': 'Hold 3s to resume',
 
     'ui.newOperation': 'GAME SETUP',
     'ui.gameMode': 'Game Mode',
@@ -392,6 +405,7 @@
     'alert.noMoves': 'No moves played yet.',
     'alert.engineFail': 'Stockfish Worker unavailable; using fallback engine.',
     'alert.takebackNA': 'Takeback is not available right now.',
+    'alert.pausedNA': 'Not available while paused.',
     'alert.illegal': 'Illegal move.',
 
     'piece.p': 'Pawn', 'piece.n': 'Knight', 'piece.b': 'Bishop', 'piece.r': 'Rook', 'piece.q': 'Queen', 'piece.k': 'King',
