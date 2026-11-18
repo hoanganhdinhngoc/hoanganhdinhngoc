@@ -1092,7 +1092,7 @@
     if (!entry || !entry.cls) { renderCoachText(); return; }
     const c = entry.cls;
     els.coachBadge.className = 'cls-badge cls-' + c.cls + ' pop';
-    els.coachBadge.innerHTML = I18N.CLASS_SYMBOL[c.cls] + '<small>' + I18N.classLabel(c.cls) + '</small>';
+    els.coachBadge.innerHTML = I18N.CLASS_SYMBOL[c.cls] + '<small>' + (I18N.dict.en['cls.' + c.cls] || I18N.classLabel(c.cls)) + '</small>';
     const a = entry.ctx.after;
     els.coachEval.textContent = Engine.formatEval(a.cpWhite, a.mate);
     if (els.coachSource) els.coachSource.textContent = '';
