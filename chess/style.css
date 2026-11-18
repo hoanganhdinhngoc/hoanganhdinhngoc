@@ -923,13 +923,16 @@ button, input, select {
 
 .cls-badge {
   flex: none;
-  min-width: 68px;
-  height: 60px;
-  padding: 4px 8px;
+  width: 104px;
+  min-width: 104px;
+  max-width: 104px;
+  height: 64px;
+  padding: 4px 6px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
   font-family: var(--font-mono);
   font-size: 18px;
   font-weight: 700;
@@ -946,6 +949,10 @@ button, input, select {
   margin-top: 2px;
   line-height: 1.1;
   text-transform: uppercase;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .cls-brilliant { background: var(--brilliant-cyan); }
@@ -1048,8 +1055,17 @@ button, input, select {
 /* Review Summary & Graph */
 .review-nav {
   display: grid;
-  grid-template-columns: auto 1fr 1fr auto;
+  grid-template-columns: 1fr 1.7fr 1fr;
   gap: 6px;
+}
+
+.review-nav .tool-btn {
+  min-height: 34px;
+}
+
+.rv-critical-btn {
+  line-height: 1.15;
+  text-align: center;
 }
 
 .review-summary {
@@ -1729,20 +1745,21 @@ select.popup-input option {
 .mobile-drawer {
   position: fixed;
   top: 0;
-  left: 0;
+  right: 0;
   bottom: 0;
   width: min(78vw, 290px);
+  touch-action: pan-y;
   background-color: var(--nier-beige);
   background-image:
     linear-gradient(90deg, rgba(198, 192, 170, 0.5) 30%, transparent 30%),
     linear-gradient(rgba(198, 192, 170, 0.5) 30%, transparent 30%);
   background-size: 5px 5px;
-  border-right: 3px solid var(--nier-dark);
-  box-shadow: 4px 0 18px rgba(0, 0, 0, 0.4);
+  border-left: 3px solid var(--nier-dark);
+  box-shadow: -4px 0 18px rgba(0, 0, 0, 0.4);
   z-index: 8900;
   display: flex;
   flex-direction: column;
-  transform: translateX(-104%);
+  transform: translateX(104%);
   transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
@@ -1825,6 +1842,13 @@ select.popup-input option {
 }
 
 /* Post-Game Review Mode UI Rules */
+body[data-mode="review"] .coach-box {
+  height: 212px;
+  min-height: 212px;
+  max-height: 212px;
+  overflow: hidden;
+}
+
 body[data-mode="review"] .side-box-header {
   display: none !important;
 }
@@ -1973,7 +1997,7 @@ body[data-mode="review"] #review-comment {
 
   /* In Post-Game Review on mobile, scale board so Board + 2 Bars + Eval Box + Nav Controls + Timeline Graph all fit on ONE screen */
   body[data-mode="review"] {
-    --board-size: max(220px, min(86vw, calc(100dvh - 360px), 340px));
+    --board-size: max(210px, min(86vw, calc(100dvh - 392px), 336px));
   }
 
   .coreSystem {
@@ -2117,12 +2141,12 @@ body[data-mode="review"] #review-comment {
     padding: 7px 9px;
   }
 
-  /* Fixed-height Evaluation box during Mobile Review so comment length never shifts nav buttons */
+  /* Fixed-height Evaluation box during Mobile Review: sized for the longest comment, no inner scrolling */
   body[data-mode="review"] .coach-box {
-    height: 88px;
-    min-height: 88px;
-    max-height: 88px;
-    overflow-y: auto;
+    height: 140px;
+    min-height: 140px;
+    max-height: 140px;
+    overflow: hidden;
     display: flex;
     flex-direction: column;
     justify-content: flex-start;
@@ -2135,9 +2159,7 @@ body[data-mode="review"] #review-comment {
   }
 
   body[data-mode="review"] .cls-badge {
-    height: 32px;
-    min-width: 48px;
-    font-size: 12px;
+    height: 38px;
   }
 
   body[data-mode="review"] .coach-eval {
@@ -2155,10 +2177,12 @@ body[data-mode="review"] #review-comment {
   }
 
   .cls-badge {
-    min-width: 52px;
+    width: 84px;
+    min-width: 84px;
+    max-width: 84px;
     height: 40px;
     font-size: 14px;
-    padding: 2px 5px;
+    padding: 2px 4px;
   }
 
   .cls-badge small {
@@ -2206,19 +2230,17 @@ body[data-mode="review"] #review-comment {
   }
 
   .review-nav {
-    gap: 4px;
+    gap: 5px;
   }
 
   .review-nav .tool-btn {
-    padding: 4px 6px;
-    min-height: 26px;
-    font-size: 10.5px;
+    padding: 6px 6px;
+    min-height: 40px;
+    font-size: 11px;
   }
 
-  #rv-critical {
-    margin-top: 4px;
-    padding: 5px 8px;
-    font-size: 10.5px;
+  .rv-critical-btn {
+    font-size: 10px;
   }
 
   .eval-graph {

@@ -2109,6 +2109,38 @@
     if ($('btn-mobile-menu')) $('btn-mobile-menu').onclick = openMobileDrawer;
     if ($('btn-drawer-close')) $('btn-drawer-close').onclick = closeMobileDrawer;
     if (els.mobileDrawerBackdrop) els.mobileDrawerBackdrop.onclick = closeMobileDrawer;
+    // Swipe-to-close (drag drawer toward the right edge; release past half width to dismiss)
+    if (els.mobileDrawer) {
+      const dr = els.mobileDrawer;
+      let sx = 0, sy = 0, dx = 0, tracking = false, horiz = false;
+      dr.addEventListener('touchstart', (e) => {
+        if (!dr.classList.contains('open') || e.touches.length !== 1) return;
+        sx = e.touches[0].clientX; sy = e.touches[0].clientY; dx = 0; tracking = true; horiz = false;
+      }, { passive: true });
+      dr.addEventListener('touchmove', (e) => {
+        if (!tracking) return;
+        const mx = e.touches[0].clientX - sx, my = e.touches[0].clientY - sy;
+        if (!horiz) {
+          if (Math.abs(mx) < 8 && Math.abs(my) < 8) return;
+          if (Math.abs(my) > Math.abs(mx)) { tracking = false; return; }
+          horiz = true;
+          dr.style.transition = 'none';
+        }
+        dx = Math.max(0, mx);
+        dr.style.transform = 'translateX(' + dx + 'px)';
+      }, { passive: true });
+      const endSwipe = () => {
+        if (!tracking) return;
+        tracking = false;
+        dr.style.transition = '';
+        const w = dr.getBoundingClientRect().width;
+        const shouldClose = horiz && dx > w / 2;
+        dr.style.transform = '';
+        if (shouldClose) { closeMobileDrawer(); sound('cancel'); }
+      };
+      dr.addEventListener('touchend', endSwipe);
+      dr.addEventListener('touchcancel', endSwipe);
+    }
     if ($('drawer-btn-menu')) $('drawer-btn-menu').onclick = () => { closeMobileDrawer(); showMenuScreen(false); };
     if ($('drawer-btn-load')) $('drawer-btn-load').onclick = () => { closeMobileDrawer(); renderArchive(); openModal('modal-load'); };
     if ($('drawer-btn-profile')) $('drawer-btn-profile').onclick = () => { closeMobileDrawer(); openProfile(); };
@@ -2180,10 +2212,8 @@
     els.btnCoachTakeback.onclick = takeback;
 
     // Review
-    $('rv-first').onclick = () => reviewGo(0);
     $('rv-prev').onclick = () => reviewGo(S.review.index - 1);
     $('rv-next').onclick = () => reviewGo(S.review.index + 1);
-    $('rv-last').onclick = () => reviewGo(S.review.fens.length - 1);
     $('rv-critical').onclick = nextCritical;
     els.evalGraph.addEventListener('click', (e) => {
       if (!S.review.active) return;
