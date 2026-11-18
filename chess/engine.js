@@ -498,18 +498,23 @@
     return Math.max(0, capturedVal - attackerVal);
   }
 
+  function withTurn(fen, color) {
+    const parts = fen.split(' ');
+    parts[1] = color;
+    parts[3] = '-';
+    return parts.join(' ');
+  }
+
   /* Check if `attackerColor` can profitably capture (gain >= 2 pawns) the piece on `sq` in `fen` */
   function canProfitablyCaptureSquare(fen, sq, attackerColor) {
-    const parts = fen.split(' ');
-    parts[1] = attackerColor;
-    parts[3] = '-';
-    const c = newChess(parts.join(' '));
+    const tf = withTurn(fen, attackerColor);
+    const c = newChess(tf);
     if (!c) return false;
     const target = c.get(sq);
     if (!target || target.color === attackerColor) return false;
-    const att = minAttacker(parts.join(' '), sq, attackerColor);
+    const att = minAttacker(tf, sq, attackerColor);
     if (!att) return false;
-    const gain = netCaptureGain(parts.join(' '), att.from + att.to + (att.promotion || ''));
+    const gain = netCaptureGain(tf, att.from + att.to + (att.promotion || ''));
     return gain >= 2;
   }
 
@@ -535,6 +540,146 @@
     return !canProfitablyCaptureSquare(info.fenAfter, playedHang.square, opponentColor);
   }
 
+  /* Simulate up to `maxPlies` along a UCI principal variation */
+  function simulatePv(fenStart, pvUcis, maxPlies) {
+    const c = newChess(fenStart);
+    const limit = maxPlies || 4;
+    const steps = [];
+    const sanList = [];
+    if (!c || !Array.isArray(pvUcis) || !pvUcis.length) return { steps, sanList, formatted: '' };
+    for (let i = 0; i < pvUcis.length && i < limit; i++) {
+      const uci = pvUcis[i];
+      if (!uci) break;
+      const fenBefore = c.fen();
+      const m = c.move(parseUci(uci));
+      if (!m) break;
+      const fenAfter = c.fen();
+      steps.push({ uci, san: m.san, m, fenBefore, fenAfter, check: c.in_check(), mate: c.in_checkmate() });
+      sanList.push(m.san);
+    }
+    return { steps, sanList, formatted: sanList.join(' \u2192 ') };
+  }
+
+  /* Material balance change (in pawns) for `sideColor` between two FENs */
+  function netMaterialDelta(fenStart, fenEnd, sideColor) {
+    const balance = (fen) => {
+      const c = newChess(fen);
+      if (!c) return 0;
+      let diff = 0;
+      const board = c.board();
+      for (let r = 0; r < 8; r++) {
+        for (let f = 0; f < 8; f++) {
+          const p = board[r][f];
+          if (!p || p.type === 'k') continue;
+          diff += (p.color === sideColor ? 1 : -1) * (VAL[p.type] || 0);
+        }
+      }
+      return diff;
+    };
+    return balance(fenEnd) - balance(fenStart);
+  }
+
+  /* Detect whether `info` rescues an attacked friendly piece or defends another threatened piece */
+  function findSavedPiece(fenBefore, info, playerColor) {
+    const cBefore = newChess(fenBefore);
+    if (!cBefore || !info) return null;
+    const opp = playerColor === 'w' ? 'b' : 'w';
+    const board = cBefore.board();
+    for (let r = 0; r < 8; r++) {
+      for (let f = 0; f < 8; f++) {
+        const p = board[r][f];
+        if (!p || p.color !== playerColor || p.type === 'p' || p.type === 'k') continue;
+        const sq = 'abcdefgh'[f] + (8 - r);
+        if (!canProfitablyCaptureSquare(fenBefore, sq, opp)) continue;
+        if (sq === info.m.from) {
+          if (!canProfitablyCaptureSquare(info.fenAfter, info.m.to, opp)) {
+            return { kind: 'evade', type: p.type, square: info.m.to };
+          }
+        } else if (!canProfitablyCaptureSquare(info.fenAfter, sq, opp)) {
+          return { kind: 'defend', type: p.type, square: sq };
+        }
+      }
+    }
+    return null;
+  }
+
+  /* Detect whether the piece moved in `info` now directly threatens a valuable enemy piece */
+  function findCreatedThreat(info, playerColor) {
+    if (!info || info.m.piece === 'k') return null;
+    const att = attackedBy(info.fenAfter, info.m.to);
+    const tf = withTurn(info.fenAfter, playerColor);
+    const candidates = att
+      .filter(t => VAL[t.type] >= 3 && (VAL[t.type] > VAL[info.m.piece] || netCaptureGain(tf, info.m.to + t.square) >= 2))
+      .sort((a, b) => VAL[b.type] - VAL[a.type]);
+    return candidates[0] || null;
+  }
+
+  function hasFriendlyPawnOnFile(fen, fileCh, color) {
+    const c = newChess(fen);
+    if (!c) return false;
+    const f = 'abcdefgh'.indexOf(fileCh);
+    if (f < 0) return false;
+    const board = c.board();
+    for (let r = 0; r < 8; r++) {
+      const p = board[r][f];
+      if (p && p.color === color && p.type === 'p') return true;
+    }
+    return false;
+  }
+
+  function pvContinuationText(fenAfter, evalData, maxPlies) {
+    const pv = evalData && evalData.lines && evalData.lines[0] && evalData.lines[0].pv;
+    if (!fenAfter || !pv || !pv.length) return '';
+    const sim = simulatePv(fenAfter, pv, maxPlies || 3);
+    if (!sim.formatted) return '';
+    return ' ' + I18N.t('p.pvPlan', { pv: sim.formatted });
+  }
+
+  function describePositivePurpose(fenBefore, uci, playerColor, ply, mate) {
+    const sign = playerColor === 'w' ? 1 : -1;
+    if (mate != null && mate * sign > 0) return I18N.t('p.mate', { n: Math.abs(mate) });
+    const info = moveInfo(fenBefore, uci);
+    if (!info) return '';
+    const m = info.m;
+    const pieceName = I18N.t('piece.pl.' + m.piece);
+    if (m.promotion) return I18N.t('p.promote');
+    const fork = (m.piece !== 'k') ? forkTargets(info.fenAfter, m.to, m.piece, info.check) : null;
+    if (fork) return I18N.t('p.fork', { targets: joinNames(fork) });
+    if (m.captured) {
+      const capName = I18N.t('piece.pl.' + m.captured);
+      if (netCaptureGain(fenBefore, uci) >= 2) return I18N.t('p.capture', { piece: capName, square: m.to });
+      return I18N.t('p.trade', { piece: capName, square: m.to });
+    }
+    const saved = findSavedPiece(fenBefore, info, playerColor);
+    if (saved) {
+      return I18N.t(saved.kind === 'evade' ? 'p.evade' : 'p.defend', { piece: I18N.t('piece.pl.' + saved.type), square: saved.square });
+    }
+    if (info.check) return I18N.t('p.check', { piece: pieceName });
+    const thr = findCreatedThreat(info, playerColor);
+    if (thr) {
+      return I18N.t('p.threat', { piece: pieceName, square: m.to, target: I18N.t('piece.pl.' + thr.type), tsq: thr.square });
+    }
+    if (m.flags.indexOf('k') >= 0 || m.flags.indexOf('q') >= 0) return I18N.t('p.castle');
+    if (m.piece === 'p') {
+      const r = parseInt(m.to[1], 10);
+      if ((playerColor === 'w' && r >= 5) || (playerColor === 'b' && r <= 4)) {
+        return I18N.t('p.pawnPush', { square: m.to });
+      }
+    }
+    if (m.piece === 'r' || m.piece === 'q') {
+      const onSeventh = (playerColor === 'w' && m.to[1] === '7') || (playerColor === 'b' && m.to[1] === '2');
+      if (onSeventh || !hasFriendlyPawnOnFile(info.fenAfter, m.to[0], playerColor)) {
+        return I18N.t('p.openFile', { piece: pieceName, square: m.to });
+      }
+    }
+    if (ply <= 24 && CENTER.has(m.to)) return I18N.t('p.center', { piece: pieceName, square: m.to });
+    if (ply <= 24 && (m.piece === 'n' || m.piece === 'b') && (m.from[1] === '1' || m.from[1] === '8')) {
+      return I18N.t('p.develop', { piece: pieceName, square: m.to });
+    }
+    if (m.piece === 'k' && ply > 40) return I18N.t('p.kingActive', { square: m.to });
+    return I18N.t('p.positional', { piece: pieceName, square: m.to });
+  }
+
   function bestMoveReason(ctx, cls, playedHang) {
     const { fenBefore, before, color, ply } = ctx;
     const bestUci = before.bestUci;
@@ -554,16 +699,33 @@
     if (playedHang && bestMoveActuallyDefends(fenBefore, bestUci, playedHang, color)) {
       return I18N.t('b.defend', { move, piece: I18N.t('piece.pl.' + playedHang.type), square: playedHang.square });
     }
+    const saved = findSavedPiece(fenBefore, info, color);
+    if (saved) {
+      return I18N.t(saved.kind === 'evade' ? 'b.evade' : 'b.defend', { move, piece: I18N.t('piece.pl.' + saved.type), square: saved.square });
+    }
     if (m.flags.indexOf('k') >= 0 || m.flags.indexOf('q') >= 0) return I18N.t('b.castle', { move });
     if (m.captured) return I18N.t('b.capture', { move, piece: I18N.t('piece.pl.' + m.captured) });
+    const thr = findCreatedThreat(info, color);
+    if (thr) return I18N.t('b.threat', { move, target: I18N.t('piece.pl.' + thr.type), tsq: thr.square });
+    const bestPv = before && before.lines && before.lines[0] ? simulatePv(fenBefore, before.lines[0].pv, 3) : { steps: [], formatted: '' };
+    if (bestPv.steps.length >= 2 && bestPv.formatted) {
+      const endFen = bestPv.steps[bestPv.steps.length - 1].fenAfter;
+      if (netMaterialDelta(fenBefore, endFen, color) >= 2) {
+        return I18N.t('b.tacticPv', { move, pv: bestPv.formatted });
+      }
+    }
     if (ply <= 24 && CENTER.has(m.to)) return I18N.t('b.center', { move });
     if (ply <= 24 && (m.piece === 'n' || m.piece === 'b') && (m.from[1] === '1' || m.from[1] === '8')) return I18N.t('b.develop', { move });
+    if (bestPv.formatted) {
+      return I18N.t('b.positionalSq', { move, piece: I18N.t('piece.pl.' + m.piece), square: m.to, pv: bestPv.formatted });
+    }
     return I18N.t('b.generic', { move });
   }
 
   function playedReason(ctx, c) {
     const { fenBefore, uci, before, after, color, ply } = ctx;
     const sign = color === 'w' ? 1 : -1;
+    const opp = color === 'w' ? 'b' : 'w';
     const info = moveInfo(fenBefore, uci);
     const res = { key: 'r.generic', params: {}, hang: null };
     if (!info) return res;
@@ -578,12 +740,11 @@
       return { key: 'r.missedMate', params: { n: Math.abs(before.mate) }, hang: null };
     }
     // hangs a piece: opponent's best reply profitably wins material (not an equal trade!)
-    if (reply) {
-      const ri = moveInfo(info.fenAfter, reply);
-      const netGain = ri && ri.m.captured ? netCaptureGain(info.fenAfter, reply) : 0;
-      if (ri && ri.m.captured && VAL[ri.m.captured] >= 3 && netGain >= 2) {
+    const ri = reply ? moveInfo(info.fenAfter, reply) : null;
+    if (ri) {
+      const netGain = ri.m.captured ? netCaptureGain(info.fenAfter, reply) : 0;
+      if (ri.m.captured && VAL[ri.m.captured] >= 3 && netGain >= 2) {
         if (ri.m.to === info.m.to) {
-          // Player moved their own piece directly onto an attacked square
           return {
             key: 'r.movedIntoAttack',
             params: { piece: I18N.t('piece.pl.' + ri.m.captured), square: ri.m.to, reply: replySan },
@@ -593,11 +754,45 @@
         const hang = { type: ri.m.captured, square: ri.m.to };
         return { key: 'r.hangs', params: { piece: I18N.t('piece.pl.' + hang.type), square: hang.square, reply: replySan }, hang };
       }
+      // allows an immediate fork
+      if (ri.m.piece !== 'k') {
+        const fork = forkTargets(ri.fenAfter, ri.m.to, ri.m.piece, ri.check);
+        if (fork) {
+          return { key: 'r.allowsFork', params: { reply: replySan, targets: joinNames(fork) }, hang: null };
+        }
+      }
     }
+
+    // Multi-ply PV tactical loss check (evaluate on even ply when possible to avoid horizon recapture bias)
+    const pvArr = after && after.lines && after.lines[0] && after.lines[0].pv;
+    const pvSim = pvArr ? simulatePv(info.fenAfter, pvArr, 4) : { steps: [], formatted: '' };
+    if (pvSim.steps.length >= 2) {
+      const checkLen = pvSim.steps.length % 2 === 1 && pvSim.steps.length > 2 ? pvSim.steps.length - 1 : pvSim.steps.length;
+      const endFen = pvSim.steps[checkLen - 1].fenAfter;
+      if (netMaterialDelta(info.fenAfter, endFen, opp) >= 1) {
+        const oppCaps = pvSim.steps.slice(0, checkLen).filter(s => s.m.color === opp && s.m.captured);
+        if (oppCaps.length) {
+          oppCaps.sort((a, b) => (VAL[b.m.captured] || 0) - (VAL[a.m.captured] || 0));
+          const lostType = oppCaps[0].m.captured;
+          const pvShown = pvSim.sanList.slice(0, Math.min(checkLen, 4)).join(' \u2192 ');
+          return { key: 'r.tacticalLoss', params: { pv: pvShown, piece: I18N.t('piece.pl.' + lostType) }, hang: null };
+        }
+      }
+    }
+
     // missed profitable capture
     const bi = moveInfo(fenBefore, before.bestUci);
     if (bi && bi.m.captured && VAL[bi.m.captured] >= 3 && netCaptureGain(fenBefore, before.bestUci) >= 2 && !info.m.captured) {
       return { key: 'r.missedCapture', params: { piece: I18N.t('piece.pl.' + bi.m.captured), square: bi.m.to }, hang: null };
+    }
+    if (ri && ri.check) {
+      return { key: 'r.allowsCheck', params: { reply: replySan }, hang: null };
+    }
+    if (ri) {
+      const thr = findCreatedThreat(ri, opp);
+      if (thr) {
+        return { key: 'r.allowsThreat', params: { reply: replySan, piece: I18N.t('piece.pl.' + thr.type), square: thr.square }, hang: null };
+      }
     }
     // center
     if (ply <= 20 && bi && (CENTER.has(bi.m.to) || EXT_CENTER.has(bi.m.to)) && !CENTER.has(info.m.to) &&
@@ -619,6 +814,7 @@
     }
     if (c.winBefore >= 60 && c.winAfter < 55) return { key: 'r.lostAdvantage', params: {}, hang: null };
     if (bi && (bi.m.captured || bi.check) && !info.m.captured && !info.check) return { key: 'r.passive', params: {}, hang: null };
+    if (pvSim.formatted) return { key: 'r.counterplay', params: { pv: pvSim.formatted }, hang: null };
     return res;
   }
 
@@ -627,21 +823,31 @@
     const label = I18N.classLabel(c.cls) + ' (' + I18N.CLASS_SYMBOL[c.cls] + '): ';
     const sign = ctx.color === 'w' ? 1 : -1;
     const evalStr = formatEval(c.evalAfter, ctx.after ? ctx.after.mate : null);
+    const afterFen = ctx.after ? ctx.after.fen : null;
     if (c.cls === 'brilliant') {
       const info = moveInfo(ctx.fenBefore, ctx.uci);
-      return label + I18N.t('r.brilliant', { piece: I18N.t('piece.pl.' + (info ? info.m.piece : 'n')) }) + ' ' + cap(I18N.t('coach.gain', { eval: evalStr })) + '.';
+      return label + I18N.t('r.brilliant', { piece: I18N.t('piece.pl.' + (info ? info.m.piece : 'n')) }) + ' ' + cap(I18N.t('coach.gain', { eval: evalStr })) + '.' + pvContinuationText(afterFen, ctx.after, 3);
     }
-    if (c.cls === 'great') return label + I18N.t('r.great') + ' ' + cap(I18N.t('coach.gain', { eval: evalStr })) + '.';
+    if (c.cls === 'great') {
+      const mateNow = c.isBest && ctx.before ? ctx.before.mate : (ctx.after ? ctx.after.mate : null);
+      const purpose = describePositivePurpose(ctx.fenBefore, ctx.uci, ctx.color, ctx.ply, mateNow);
+      return label + I18N.t('r.great') + (purpose ? ' ' + purpose : '') + ' ' + cap(I18N.t('coach.gain', { eval: evalStr })) + '.' + pvContinuationText(afterFen, ctx.after, 3);
+    }
     if (c.cls === 'best') {
-      const bestMsg = c.isBest ? I18N.t('r.best') : I18N.t('r.bestAlt', { best: c.bestSan || '' });
-      return label + bestMsg + ' ' + cap(I18N.t('coach.gain', { eval: evalStr })) + '.';
+      const mateNow = c.isBest && ctx.before ? ctx.before.mate : (ctx.after ? ctx.after.mate : null);
+      const purpose = describePositivePurpose(ctx.fenBefore, ctx.uci, ctx.color, ctx.ply, mateNow);
+      const body = c.isBest
+        ? (purpose || I18N.t('r.best'))
+        : I18N.t('p.altNote', { best: c.bestSan || '', purpose: purpose || I18N.t('r.good') });
+      return label + body + ' ' + cap(I18N.t('coach.gain', { eval: evalStr })) + '.' + pvContinuationText(afterFen, ctx.after, 3);
     }
     if (c.cls === 'book') return label + I18N.t('r.book') + ' ' + cap(I18N.t('coach.gain', { eval: evalStr })) + '.';
 
     const pr = playedReason(ctx, c);
     let reasonText;
     if (c.cls === 'good') {
-      reasonText = I18N.t('r.good');
+      const purpose = describePositivePurpose(ctx.fenBefore, ctx.uci, ctx.color, ctx.ply, ctx.after ? ctx.after.mate : null);
+      reasonText = purpose || I18N.t('r.good');
       if (!c.isBest && ctx.before && ctx.before.bestUci) {
         return label + reasonText + ' ' + bestMoveReason(ctx, c.cls, null);
       }

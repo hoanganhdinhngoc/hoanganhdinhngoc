@@ -1843,10 +1843,10 @@ select.popup-input option {
 
 /* Post-Game Review Mode UI Rules */
 body[data-mode="review"] .coach-box {
-  height: 212px;
-  min-height: 212px;
-  max-height: 212px;
-  overflow: hidden;
+  height: 190px;
+  min-height: 190px;
+  max-height: 190px;
+  overflow-y: auto;
 }
 
 body[data-mode="review"] .side-box-header {
@@ -2141,12 +2141,13 @@ body[data-mode="review"] #review-comment {
     padding: 7px 9px;
   }
 
-  /* Fixed-height Evaluation box during Mobile Review: sized for the longest comment, no inner scrolling */
+  /* Fixed-height Evaluation box during Mobile Review with smooth touch scrolling for longer explanations */
   body[data-mode="review"] .coach-box {
-    height: 140px;
-    min-height: 140px;
-    max-height: 140px;
-    overflow: hidden;
+    height: 136px;
+    min-height: 136px;
+    max-height: 136px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
     display: flex;
     flex-direction: column;
     justify-content: flex-start;
