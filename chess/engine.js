@@ -702,7 +702,7 @@
     if (m.flags.indexOf('k') >= 0 || m.flags.indexOf('q') >= 0) return I18N.t('b.castle', { move });
     if (m.captured) return I18N.t('b.capture', { move, piece: I18N.t('piece.pl.' + m.captured) });
     const thr = findCreatedThreat(info, color);
-    if (thr) return I18N.t('b.threat', { move, target: I18N.t('piece.pl.' + thr.type), tsq: thr.square });
+    if (thr) return I18N.t('b.threat', { move, piece: I18N.t('piece.pl.' + m.piece), target: I18N.t('piece.pl.' + thr.type), tsq: thr.square });
     const bestPv = before && before.lines && before.lines[0] ? simulatePv(fenBefore, before.lines[0].pv, 3) : { steps: [], formatted: '' };
     if (bestPv.steps.length >= 2 && bestPv.formatted) {
       const endFen = bestPv.steps[bestPv.steps.length - 1].fenAfter;
@@ -827,6 +827,9 @@
 
   function comment(ctx, c) {
     if (!ctx || !c) return '';
+    if (window.Commentary && typeof window.Commentary.comment === 'function') {
+      return window.Commentary.comment(ctx, c);
+    }
     const label = I18N.classLabel(c.cls) + ' (' + I18N.CLASS_SYMBOL[c.cls] + '): ';
     const sign = ctx.color === 'w' ? 1 : -1;
     const evalStr = formatEval(c.evalAfter, ctx.after ? ctx.after.mate : null);
@@ -922,8 +925,8 @@
         cls = 'best';
       }
     } else if (sign * evalBefore >= 600 && !isBest && rawCpl > 20 && winDrop <= 6.5) {
-      if (rawCpl <= 140) cls = 'good';
-      else if (rawCpl <= 320 || sign * evalAfter >= 500) cls = rawCpl <= 320 ? 'inaccuracy' : 'mistake';
+      if (sign * evalAfter >= 650 || rawCpl <= 180) cls = 'good';
+      else if (rawCpl <= 380) cls = 'inaccuracy';
       else cls = 'mistake';
     } else if (isBest || (cpl <= 12 && winDrop <= 1.2 && rawCpl <= 25)) {
       cls = 'best';
