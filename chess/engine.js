@@ -143,7 +143,7 @@
     const c = newChess(parts.join(' ')); if (!c) return [];
     const res = [];
     c.moves({ square: sq, verbose: true }).forEach(m => {
-      if (m.captured) res.push({ square: m.to, type: m.captured });
+      if (m.captured && m.captured !== 'k') res.push({ square: m.to, type: m.captured });
     });
     return res;
   }
@@ -470,11 +470,15 @@
   }
 
   function forkTargets(fenAfter, sq, moverPiece, givesCheck) {
+    const c = newChess(fenAfter);
+    const p = c && c.get(sq);
+    const opp = p ? (p.color === 'w' ? 'b' : 'w') : turnOf(fenAfter);
+    if (canProfitablyCaptureSquare(fenAfter, sq, opp)) return null;
     const att = attackedBy(fenAfter, sq);
-    const targets = att.filter(a => VAL[a.type] > VAL[moverPiece] || a.type === 'r' || a.type === 'q');
+    const targets = att.filter(a => a.type !== 'k' && (VAL[a.type] > VAL[moverPiece] || a.type === 'r' || a.type === 'q'));
     const uniq = [];
     targets.forEach(t => { if (!uniq.some(u => u.square === t.square)) uniq.push(t); });
-    if (givesCheck) uniq.unshift({ type: 'k', square: '' });
+    if (givesCheck && !uniq.some(u => u.type === 'k')) uniq.unshift({ type: 'k', square: '' });
     return uniq.length >= 2 ? uniq : null;
   }
 
@@ -627,14 +631,6 @@
     return false;
   }
 
-  function pvContinuationText(fenAfter, evalData, maxPlies) {
-    const pv = evalData && evalData.lines && evalData.lines[0] && evalData.lines[0].pv;
-    if (!fenAfter || !pv || !pv.length) return '';
-    const sim = simulatePv(fenAfter, pv, maxPlies || 3);
-    if (!sim.formatted) return '';
-    return ' ' + I18N.t('p.pvPlan', { pv: sim.formatted });
-  }
-
   function describePositivePurpose(fenBefore, uci, playerColor, ply, mate) {
     const sign = playerColor === 'w' ? 1 : -1;
     if (mate != null && mate * sign > 0) return I18N.t('p.mate', { n: Math.abs(mate) });
@@ -711,13 +707,13 @@
     if (bestPv.steps.length >= 2 && bestPv.formatted) {
       const endFen = bestPv.steps[bestPv.steps.length - 1].fenAfter;
       if (netMaterialDelta(fenBefore, endFen, color) >= 2) {
-        return I18N.t('b.tacticPv', { move, pv: bestPv.formatted });
+        return I18N.t('b.tacticPv', { move });
       }
     }
     if (ply <= 24 && CENTER.has(m.to)) return I18N.t('b.center', { move });
     if (ply <= 24 && (m.piece === 'n' || m.piece === 'b') && (m.from[1] === '1' || m.from[1] === '8')) return I18N.t('b.develop', { move });
-    if (bestPv.formatted) {
-      return I18N.t('b.positionalSq', { move, piece: I18N.t('piece.pl.' + m.piece), square: m.to, pv: bestPv.formatted });
+    if (m.piece !== 'k') {
+      return I18N.t('b.positionalSq', { move, piece: I18N.t('piece.pl.' + m.piece), square: m.to });
     }
     return I18N.t('b.generic', { move });
   }
@@ -735,11 +731,16 @@
     if (after && after.mate != null && after.mate * sign < 0 && !(before.mate != null && before.mate * sign < 0)) {
       return { key: 'r.allowsMate', params: { n: Math.abs(after.mate), reply: replySan }, hang: null };
     }
-    // missed mate
-    if (before.mate != null && before.mate * sign > 0 && !(after && after.mate != null && after.mate * sign > 0)) {
-      return { key: 'r.missedMate', params: { n: Math.abs(before.mate) }, hang: null };
+    // missed mate or delayed forced mate
+    if (before.mate != null && before.mate * sign > 0) {
+      if (!(after && after.mate != null && after.mate * sign > 0)) {
+        return { key: 'r.missedMate', params: { n: Math.abs(before.mate) }, hang: null };
+      }
+      if (Math.abs(after.mate) > Math.abs(before.mate)) {
+        return { key: 'r.delayedMate', params: { best: describeMove(fenBefore, before.bestUci) }, hang: null };
+      }
     }
-    // hangs a piece: opponent's best reply profitably wins material (not an equal trade!)
+    // hangs a piece or pawn: opponent's best reply profitably wins material
     const ri = reply ? moveInfo(info.fenAfter, reply) : null;
     if (ri) {
       const netGain = ri.m.captured ? netCaptureGain(info.fenAfter, reply) : 0;
@@ -753,6 +754,9 @@
         }
         const hang = { type: ri.m.captured, square: ri.m.to };
         return { key: 'r.hangs', params: { piece: I18N.t('piece.pl.' + hang.type), square: hang.square, reply: replySan }, hang };
+      }
+      if (ri.m.captured === 'p' && netGain >= 1) {
+        return { key: 'r.hangsPawn', params: { square: ri.m.to, reply: replySan }, hang: { type: 'p', square: ri.m.to } };
       }
       // allows an immediate fork
       if (ri.m.piece !== 'k') {
@@ -773,9 +777,12 @@
         const oppCaps = pvSim.steps.slice(0, checkLen).filter(s => s.m.color === opp && s.m.captured);
         if (oppCaps.length) {
           oppCaps.sort((a, b) => (VAL[b.m.captured] || 0) - (VAL[a.m.captured] || 0));
-          const lostType = oppCaps[0].m.captured;
-          const pvShown = pvSim.sanList.slice(0, Math.min(checkLen, 4)).join(' \u2192 ');
-          return { key: 'r.tacticalLoss', params: { pv: pvShown, piece: I18N.t('piece.pl.' + lostType) }, hang: null };
+          const lostStep = oppCaps[0];
+          return {
+            key: 'r.tacticalLoss',
+            params: { reply: replySan || pvSim.sanList[0] || '', piece: I18N.t('piece.pl.' + lostStep.m.captured), square: lostStep.m.to },
+            hang: null
+          };
         }
       }
     }
@@ -814,7 +821,7 @@
     }
     if (c.winBefore >= 60 && c.winAfter < 55) return { key: 'r.lostAdvantage', params: {}, hang: null };
     if (bi && (bi.m.captured || bi.check) && !info.m.captured && !info.check) return { key: 'r.passive', params: {}, hang: null };
-    if (pvSim.formatted) return { key: 'r.counterplay', params: { pv: pvSim.formatted }, hang: null };
+    if (replySan) return { key: 'r.counterplay', params: { reply: replySan }, hang: null };
     return res;
   }
 
@@ -823,15 +830,14 @@
     const label = I18N.classLabel(c.cls) + ' (' + I18N.CLASS_SYMBOL[c.cls] + '): ';
     const sign = ctx.color === 'w' ? 1 : -1;
     const evalStr = formatEval(c.evalAfter, ctx.after ? ctx.after.mate : null);
-    const afterFen = ctx.after ? ctx.after.fen : null;
     if (c.cls === 'brilliant') {
       const info = moveInfo(ctx.fenBefore, ctx.uci);
-      return label + I18N.t('r.brilliant', { piece: I18N.t('piece.pl.' + (info ? info.m.piece : 'n')) }) + ' ' + cap(I18N.t('coach.gain', { eval: evalStr })) + '.' + pvContinuationText(afterFen, ctx.after, 3);
+      return label + I18N.t('r.brilliant', { piece: I18N.t('piece.pl.' + (info ? info.m.piece : 'n')) }) + ' ' + cap(I18N.t('coach.gain', { eval: evalStr })) + '.';
     }
     if (c.cls === 'great') {
       const mateNow = c.isBest && ctx.before ? ctx.before.mate : (ctx.after ? ctx.after.mate : null);
       const purpose = describePositivePurpose(ctx.fenBefore, ctx.uci, ctx.color, ctx.ply, mateNow);
-      return label + I18N.t('r.great') + (purpose ? ' ' + purpose : '') + ' ' + cap(I18N.t('coach.gain', { eval: evalStr })) + '.' + pvContinuationText(afterFen, ctx.after, 3);
+      return label + I18N.t('r.great') + (purpose ? ' ' + purpose : '') + ' ' + cap(I18N.t('coach.gain', { eval: evalStr })) + '.';
     }
     if (c.cls === 'best') {
       const mateNow = c.isBest && ctx.before ? ctx.before.mate : (ctx.after ? ctx.after.mate : null);
@@ -839,7 +845,7 @@
       const body = c.isBest
         ? (purpose || I18N.t('r.best'))
         : I18N.t('p.altNote', { best: c.bestSan || '', purpose: purpose || I18N.t('r.good') });
-      return label + body + ' ' + cap(I18N.t('coach.gain', { eval: evalStr })) + '.' + pvContinuationText(afterFen, ctx.after, 3);
+      return label + body + ' ' + cap(I18N.t('coach.gain', { eval: evalStr })) + '.';
     }
     if (c.cls === 'book') return label + I18N.t('r.book') + ' ' + cap(I18N.t('coach.gain', { eval: evalStr })) + '.';
 
@@ -876,6 +882,8 @@
     let evalAfter = after ? after.cpWhite : evalBefore;
     const bestUci = before ? before.bestUci : null;
     const isBest = sameMove(uci, bestUci);
+    const hadMate = before && before.mate != null && before.mate * sign > 0 ? Math.abs(before.mate) : null;
+    let hasMate = after && after.mate != null && after.mate * sign > 0 ? Math.abs(after.mate) : null;
 
     // If the played move is already present in `before.lines` (same search depth & horizon),
     // use its direct evaluation from `before.lines` to avoid odd/even ply horizon noise.
@@ -883,22 +891,41 @@
       const matchedLine = before.lines.find(l => sameMove(l.uci, uci));
       if (matchedLine) {
         evalAfter = matchedLine.cpWhite;
+        if (matchedLine.mateWhite != null && matchedLine.mateWhite * sign > 0) {
+          hasMate = Math.abs(matchedLine.mateWhite);
+        }
       }
     }
     if (isBest) {
       evalAfter = evalBefore;
+      hasMate = hadMate;
     }
 
     const winBefore = winPercent(sign * evalBefore);
     const winAfter = winPercent(sign * evalAfter);
     let winDrop = isBest ? 0 : Math.max(0, winBefore - winAfter);
     const cpl = isBest ? 0 : Math.max(0, Math.min(1000, sign * (clampCp(evalBefore) - clampCp(evalAfter))));
+    const rawCpl = isBest ? 0 : Math.max(0, sign * (evalBefore - evalAfter));
     let cls;
 
     const startStd = ctx.startFen ? fenKey(ctx.startFen) === fenKey(START_FEN) : true;
-    if (startStd && ply <= 20 && uciHistory && isBookLine(uciHistory) && winDrop <= 6 && cpl <= 55) {
+    if (startStd && ply <= 20 && uciHistory && isBookLine(uciHistory) && winDrop <= 6 && cpl <= 55 && hadMate == null) {
       cls = 'book';
-    } else if (isBest || (cpl <= 12 && winDrop <= 1.2)) {
+    } else if (hadMate != null && !isBest) {
+      if (hasMate == null) {
+        if (hadMate <= 3) cls = (sign * evalAfter >= 400) ? 'inaccuracy' : 'mistake';
+        else cls = (sign * evalAfter >= 500 && rawCpl < 250) ? 'good' : 'inaccuracy';
+      } else if (hasMate > hadMate) {
+        if (hadMate === 1 || hasMate - hadMate >= 3) cls = 'inaccuracy';
+        else cls = 'good';
+      } else {
+        cls = 'best';
+      }
+    } else if (sign * evalBefore >= 600 && !isBest && rawCpl > 20 && winDrop <= 6.5) {
+      if (rawCpl <= 140) cls = 'good';
+      else if (rawCpl <= 320 || sign * evalAfter >= 500) cls = rawCpl <= 320 ? 'inaccuracy' : 'mistake';
+      else cls = 'mistake';
+    } else if (isBest || (cpl <= 12 && winDrop <= 1.2 && rawCpl <= 25)) {
       cls = 'best';
       if (winAfter >= 40 && isSacrifice(fenBefore, uci) && cpl <= 25 && winDrop <= 2.5) cls = 'brilliant';
       else if (isBest && before && before.lines && before.lines.length > 1) {
