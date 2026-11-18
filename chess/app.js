@@ -1096,7 +1096,7 @@
     const a = entry.ctx.after;
     els.coachEval.textContent = Engine.formatEval(a.cpWhite, a.mate);
     if (els.coachSource) els.coachSource.textContent = '';
-    S.coachFn = customTextFn || (() => Engine.comment(entry.ctx, entry.cls));
+    S.coachFn = customTextFn || (() => Engine.comment(entry.ctx, entry.cls, { hideBest: !S.review.active }));
     renderCoachText();
     if (S.review.active) {
       els.coachBest.classList.add('hidden');
@@ -1113,7 +1113,10 @@
       const mv = Engine.describeMove(entry.fenBefore, c.bestUci);
       const bestEval = Engine.formatEval(entry.ctx.before.cpWhite, entry.ctx.before.mate);
       const playedEval = Engine.formatEval(a.cpWhite, a.mate);
-      els.coachBest.textContent = T('coach.optimalIs', { move: mv }) + ' — ' + T('b.whyBetter', { move: c.bestSan, eval: bestEval, played: playedEval });
+      const bestExplain = (window.Commentary && typeof window.Commentary.explainBest === 'function')
+        ? window.Commentary.explainBest(entry.ctx)
+        : T('coach.optimalIs', { move: mv });
+      els.coachBest.textContent = bestExplain + ' ' + T('b.whyBetter', { move: c.bestSan, eval: bestEval, played: playedEval });
     } else {
       els.coachBest.classList.add('hidden');
     }

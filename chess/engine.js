@@ -825,11 +825,13 @@
     return res;
   }
 
-  function comment(ctx, c) {
+  function comment(ctx, c, opts) {
     if (!ctx || !c) return '';
     if (window.Commentary && typeof window.Commentary.comment === 'function') {
-      return window.Commentary.comment(ctx, c);
+      return window.Commentary.comment(ctx, c, opts);
     }
+    opts = opts || {};
+    const hideBest = !!opts.hideBest;
     const label = I18N.classLabel(c.cls) + ' (' + I18N.CLASS_SYMBOL[c.cls] + '): ';
     const sign = ctx.color === 'w' ? 1 : -1;
     const evalStr = formatEval(c.evalAfter, ctx.after ? ctx.after.mate : null);
@@ -870,7 +872,7 @@
         : I18N.t('coach.reasonDrop', { reason, drop: '-' + Math.max(0.1, dropPawns).toFixed(1) });
     }
     let bestText = '';
-    if (!c.isBest && ctx.before && ctx.before.bestUci) bestText = ' ' + bestMoveReason(ctx, c.cls, pr.hang);
+    if (!hideBest && !c.isBest && ctx.before && ctx.before.bestUci) bestText = ' ' + bestMoveReason(ctx, c.cls, pr.hang);
     return label + reasonText + bestText;
   }
   function cap(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : s; }

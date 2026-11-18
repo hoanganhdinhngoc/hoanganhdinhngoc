@@ -504,7 +504,7 @@
   /* ------------------------------------------------------------------
      Sentences
      ------------------------------------------------------------------ */
-  function explainPlayed(ctx, c) {
+  function explainPlayed(ctx, c, hideBest) {
     const E = window.Engine;
     const sign = ctx.color === 'w' ? 1 : -1;
     const before = ctx.before || {}, after = ctx.after || {};
@@ -527,10 +527,11 @@
       const mCount = Math.abs(before.mate);
       const bestSan = E.describeMove(ctx.fenBefore, before.bestUci);
       if (!(after.mate != null && after.mate * sign > 0)) {
-        if (mCount === 1) return { key: 'r.missedMate1', params: { best: bestSan }, noDrop: true };
+        if (mCount === 1) return { key: hideBest ? 'r.missedMate1Plain' : 'r.missedMate1', params: { best: bestSan }, noDrop: true };
         return { key: 'r.missedMate', params: { n: mCount }, noDrop: true };
       }
       if (Math.abs(after.mate) > mCount) {
+        if (hideBest) return { key: mCount === 1 ? 'r.missedMate1Plain' : 'r.delayedMatePlain', params: {}, noDrop: true };
         return { key: mCount === 1 ? 'r.missedMate1' : 'r.delayedMate', params: { best: bestSan }, noDrop: true };
       }
     }
@@ -583,7 +584,9 @@
     return ph.length ? ph : null;
   }
 
-  function build(ctx, c) {
+  function build(ctx, c, opts) {
+    opts = opts || {};
+    const hideBest = !!opts.hideBest;
     const E = window.Engine;
     const label = I18N.classLabel(c.cls) + ' (' + I18N.CLASS_SYMBOL[c.cls] + '): ';
     const sign = ctx.color === 'w' ? 1 : -1;
@@ -602,7 +605,7 @@
     }
     if (c.cls === 'best') {
       const body = positiveBody(ctx);
-      const text = c.isBest
+      const text = (c.isBest || hideBest)
         ? (body ? cap(joinList(body)) + '.' : T('r.best'))
         : T('p.altNote', { best: c.bestSan || '', purpose: body ? joinList(body) + '.' : T('r.good') });
       return label + text + gain;
@@ -612,25 +615,25 @@
     if (c.cls === 'good') {
       const body = positiveBody(ctx);
       let text = body ? cap(joinList(body)) + '.' : T('r.good');
-      if (!c.isBest && ctx.before && ctx.before.bestUci) text += ' ' + explainBest(ctx);
+      if (!hideBest && !c.isBest && ctx.before && ctx.before.bestUci) text += ' ' + explainBest(ctx);
       return label + text;
     }
 
-    const pr = explainPlayed(ctx, c);
+    const pr = explainPlayed(ctx, c, hideBest);
     const reason = T(pr.key, pr.params);
     const dropPawns = (sign * (c.evalBefore - c.evalAfter)) / 100;
     const bigEval = Math.abs(c.evalBefore) >= 1500 || Math.abs(c.evalAfter) >= 1500;
     const reasonText = (pr.noDrop || bigEval)
       ? T('coach.reasonEnd', { reason })
       : T('coach.reasonDrop', { reason, drop: '-' + Math.max(0.1, dropPawns).toFixed(1) });
-    const bestText = (!c.isBest && ctx.before && ctx.before.bestUci) ? ' ' + explainBest(ctx) : '';
+    const bestText = (!hideBest && !c.isBest && ctx.before && ctx.before.bestUci) ? ' ' + explainBest(ctx) : '';
     return label + reasonText + bestText;
   }
 
-  function comment(ctx, c) {
+  function comment(ctx, c, opts) {
     if (!ctx || !c) return '';
     try {
-      return build(ctx, c);
+      return build(ctx, c, opts);
     } catch (e) {
       console.error('[Commentary]', e);
       return I18N.classLabel(c.cls) + ' (' + I18N.CLASS_SYMBOL[c.cls] + '): ' + T('r.generic');
