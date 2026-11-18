@@ -2039,8 +2039,10 @@
      ------------------------------------------------------------------ */
   function bind() {
     // generic UI hover & click sounds matching CDN theme
+    const SILENT_BTN = '.review-nav .tool-btn';
     document.addEventListener('mouseover', (e) => {
       const btn = e.target.closest('.themebutton, .tool-btn, .dropContent, .seg-btn, .bot-chip');
+      if (btn && btn.matches(SILENT_BTN)) { bind._lastHover = btn; return; }
       if (btn && btn !== bind._lastHover) {
         bind._lastHover = btn;
         sound('hover');
@@ -2052,7 +2054,7 @@
     document.addEventListener('click', (e) => {
       YoRHaAudio.init();
       const t = e.target.closest('.themebutton, .tool-btn, .dropContent, .seg-btn');
-      if (t) sound('click');
+      if (t && !t.matches(SILENT_BTN)) sound('click');
       const close = e.target.closest('[data-close]');
       if (close) closeModal(close.dataset.close);
     });

@@ -2159,7 +2159,7 @@ body[data-mode="review"] #review-comment {
   }
 
   body[data-mode="review"] .cls-badge {
-    height: 38px;
+    height: 42px;
   }
 
   body[data-mode="review"] .coach-eval {
@@ -2177,17 +2177,21 @@ body[data-mode="review"] #review-comment {
   }
 
   .cls-badge {
-    width: 84px;
-    min-width: 84px;
-    max-width: 84px;
-    height: 40px;
+    width: clamp(62px, 17.5vw, 74px);
+    min-width: clamp(62px, 17.5vw, 74px);
+    max-width: clamp(62px, 17.5vw, 74px);
+    height: 42px;
     font-size: 14px;
-    padding: 2px 4px;
+    padding: 2px 3px;
   }
 
   .cls-badge small {
-    font-size: 7.5px;
+    font-size: clamp(7px, 2vw, 8.5px);
     margin-top: 1px;
+    white-space: normal;
+    text-overflow: clip;
+    overflow-wrap: normal;
+    line-height: 1.08;
   }
 
   .coach-evalbox .field-label {
