@@ -179,6 +179,7 @@
     'review.noCritical': 'Không còn nước đi quan trọng nào phía sau.',
     'review.start': 'Thế cờ ban đầu.',
     'review.playedArrow': 'Mũi tên cam: nước đã đi. Mũi tên xanh: nước tối ưu.',
+    'review.playedArrowRed': 'Mũi tên đỏ: nước đã đi. Mũi tên xanh: nước tối ưu.',
     'review.needGame': 'Chưa có nước đi nào để phân tích.',
     'review.moveHeader': 'Nước {no}{dots} {san}',
 
@@ -380,6 +381,7 @@
     'review.noCritical': 'No further key moves ahead.',
     'review.start': 'Starting position.',
     'review.playedArrow': 'Orange arrow: played move. Cyan arrow: best move.',
+    'review.playedArrowRed': 'Red arrow: played move. Cyan arrow: best move.',
     'review.needGame': 'No moves available to analyze.',
     'review.moveHeader': 'Move {no}{dots} {san}',
 

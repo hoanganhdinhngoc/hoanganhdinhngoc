@@ -1113,7 +1113,8 @@
       const mv = Engine.describeMove(entry.fenBefore, c.bestUci);
       const bestEval = Engine.formatEval(entry.ctx.before.cpWhite, entry.ctx.before.mate);
       const playedEval = Engine.formatEval(a.cpWhite, a.mate);
-      els.coachBest.textContent = T('coach.optimalIs', { move: mv }) + ' — ' + T('b.whyBetter', { move: c.bestSan, eval: bestEval, played: playedEval }) + ' ' + T('coach.optimalShown', { move: c.bestSan });
+      const isRed = c.cls === 'blunder';
+      els.coachBest.textContent = T('coach.optimalIs', { move: mv }) + ' — ' + T('b.whyBetter', { move: c.bestSan, eval: bestEval, played: playedEval }) + ' ' + T(isRed ? 'review.playedArrowRed' : 'review.playedArrow');
     } else {
       els.coachBest.classList.add('hidden');
     }
@@ -1129,8 +1130,9 @@
     S.selected = null; S.legal = [];
     sound('confirm');
     const best = entry.cls.bestUci;
+    const isRed = entry.cls.cls === 'blunder';
     drawArrows([
-      { from: entry.uci.slice(0, 2), to: entry.uci.slice(2, 4), color: ['mistake', 'blunder'].indexOf(entry.cls.cls) >= 0 ? 'red' : 'orange', width: 11, opacity: 0.7 },
+      { from: entry.uci.slice(0, 2), to: entry.uci.slice(2, 4), color: isRed ? 'red' : 'orange', width: 11, opacity: 0.7 },
       { from: best.slice(0, 2), to: best.slice(2, 4), color: 'cyan' }
     ]);
     render();
@@ -1385,14 +1387,14 @@
     if (index > 0) {
       const h = S.history[index - 1];
       if (h.cls) {
-        const bad = ['mistake', 'blunder'].indexOf(h.cls.cls) >= 0;
-        arrows.push({ from: h.uci.slice(0, 2), to: h.uci.slice(2, 4), color: bad ? 'red' : 'orange', width: 11, opacity: 0.7 });
+        const isRed = h.cls.cls === 'blunder';
+        arrows.push({ from: h.uci.slice(0, 2), to: h.uci.slice(2, 4), color: isRed ? 'red' : 'orange', width: 11, opacity: 0.7 });
         if (!h.cls.isBest && h.cls.bestUci) arrows.push({ from: h.cls.bestUci.slice(0, 2), to: h.cls.bestUci.slice(2, 4), color: 'cyan' });
         const moveNo = Math.ceil((h.ply + (S.startFen.split(' ')[1] === 'b' ? 1 : 0)) / 2) + (parseInt(S.startFen.split(' ')[5], 10) || 1) - 1;
         commentFn = () => {
           const head = T('review.moveHeader', { no: moveNo, dots: h.color === 'w' ? '.' : '...', san: h.san });
           let txt = head + ' — ' + Engine.comment(h.ctx, h.cls);
-          if (!h.cls.isBest && h.cls.bestUci) txt += ' ' + T('review.playedArrow');
+          if (!h.cls.isBest && h.cls.bestUci) txt += ' ' + T(isRed ? 'review.playedArrowRed' : 'review.playedArrow');
           return txt;
         };
         if (h.cls.cls === 'blunder') sound('blunder'); else if (h.cls.cls === 'brilliant') sound('brilliant'); else sound(h.captured ? 'capture' : 'move');
