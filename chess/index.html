@@ -69,6 +69,10 @@
             </button>
           </div>
 
+          <button id="menu-btn-study" class="themebutton menu-btn" type="button">
+            <span><i class="fas fa-chess-board"></i> <span data-i18n="menu.study">NieR Chess Study / Nghiên Cứu Thế Cờ</span></span>
+          </button>
+
           <button id="menu-btn-load" class="themebutton menu-btn" type="button">
             <span><i class="fas fa-folder-open"></i> <span data-i18n="menu.load">TẢI VÁN CỜ / LƯU TRỮ</span></span>
           </button>
@@ -314,6 +318,216 @@
       </main>
     </div>
 
+    <!-- ================= STUDY SCREEN (NieR Chess Study) ================= -->
+    <div id="screen-study" class="study-screen hidden">
+      <header class="nier-toolbar study-toolbar">
+        <div class="toolbar-group study-toolbar-left">
+          <span class="desktop-toolbar-brand">NieR Chess</span>
+          <span class="study-toolbar-badge" data-i18n="mode.study">NieR Chess Study</span>
+          <input id="study-title-input" class="study-title-input" type="text" maxlength="64" placeholder="Tên thế cờ nghiên cứu..." />
+        </div>
+        <div class="toolbar-group study-toolbar-right">
+          <button id="study-btn-back-menu" class="tool-btn" type="button" data-i18n="btn.menu">MENU CHÍNH</button>
+          <button id="study-btn-new" class="tool-btn" type="button" data-i18n="study.newStudy">TẠO MỚI</button>
+          <button id="study-btn-save" class="tool-btn" type="button" data-i18n="study.saveStudy">LƯU THẾ CỜ</button>
+          <button id="study-btn-archive" class="tool-btn" type="button" data-i18n="study.openStudies">DANH SÁCH THẾ CỜ</button>
+          <button id="study-btn-lang" class="tool-btn" type="button" data-i18n-title="settings.language" title="Language">VI</button>
+          <button id="study-btn-audio" class="tool-btn" type="button" data-i18n-title="settings.audio" title="Audio"><i class="fas fa-volume-up"></i> ON</button>
+          <button id="study-btn-settings" class="tool-btn" type="button" data-i18n="btn.settings">CÀI ĐẶT</button>
+        </div>
+      </header>
+
+      <main id="study-workspace" class="study-workspace" data-mobile-tab="tree">
+        <!-- LEFT PANEL: Mode Switch + Board Editor / Engine Analysis / Draw & Export -->
+        <aside id="study-col-left" class="study-col-left">
+          <div class="study-card study-mode-card">
+            <div class="study-mode-switch" role="tablist">
+              <button id="study-mode-editor-btn" class="themebutton study-mode-btn" type="button" data-i18n="study.modeEditor">XẾP THẾ CỜ</button>
+              <button id="study-mode-play-btn" class="themebutton study-mode-btn active" type="button" data-i18n="study.modePlay">PHÂN TÍCH &amp; TỰ ĐI</button>
+            </div>
+          </div>
+
+          <!-- Board Editor Module (Panel A) -->
+          <section id="study-panel-editor" class="study-card study-panel hidden" data-study-panel="editor">
+            <h3 class="study-card-title" data-i18n="study.paletteTools">CÔNG CỤ XẾP QUÂN</h3>
+            <div class="study-tool-row">
+              <button class="themebutton study-tool-btn active" type="button" data-tool="move">
+                <i class="fas fa-hand-pointer"></i> <span data-i18n="study.toolMove">Di chuyển</span>
+              </button>
+              <button class="themebutton study-tool-btn" type="button" data-tool="erase">
+                <i class="fas fa-eraser"></i> <span data-i18n="study.toolErase">Xóa quân</span>
+              </button>
+            </div>
+
+            <div class="study-palette-label" data-i18n="study.whitePieces">Quân Trắng</div>
+            <div id="study-palette-white" class="study-palette-grid"></div>
+
+            <div class="study-palette-label" data-i18n="study.blackPieces">Quân Đen</div>
+            <div id="study-palette-black" class="study-palette-grid"></div>
+
+            <div class="study-palette-label" data-i18n="study.presets">BÀN CỜ MẪU</div>
+            <div class="study-preset-row">
+              <button id="study-btn-startpos" class="themebutton study-mini-btn" type="button" data-i18n="study.startPos">Thế cờ đầu</button>
+              <button id="study-btn-clear" class="themebutton study-mini-btn" type="button" data-i18n="study.clearBoard">Xóa sạch bàn</button>
+              <button id="study-btn-flip-ed" class="themebutton study-mini-btn" type="button" data-i18n="study.flipBoard">Xoay bàn cờ</button>
+            </div>
+
+            <div class="study-editor-row">
+              <span class="study-field-lbl" data-i18n="study.sideToMove">Lượt đi tiếp theo</span>
+              <div class="seg study-turn-seg">
+                <button id="study-turn-w" class="seg-btn active" type="button" data-i18n="ui.white">TRẮNG</button>
+                <button id="study-turn-b" class="seg-btn" type="button" data-i18n="ui.black">ĐEN</button>
+              </div>
+            </div>
+
+            <div class="study-editor-row">
+              <span class="study-field-lbl" data-i18n="study.castlingRights">Quyền nhập thành</span>
+              <div class="study-castle-grid">
+                <label class="study-check"><input type="checkbox" id="study-castle-K" checked /> W O-O (K)</label>
+                <label class="study-check"><input type="checkbox" id="study-castle-Q" checked /> W O-O-O (Q)</label>
+                <label class="study-check"><input type="checkbox" id="study-castle-k" checked /> B O-O (k)</label>
+                <label class="study-check"><input type="checkbox" id="study-castle-q" checked /> B O-O-O (q)</label>
+              </div>
+            </div>
+
+            <div class="study-editor-row">
+              <div class="study-fen-hdr">
+                <span class="study-field-lbl" data-i18n="study.fenLabel">Chuỗi FEN</span>
+                <button id="study-btn-copy-fen" class="themebutton study-tiny-btn" type="button" data-i18n="study.copyFen">SAO CHÉP FEN</button>
+              </div>
+              <input id="study-fen-input" class="popup-input study-fen-input" type="text" spellcheck="false" autocomplete="off" />
+            </div>
+
+            <div id="study-legal-msg" class="study-legal-msg ok"></div>
+            <button id="study-btn-commit" class="themebutton study-commit-btn" type="button" data-i18n="study.commitPosition">HOÀN TẤT &amp; PHÂN TÍCH</button>
+          </section>
+
+          <!-- Self-Analysis Engine Module (Panel B) -->
+          <section id="study-panel-engine" class="study-card study-panel" data-study-panel="engine">
+            <div class="study-engine-hdr">
+              <button id="study-btn-analysis" class="themebutton study-analysis-btn" type="button" data-i18n="study.analysisOff">TỰ PHÂN TÍCH: TẮT</button>
+              <button id="study-btn-flip" class="themebutton study-mini-btn" type="button" data-i18n="btn.flip">XOAY BÀN</button>
+            </div>
+            <div class="study-eval-box">
+              <div class="study-eval-top">
+                <span class="study-eval-lbl" data-i18n="study.nodeEvalLabel">ĐÁNH GIÁ THẾ CỜ</span>
+                <span id="study-node-eval" class="study-eval-val">+0.00</span>
+                <span id="study-node-badge" class="study-node-badge hidden"></span>
+              </div>
+              <p id="study-engine-status" class="study-engine-status" data-i18n="study.analysisIdle">Bật Tự phân tích để xem đánh giá Stockfish &amp; 3 nhánh tối ưu.</p>
+            </div>
+            <div class="study-palette-label" data-i18n="study.topLines">CÁC NHÁNH TỐT NHẤT (TOP PV)</div>
+            <div id="study-pv-list" class="study-pv-list"></div>
+          </section>
+
+          <!-- Telestrator Annotations & Export Module (Panel C) -->
+          <section id="study-panel-draw" class="study-card study-panel" data-study-panel="draw">
+            <h3 class="study-card-title" data-i18n="study.drawHeader">VẼ MŨI TÊN &amp; ĐÁNH DẤU Ô</h3>
+            <div class="study-draw-controls">
+              <button id="study-btn-draw-mode" class="themebutton study-mini-btn" type="button" data-i18n="study.drawToggle">CHẾ ĐỘ VẼ (TOUCH)</button>
+              <button id="study-btn-clear-annot" class="themebutton study-mini-btn" type="button" data-i18n="study.clearAnnot">XÓA VẼ Ở NƯỚC NÀY</button>
+            </div>
+            <div id="study-draw-colors" class="study-draw-colors">
+              <button class="study-color-swatch active" type="button" data-color="green" title="Green"></button>
+              <button class="study-color-swatch" type="button" data-color="red" title="Red"></button>
+              <button class="study-color-swatch" type="button" data-color="blue" title="Blue"></button>
+              <button class="study-color-swatch" type="button" data-color="yellow" title="Yellow"></button>
+            </div>
+            <p class="study-draw-hint" data-i18n="study.drawHintDesktop">Chuột phải + kéo để vẽ mũi tên; chuột phải vào ô để tô màu.</p>
+
+            <div class="study-export-grid">
+              <button id="study-btn-export-branch" class="themebutton study-mini-btn" type="button" data-i18n="study.exportBranch">XUẤT NHÁNH (.JSON)</button>
+              <button id="study-btn-export-study" class="themebutton study-mini-btn" type="button" data-i18n="study.exportStudy">XUẤT .STUDY.JSON</button>
+              <button id="study-btn-import-study" class="themebutton study-mini-btn" type="button" data-i18n="study.importStudy">NHẬP .STUDY.JSON</button>
+              <input id="study-import-file" type="file" accept=".json,.study.json" class="hidden" />
+            </div>
+          </section>
+        </aside>
+
+        <!-- CENTER COLUMN: Eval Bar + Study Board + Separate Annotation/Engine SVG Layers + Nav Controls -->
+        <section id="study-col-center" class="study-col-center">
+          <div class="study-board-zone">
+            <div id="study-eval-bar" class="eval-bar" title="Evaluation">
+              <div id="study-eval-fill" class="eval-fill"></div>
+              <div id="study-eval-text" class="eval-text">0.0</div>
+            </div>
+
+            <div class="board-frame study-board-frame">
+              <div id="study-board-wrap" class="board-wrap study-board-wrap">
+                <div id="study-board" class="board" aria-label="Study Chessboard"></div>
+
+                <!-- Lower SVG Layer: Engine Best-Move Arrow -->
+                <svg id="study-engine-arrow-layer" class="arrow-layer study-engine-svg" viewBox="0 0 800 800" preserveAspectRatio="none" aria-hidden="true">
+                  <defs>
+                    <marker id="st-ah-cyan" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="3.2" markerHeight="3.2" orient="auto-start-reverse">
+                      <path d="M0,0 L10,5 L0,10 Z" fill="#2B8C84" />
+                    </marker>
+                  </defs>
+                  <g id="study-engine-arrow-group"></g>
+                </svg>
+
+                <!-- Upper SVG Layer: User Telestrator Highlights & Arrows -->
+                <svg id="study-annot-layer" class="arrow-layer study-annot-svg" viewBox="0 0 800 800" preserveAspectRatio="none" aria-hidden="true">
+                  <defs>
+                    <marker id="st-ah-green" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="3.2" markerHeight="3.2" orient="auto-start-reverse">
+                      <path d="M0,0 L10,5 L0,10 Z" fill="#4E7A45" />
+                    </marker>
+                    <marker id="st-ah-red" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="3.2" markerHeight="3.2" orient="auto-start-reverse">
+                      <path d="M0,0 L10,5 L0,10 Z" fill="#B83A2D" />
+                    </marker>
+                    <marker id="st-ah-blue" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="3.2" markerHeight="3.2" orient="auto-start-reverse">
+                      <path d="M0,0 L10,5 L0,10 Z" fill="#3A6EA5" />
+                    </marker>
+                    <marker id="st-ah-yellow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="3.2" markerHeight="3.2" orient="auto-start-reverse">
+                      <path d="M0,0 L10,5 L0,10 Z" fill="#C99A2E" />
+                    </marker>
+                  </defs>
+                  <g id="study-annot-highlights"></g>
+                  <g id="study-annot-arrows"></g>
+                </svg>
+              </div>
+            </div>
+          </div>
+
+          <div id="study-nav-bar" class="study-nav-bar">
+            <button id="study-nav-start" class="themebutton study-nav-btn" type="button" data-i18n="study.navStart">|&lt; Đầu</button>
+            <button id="study-nav-prev" class="themebutton study-nav-btn" type="button" data-i18n="study.navPrev">&lt; Lùi</button>
+            <button id="study-nav-next" class="themebutton study-nav-btn" type="button" data-i18n="study.navNext">Tiến &gt;</button>
+            <button id="study-nav-end" class="themebutton study-nav-btn" type="button" data-i18n="study.navEnd">Cuối &gt;|</button>
+            <button id="study-nav-prev-var" class="themebutton study-nav-btn" type="button" data-i18n="study.navPrevVar">Nhánh trên</button>
+            <button id="study-nav-next-var" class="themebutton study-nav-btn" type="button" data-i18n="study.navNextVar">Nhánh dưới</button>
+          </div>
+
+          <div id="study-shortcuts-hint" class="study-shortcuts-hint" data-i18n="study.shortcuts"></div>
+
+          <!-- Mobile Tab Switcher (Visible < 1024px) -->
+          <div id="study-mobile-tabs" class="study-mobile-tabs">
+            <button class="study-mob-tab active" type="button" data-tab="tree" data-i18n="study.tab.tree">NHÁNH CỜ</button>
+            <button class="study-mob-tab" type="button" data-tab="editor" data-i18n="study.tab.editor">XẾP QUÂN</button>
+            <button class="study-mob-tab" type="button" data-tab="engine" data-i18n="study.tab.engine">ENGINE</button>
+            <button class="study-mob-tab" type="button" data-tab="draw" data-i18n="study.tab.draw">VẼ &amp; LƯU</button>
+          </div>
+        </section>
+
+        <!-- RIGHT COLUMN: Multi-Branch Variation Tree + Node Actions + Per-Node Comment -->
+        <aside id="study-col-right" class="study-col-right" data-study-panel="tree">
+          <div class="study-card study-tree-card">
+            <h3 class="study-card-title" data-i18n="study.treeHeader">CÂY BIẾN HÓA (VARIATIONS)</h3>
+            <div id="study-tree-box" class="study-tree-box"></div>
+            <div class="study-node-actions">
+              <button id="study-btn-promote" class="themebutton study-mini-btn" type="button" data-i18n="study.promote">ĐƯA LÊN NHÁNH CHÍNH</button>
+              <button id="study-btn-delete-node" class="themebutton study-mini-btn" type="button" data-i18n="study.deleteFromHere">XÓA TỪ ĐÂY</button>
+            </div>
+          </div>
+
+          <div class="study-card study-comment-card">
+            <h3 class="study-card-title" data-i18n="study.nodeComment">GHI CHÚ NƯỚC ĐI</h3>
+            <textarea id="study-node-comment" class="study-comment-input" rows="4" placeholder="Ghi chú ý đồ chiến thuật cho nước đi này..."></textarea>
+          </div>
+        </aside>
+      </main>
+    </div>
+
   </div>
 
   <!-- ================= DIALOGS / MODALS (NieR Popup Style) ================= -->
@@ -500,6 +714,23 @@
     </div>
   </div>
 
+  <!-- 9. Saved Studies Archive Modal (Strictly Separate from Match Archive) -->
+  <div id="modal-study-archive" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="popupSection modal-box modal-wide">
+      <h2 class="popupSectionTitle" data-i18n="study.archiveTitle">DANH SÁCH THẾ CỜ NGHIÊN CỨU</h2>
+      <div class="popup-boxContent">
+        <div class="archive-top-actions">
+          <button id="study-modal-import-btn" class="themebutton popup-btn" type="button" data-i18n="study.importStudy">NHẬP .STUDY.JSON</button>
+          <input id="study-modal-import-file" type="file" accept=".json,.study.json" class="hidden" />
+        </div>
+        <div id="study-archive-list" class="archive-list"></div>
+        <div class="popup-button-group">
+          <button class="themebutton popup-btn" type="button" data-close="modal-study-archive" data-i18n="btn.close">ĐÓNG</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div id="toast" class="toast hidden"></div>
 
   <!-- ================= SCRIPTS ================= -->
@@ -513,5 +744,6 @@
   <script src="commentary.js"></script>
   <script src="engine.js"></script>
   <script src="app.js"></script>
+  <script src="study.js"></script>
 </body>
 </html>

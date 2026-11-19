@@ -230,22 +230,43 @@
     stopClock();
     Engine.cancelAnalysis();
     YoRHaAudio.stopBgm();
+    if (window.Study) Study.onLeave();
     S.view = 'menu';
     document.body.dataset.view = 'menu';
     els.screenMenu.classList.remove('hidden');
     els.screenGame.classList.add('hidden');
+    if (els.screenStudy) els.screenStudy.classList.add('hidden');
     sound('cancel');
     return true;
   }
 
   function showGameScreen() {
     closeMobileDrawer();
+    if (window.Study) Study.onLeave();
     S.view = 'game';
     document.body.dataset.view = 'game';
     els.screenMenu.classList.add('hidden');
+    if (els.screenStudy) els.screenStudy.classList.add('hidden');
     els.screenGame.classList.remove('hidden');
     YoRHaAudio.startBgm();
     syncAnalysisVisibility();
+  }
+
+  function showStudyScreen() {
+    closeMobileDrawer();
+    clearPauseCover();
+    S.moveToken++;
+    S.review.token++;
+    if (S.review.active) exitReview();
+    stopClock();
+    Engine.cancelAnalysis();
+    YoRHaAudio.stopBgm();
+    S.view = 'study';
+    document.body.dataset.view = 'study';
+    els.screenMenu.classList.add('hidden');
+    els.screenGame.classList.add('hidden');
+    if (els.screenStudy) els.screenStudy.classList.remove('hidden');
+    if (window.Study) Study.open();
   }
 
   function syncBoardControlsPlacement() {
@@ -1497,7 +1518,7 @@
     try {
       resetCommon();
       const c = new Chess();
-      const start = match.startFen || Engine.START_FEN;
+      const start = match.startFen || match.initialFen || Engine.START_FEN;
       if (start !== Engine.START_FEN && !c.load(start)) return false;
       S.startFen = start;
       S.history = [];
@@ -1574,7 +1595,7 @@
       const bName = m.black.isBot && Bots.get(m.black.botId) ? I18N.pick(Bots.get(m.black.botId).name) : m.black.name;
       li.innerHTML = '<div class="ar-title">' + (m.favorite ? '<span class="ar-fav">★</span> ' : '') +
         escapeHtml(T('archive.vs', { w: wName, we: m.white.elo, b: bName, be: m.black.elo })) + '</div>' +
-        '<div class="ar-meta">' + d.toLocaleString(I18N.lang === 'vi' ? 'vi-VN' : 'en-US') + ' · ' + T('mode.' + (m.mode === 'pvp' ? 'pvp' : m.mode === 'puzzle' ? 'puzzle' : 'bot')) +
+        '<div class="ar-meta">' + d.toLocaleString(I18N.lang === 'vi' ? 'vi-VN' : 'en-US') + ' · ' + T('mode.' + (m.mode === 'pvp' ? 'pvp' : m.mode === 'puzzle' ? 'puzzle' : m.mode === 'study' ? 'study' : 'bot')) +
         ' · ' + (m.result || '*') + ' · ' + T('archive.moves', { n: (m.moves || []).length }) +
         (m.accuracy ? ' · ' + m.accuracy.white + '% / ' + m.accuracy.black + '%' : '') + '</div>' +
         '<div class="ar-actions"></div>';
@@ -1969,6 +1990,7 @@
     tg.querySelector('.tg-state').textContent = S.liveEval ? '[ON]' : '[OFF]';
     syncAnalysisVisibility();
     renderEngineInfo();
+    if (window.Study && Study.syncSettingsUI) Study.syncSettingsUI();
   }
   function renderEngineInfo() {
     const p = Engine.profile;
@@ -2034,6 +2056,7 @@
     renderPuzzleInfo();
     renderArchive();
     renderGameOver();
+    if (window.Study && Study.applyLanguage) Study.applyLanguage();
   }
 
   /* ------------------------------------------------------------------
@@ -2041,7 +2064,7 @@
      ------------------------------------------------------------------ */
   function bind() {
     // generic UI hover & click sounds matching CDN theme
-    const SILENT_BTN = '.review-nav .tool-btn';
+    const SILENT_BTN = '.review-nav .tool-btn, .study-nav-btn';
     document.addEventListener('mouseover', (e) => {
       const btn = e.target.closest('.themebutton, .tool-btn, .dropContent, .seg-btn, .bot-chip');
       if (btn && btn.matches(SILENT_BTN)) { bind._lastHover = btn; return; }
@@ -2066,8 +2089,8 @@
     }));
 
     document.addEventListener('keydown', (e) => {
-      if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
-      if (S.review.active) {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+      if (S.view === 'game' && S.review.active) {
         if (e.key === 'ArrowLeft') reviewGo(S.review.index - 1);
         else if (e.key === 'ArrowRight') reviewGo(S.review.index + 1);
         else if (e.key === 'Home') reviewGo(0);
@@ -2091,6 +2114,7 @@
       renderPuzzleList();
       openModal('modal-puzzles');
     };
+    if ($('menu-btn-study')) $('menu-btn-study').onclick = () => showStudyScreen();
     $('menu-btn-load').onclick = () => {
       renderArchive();
       openModal('modal-load');
@@ -2294,6 +2318,7 @@
   function init() {
     els.screenMenu = $('screen-menu');
     els.screenGame = $('screen-game');
+    els.screenStudy = $('screen-study');
     els.board = $('board');
     els.colCenter = $('col-center');
     els.boardControls = $('board-controls');
@@ -2360,10 +2385,11 @@
   window.App = {
     state: S,
     init,
-    showMenuScreen, showGameScreen,
-    newGame, loadPuzzle, startReview, applyLanguage, render,
+    showMenuScreen, showGameScreen, showStudyScreen,
+    newGame, loadPuzzle, startReview, applyLanguage, render, syncSettingsUI,
     drawArrows, clearArrows, takeback, resign, flip, showOptimal,
-    reviewGo, nextCritical, buildMatchRecord, onPlayerMove: playerMove
+    reviewGo, nextCritical, buildMatchRecord, onPlayerMove: playerMove,
+    pieceSVG, toast, askConfirm, askPromotion, openModal, closeModal
   };
 
   document.addEventListener('DOMContentLoaded', init);

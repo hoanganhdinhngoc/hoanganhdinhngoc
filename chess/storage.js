@@ -13,6 +13,7 @@
     profile: 'yorha_chess_profile',
     settings: 'yorha_chess_settings',
     saves: 'yorha_chess_saves',
+    studies: 'yorha_chess_studies',
     solved: 'yorha_chess_puzzles_solved'
   };
 
@@ -177,7 +178,7 @@
   /* ---------------- File Export / Import ---------------- */
   function pad2(n) { return String(n).padStart(2, '0'); }
 
-  function buildFilename(date) {
+  function buildFilename(date, prefix, ext) {
     const d = (date instanceof Date && !isNaN(date)) ? date : new Date(date || Date.now());
     const yyyy = d.getFullYear();
     const mm = pad2(d.getMonth() + 1);
@@ -185,14 +186,11 @@
     const hh = pad2(d.getHours());
     const mi = pad2(d.getMinutes());
     const ss = pad2(d.getSeconds());
-    return 'Chess_Match_' + yyyy + '-' + mm + '-' + dd + '_' + hh + '-' + mi + '-' + ss + '.json';
+    return (prefix || 'Chess_Match_') + yyyy + '-' + mm + '-' + dd + '_' + hh + '-' + mi + '-' + ss + (ext || '.json');
   }
 
-  function exportMatch(match) {
-    if (!match) return '';
-    const d = match.timestamp ? new Date(match.timestamp) : new Date();
-    const filename = buildFilename(d);
-    const payload = JSON.stringify(match, null, 2);
+  function triggerJsonDownload(filename, dataObj) {
+    const payload = JSON.stringify(dataObj, null, 2);
     const blob = new Blob([payload], { type: 'application/json;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -205,6 +203,13 @@
       URL.revokeObjectURL(url);
     }, 200);
     return filename;
+  }
+
+  function exportMatch(match, prefix) {
+    if (!match) return '';
+    const d = match.timestamp ? new Date(match.timestamp) : new Date();
+    const filename = buildFilename(d, prefix);
+    return triggerJsonDownload(filename, match);
   }
 
   function importFile(file) {
@@ -222,8 +227,9 @@
           // Verify moves are replayable with Chess if available
           if (window.Chess) {
             const c = new window.Chess();
-            if (data.startFen && data.startFen !== 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1') {
-              if (!c.load(data.startFen)) { reject(new Error('invalid')); return; }
+            const startFen = data.startFen || data.initialFen;
+            if (startFen && startFen !== 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1') {
+              if (!c.load(startFen)) { reject(new Error('invalid')); return; }
             }
             for (const mv of data.moves) {
               const u = mv && mv.uci;
@@ -231,6 +237,96 @@
                 ? c.move({ from: u.slice(0, 2), to: u.slice(2, 4), promotion: u.length > 4 ? u[4] : undefined })
                 : c.move(mv && mv.san);
               if (!step) { reject(new Error('invalid')); return; }
+            }
+          }
+          resolve(data);
+        } catch (e) {
+          reject(new Error('invalid'));
+        }
+      };
+      reader.readAsText(file);
+    });
+  }
+
+  /* ---------------- Study Archive ---------------- */
+  function listStudies() {
+    const arr = readJSON(KEYS.studies, []);
+    if (!Array.isArray(arr)) return [];
+    return arr;
+  }
+
+  function saveStudy(study) {
+    if (!study || typeof study !== 'object' || !study.root) return null;
+    const list = listStudies();
+    const now = new Date().toISOString();
+    const id = study.id || ('st_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6));
+    const idx = list.findIndex(s => s && s.id === id);
+    const prev = idx >= 0 ? list[idx] : null;
+    const title = String(study.title || (prev && prev.title) || 'Untitled Study').trim() || 'Untitled Study';
+    const copy = {
+      format: 'yorha-chess-study',
+      version: 1,
+      id,
+      title,
+      initialFen: study.initialFen || study.root.fen || 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+      createdAt: (prev && prev.createdAt) || study.createdAt || now,
+      updatedAt: now,
+      root: study.root
+    };
+    if (idx >= 0) list.splice(idx, 1);
+    list.unshift(copy);
+    writeJSON(KEYS.studies, list.slice(0, 100));
+    return copy;
+  }
+
+  function getStudy(id) {
+    return listStudies().find(s => s && s.id === id) || null;
+  }
+
+  function deleteStudy(id) {
+    const next = listStudies().filter(s => s && s.id !== id);
+    writeJSON(KEYS.studies, next);
+  }
+
+  function exportStudyFile(study) {
+    if (!study || !study.root) return '';
+    const d = study.updatedAt ? new Date(study.updatedAt) : new Date();
+    const filename = buildFilename(d, 'NieR_Chess_Study_', '.study.json');
+    const payload = {
+      format: 'yorha-chess-study',
+      version: 1,
+      id: study.id || ('st_' + Date.now()),
+      title: String(study.title || 'Untitled Study').trim() || 'Untitled Study',
+      initialFen: study.initialFen || study.root.fen,
+      createdAt: study.createdAt || new Date().toISOString(),
+      updatedAt: study.updatedAt || new Date().toISOString(),
+      root: study.root
+    };
+    return triggerJsonDownload(filename, payload);
+  }
+
+  function importStudyFile(file) {
+    return new Promise((resolve, reject) => {
+      if (!file) { reject(new Error('invalid')); return; }
+      const reader = new FileReader();
+      reader.onerror = () => reject(new Error('invalid'));
+      reader.onload = () => {
+        try {
+          const data = JSON.parse(String(reader.result || ''));
+          if (!data || typeof data !== 'object' || !data.root || typeof data.root !== 'object') {
+            reject(new Error('invalid'));
+            return;
+          }
+          const fen = data.initialFen || data.root.fen;
+          if (!fen || typeof fen !== 'string') {
+            reject(new Error('invalid'));
+            return;
+          }
+          if (window.Chess) {
+            const c = new window.Chess();
+            if (!c.load(fen)) {
+              reject(new Error('invalid'));
+              return;
             }
           }
           resolve(data);
@@ -278,6 +374,12 @@
     exportMatch,
     buildFilename,
     importFile,
+    listStudies,
+    saveStudy,
+    getStudy,
+    deleteStudy,
+    exportStudyFile,
+    importStudyFile,
     getSolved,
     markSolved,
     resetSolved
