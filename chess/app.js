@@ -25,17 +25,18 @@
      ------------------------------------------------------------------ */
   const PIECE_PATHS = {
     p: '<circle cx="22.5" cy="12" r="5.5"/><path d="M18 18 L27 18 L25.5 22 L19.5 22 Z"/><path d="M19.5 22 L25.5 22 L29.5 34 L15.5 34 Z"/><rect x="12" y="34" width="21" height="5"/>',
-    r: '<path d="M12 17 L12 8 L16.5 8 L16.5 11.5 L20.5 11.5 L20.5 8 L24.5 8 L24.5 11.5 L28.5 11.5 L28.5 8 L33 8 L33 17 Z"/><path d="M14.5 17 L30.5 17 L31.5 34 L13.5 34 Z"/><rect x="11" y="34" width="23" height="5"/><path class="d" d="M15 22 L30 22 M15 29 L30.5 29" fill="none"/>',
-    n: '<path d="M13 34 L17 26 L22.5 22 L21.5 19.5 L15 24.5 L11 22.5 L11 18.5 L18 11 L18 6.5 L21 9 L24 6.5 L31 13.5 L33.5 22 L31.5 34 Z"/><rect x="11" y="34" width="23" height="5"/><rect class="dfill" x="18.5" y="13.5" width="2.5" height="2.5"/><path class="d" d="M26 12 L29.5 22.5 L28 34" fill="none"/>',
-    b: '<circle cx="22.5" cy="5.5" r="2.3"/><path d="M22.5 8 L29 15.5 L26 22 L19 22 L16 15.5 Z"/><path d="M19 22 L26 22 L29.5 34 L15.5 34 Z"/><rect x="11" y="34" width="23" height="5"/><path class="d" d="M24.8 11.5 L21 17.5 M18 27 L27 27" fill="none"/>',
-    q: '<path d="M14 34 L10.5 14.5 L17 24.5 L16.5 10.5 L21 23 L22.5 8.5 L24 23 L28.5 10.5 L28 24.5 L34.5 14.5 L31 34 Z"/><circle cx="10.5" cy="13" r="2"/><circle cx="16.5" cy="9" r="2"/><circle cx="22.5" cy="7" r="2"/><circle cx="28.5" cy="9" r="2"/><circle cx="34.5" cy="13" r="2"/><rect x="11" y="34" width="23" height="5"/><path class="d" d="M14.5 29 L30.5 29" fill="none"/>',
-    k: '<rect x="21" y="3" width="3" height="12"/><rect x="17.5" y="6.5" width="10" height="3"/><path d="M14 34 L12 21 L22.5 16 L33 21 L31 34 Z"/><rect x="11" y="34" width="23" height="5"/><path class="d" d="M13.5 27 L31.5 27 M22.5 16 L22.5 34" fill="none"/>'
+    r: '<path d="M12 17 L12 8 L16.5 8 L16.5 11.5 L20.5 11.5 L20.5 8 L24.5 8 L24.5 11.5 L28.5 11.5 L28.5 8 L33 8 L33 17 Z"/><path d="M14.5 17 L30.5 17 L31.5 34 L13.5 34 Z"/><rect x="11" y="34" width="23" height="5"/><path d="M15 22 L30 22 M15 29 L30.5 29" fill="none" stroke-width="1.2"/>',
+    n: '<path d="M13 34 L17 26 L22.5 22 L21.5 19.5 L15 24.5 L11 22.5 L11 18.5 L18 11 L18 6.5 L21 9 L24 6.5 L31 13.5 L33.5 22 L31.5 34 Z"/><rect x="11" y="34" width="23" height="5"/><rect x="18.5" y="13.5" width="2.5" height="2.5" fill="currentColor" stroke="none"/><path d="M26 12 L29.5 22.5 L28 34" fill="none" stroke-width="1.2"/>',
+    b: '<circle cx="22.5" cy="5.5" r="2.3"/><path d="M22.5 8 L29 15.5 L26 22 L19 22 L16 15.5 Z"/><path d="M19 22 L26 22 L29.5 34 L15.5 34 Z"/><rect x="11" y="34" width="23" height="5"/><path d="M24.8 11.5 L21 17.5 M18 27 L27 27" fill="none" stroke-width="1.2"/>',
+    q: '<path d="M14 34 L10.5 14.5 L17 24.5 L16.5 10.5 L21 23 L22.5 8.5 L24 23 L28.5 10.5 L28 24.5 L34.5 14.5 L31 34 Z"/><circle cx="10.5" cy="13" r="2"/><circle cx="16.5" cy="9" r="2"/><circle cx="22.5" cy="7" r="2"/><circle cx="28.5" cy="9" r="2"/><circle cx="34.5" cy="13" r="2"/><rect x="11" y="34" width="23" height="5"/><path d="M14.5 29 L30.5 29" fill="none" stroke-width="1.2"/>',
+    k: '<rect x="21" y="3" width="3" height="12"/><rect x="17.5" y="6.5" width="10" height="3"/><path d="M14 34 L12 21 L22.5 16 L33 21 L31 34 Z"/><rect x="11" y="34" width="23" height="5"/><path d="M13.5 27 L31.5 27 M22.5 16 L22.5 34" fill="none" stroke-width="1.2"/>'
   };
   function pieceSVG(color, type) {
     const fill = color === 'w' ? '#EFECE6' : '#3B3831';
     const stroke = color === 'w' ? '#3B3831' : '#CEC8B0';
-    return '<svg viewBox="0 0 45 45" xmlns="http://www.w3.org/2000/svg"><style>.d{stroke:' + stroke + ';stroke-width:1.2}.dfill{fill:' + stroke + ';stroke:none}</style>' +
-      '<g fill="' + fill + '" stroke="' + stroke + '" stroke-width="1.5" stroke-linejoin="miter">' + PIECE_PATHS[type] + '</g></svg>';
+    return '<svg viewBox="0 0 45 45" xmlns="http://www.w3.org/2000/svg">' +
+      '<g color="' + stroke + '" fill="' + fill + '" stroke="' + stroke + '" stroke-width="1.5" stroke-linejoin="miter">' +
+      PIECE_PATHS[type] + '</g></svg>';
   }
 
   /* ------------------------------------------------------------------

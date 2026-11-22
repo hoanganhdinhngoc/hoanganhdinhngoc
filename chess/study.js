@@ -286,6 +286,7 @@
     editorTurn: 'w',
     editorCastle: { K: true, Q: true, k: true, q: true },
     editorSelectedSq: null,
+    editorInitialized: false,
     editorDirty: false
   };
 
@@ -294,6 +295,9 @@
   let drag = null;
   let drawDrag = null;
   let edDrag = null;
+  let fenTipTimer = null;
+  let fenTipHoverBadge = null;
+  let fenTipCopied = false;
   let inited = false;
 
   /* ------------------------------------------------------------------
@@ -656,6 +660,7 @@
     ST.editorTurn = parsed.turn;
     ST.editorCastle = parsed.castle;
     ST.editorSelectedSq = null;
+    ST.editorInitialized = true;
     ST.editorDirty = false;
     syncEditorControlsUI();
   }
@@ -669,7 +674,11 @@
       ST.selectedSq = null;
       ST.legalMoves = [];
       ST.drawMode = false;
-      loadRootIntoEditor();
+      if (!ST.editorInitialized || !ST.editorDirty) {
+        loadRootIntoEditor();
+      } else {
+        syncEditorControlsUI();
+      }
       if (window.innerWidth < 1024) ST.mobileTab = 'editor';
       renderAll();
     } else {
@@ -698,6 +707,7 @@
       rebuildIndex();
       ST.currentNodeId = 'root';
     }
+    ST.editorInitialized = false;
     ST.editorDirty = false;
     ST.mode = 'play';
     if (window.innerWidth < 1024) ST.mobileTab = 'tree';
@@ -732,7 +742,7 @@
     }
     if (els.commitBtn) els.commitBtn.disabled = !val.ok;
 
-    document.querySelectorAll('#study-panel-editor [data-tool]').forEach(btn => {
+    document.querySelectorAll('#screen-study [data-tool]').forEach(btn => {
       btn.classList.toggle('active', btn.dataset.tool === ST.editorTool);
     });
   }
@@ -1140,10 +1150,10 @@
     return node.move.san;
   }
 
-  function createMoveChip(node, showNum) {
+  function createMoveChip(node, showNum, isVarHead) {
     const btn = document.createElement('button');
     btn.type = 'button';
-    btn.className = 'study-move-chip' + (node.id === ST.currentNodeId ? ' active' : '');
+    btn.className = 'study-move-chip' + (isVarHead ? ' study-var-head' : '') + (node.id === ST.currentNodeId ? ' active' : '');
     btn.dataset.nodeId = node.id;
     let extra = '';
     if (node.evaluation && node.evaluation.clsObj && window.I18N) {
@@ -1182,7 +1192,7 @@
     container.appendChild(segEl);
 
     while (cur) {
-      const chip = createMoveChip(cur, forceNum || (cur.move && cur.move.color === 'w'));
+      const chip = createMoveChip(cur, forceNum || (cur.move && cur.move.color === 'w'), isSubVariation && cur === startNode);
       segEl.appendChild(chip);
 
       if (!cur.children || !cur.children.length) break;
@@ -1342,10 +1352,14 @@
 
   function syncToolbarSettingsUI() {
     const s = window.YStorage ? YStorage.getSettings() : { audio: true, showCoords: true };
-    if (els.langBtn && window.I18N) els.langBtn.textContent = I18N.lang === 'vi' ? 'VI' : 'EN';
+    const langCode = window.I18N && I18N.lang === 'en' ? 'EN' : 'VI';
+    if (els.langBtn) els.langBtn.textContent = langCode;
     if (els.audioBtn) {
       els.audioBtn.innerHTML = '<i class="fas ' + (s.audio ? 'fa-volume-up' : 'fa-volume-mute') + '"></i> ' + (s.audio ? 'ON' : 'OFF');
     }
+    if (els.drawerLangLabel) els.drawerLangLabel.textContent = T('study.drawerLang') + ': ' + langCode;
+    if (els.drawerAudioLabel) els.drawerAudioLabel.textContent = T('study.drawerAudio') + ': ' + (s.audio ? 'ON' : 'OFF');
+    if (els.drawerAudioIcon) els.drawerAudioIcon.className = 'fas ' + (s.audio ? 'fa-volume-up' : 'fa-volume-mute');
     if (els.board) els.board.classList.toggle('no-coords', !s.showCoords);
   }
 
@@ -1686,43 +1700,68 @@
   }
 
   /* ------------------------------------------------------------------
-     Palette Builder
+     Palette Builder (Desktop + Mobile Editor Piece Bars)
      ------------------------------------------------------------------ */
+  function makeEditorPieceBtn(color, type) {
+    const code = color + type;
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'themebutton study-piece-btn';
+    btn.dataset.tool = code;
+    btn.innerHTML = pieceSVG(color, type);
+    btn.addEventListener('pointerdown', (e) => {
+      if (e.button !== 0 || ST.mode !== 'editor') return;
+      ST.editorTool = code;
+      ST.editorSelectedSq = null;
+      syncEditorControlsUI();
+      const ghost = makeGhostSvg(color, type);
+      ghost.style.display = 'none';
+      edDrag = {
+        pointerId: e.pointerId,
+        source: 'palette',
+        color,
+        type,
+        startX: e.clientX,
+        startY: e.clientY,
+        active: false,
+        ghost
+      };
+    });
+    return btn;
+  }
+
+  function makeMobileTrashBtn() {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'themebutton study-piece-btn study-mob-trash-btn';
+    btn.dataset.tool = 'erase';
+    btn.dataset.i18nTitle = 'study.trashPiece';
+    btn.title = T('study.trashPiece');
+    btn.setAttribute('aria-label', T('study.trashPiece'));
+    btn.innerHTML = '<i class="fas fa-trash-alt"></i>';
+    btn.onclick = () => {
+      if (ST.mode !== 'editor') return;
+      ST.editorTool = 'erase';
+      ST.editorSelectedSq = null;
+      syncEditorControlsUI();
+      renderBoard();
+    };
+    return btn;
+  }
+
   function buildEditorPalette() {
-    const buildColorRow = (color, containerId) => {
-      const box = $(containerId);
+    const order = ['k', 'q', 'r', 'b', 'n', 'p'];
+    const fillBox = (boxId, color, withTrash) => {
+      const box = $(boxId);
       if (!box) return;
       box.innerHTML = '';
-      ['k', 'q', 'r', 'b', 'n', 'p'].forEach(type => {
-        const code = color + type;
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'themebutton study-piece-btn';
-        btn.dataset.tool = code;
-        btn.innerHTML = pieceSVG(color, type);
-        btn.addEventListener('pointerdown', (e) => {
-          if (e.button !== 0 || ST.mode !== 'editor') return;
-          ST.editorTool = code;
-          ST.editorSelectedSq = null;
-          syncEditorControlsUI();
-          const ghost = makeGhostSvg(color, type);
-          ghost.style.display = 'none';
-          edDrag = {
-            pointerId: e.pointerId,
-            source: 'palette',
-            color,
-            type,
-            startX: e.clientX,
-            startY: e.clientY,
-            active: false,
-            ghost
-          };
-        });
-        box.appendChild(btn);
-      });
+      order.forEach(type => box.appendChild(makeEditorPieceBtn(color, type)));
+      if (withTrash) box.appendChild(makeMobileTrashBtn());
     };
-    buildColorRow('w', 'study-palette-white');
-    buildColorRow('b', 'study-palette-black');
+    fillBox('study-palette-white', 'w', false);
+    fillBox('study-palette-black', 'b', false);
+    fillBox('study-mob-palette-top', 'b', true);
+    fillBox('study-mob-palette-bottom', 'w', true);
   }
 
   /* ------------------------------------------------------------------
@@ -1776,7 +1815,7 @@
       black: { name: (ST.study.title && ST.study.title.trim()) || T('study.untitled'), elo: profile.p2.elo || 600, botId: null },
       moves
     };
-    const file = YStorage.exportMatch(matchObj, 'NieR_Chess_Study_Branch_');
+    const file = YStorage.exportMatch(matchObj, 'NieR_Study_Branch_');
     sound('confirm');
     toast(T('study.exportedBranchToast', { n: moves.length, file }));
   }
@@ -1822,6 +1861,8 @@
         root: data.root
       };
       ST.collapsedIds.clear();
+      ST.editorInitialized = false;
+      ST.editorDirty = false;
       rebuildIndex();
       ST.mode = 'play';
       navigateTo('root', false);
@@ -1839,39 +1880,159 @@
     if (window.Engine) Engine.cancelAnalysis('study');
     ST.study = createEmptyStudy();
     ST.collapsedIds.clear();
+    ST.editorInitialized = false;
+    ST.editorDirty = false;
     rebuildIndex();
     ST.mode = 'play';
     navigateTo('root', false);
     sound('confirm');
   }
 
+  function copyToClipboard(text, onSuccess) {
+    const val = String(text || '');
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(val).then(() => { if (onSuccess) onSuccess(); }).catch(() => fallbackCopy(val, onSuccess));
+    } else {
+      fallbackCopy(val, onSuccess);
+    }
+  }
+
+  function fallbackCopy(val, onSuccess) {
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = val;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      ta.remove();
+      if (onSuccess) onSuccess();
+    } catch (e) { /* ignore */ }
+  }
+
+  function positionFenTooltip(x, y) {
+    const tip = els.fenTooltip;
+    if (!tip) return;
+    const tipW = tip.offsetWidth || 260;
+    const tipH = tip.offsetHeight || 34;
+    const pad = 12;
+    const vw = window.innerWidth || 1024;
+    const vh = window.innerHeight || 768;
+    let left = x + 14;
+    if (left + tipW + pad > vw) left = Math.max(pad, vw - tipW - pad);
+    const top = Math.max(pad, Math.min(vh - tipH - pad, y - tipH / 2));
+    tip.style.left = left + 'px';
+    tip.style.top = top + 'px';
+  }
+
+  function showFenTooltip(text, x, y, isCopied) {
+    const tip = els.fenTooltip;
+    if (!tip) return;
+    const modal = $('modal-study-archive');
+    if (modal && modal.classList.contains('hidden')) {
+      hideFenTooltip();
+      return;
+    }
+    tip.textContent = text;
+    tip.classList.toggle('copied', !!isCopied);
+    tip.classList.add('visible');
+    tip.setAttribute('aria-hidden', 'false');
+    positionFenTooltip(x, y);
+  }
+
+  function hideFenTooltip() {
+    clearTimeout(fenTipTimer);
+    fenTipTimer = null;
+    fenTipCopied = false;
+    fenTipHoverBadge = null;
+    const tip = els.fenTooltip;
+    if (!tip) return;
+    tip.classList.remove('visible', 'copied');
+    tip.setAttribute('aria-hidden', 'true');
+  }
+
   function renderStudyArchive() {
     const listEl = $('study-archive-list');
     if (!listEl || !window.YStorage) return;
+    hideFenTooltip();
     const list = YStorage.listStudies();
     listEl.innerHTML = '';
     if (!list.length) {
-      listEl.innerHTML = '<div class="empty-msg">' + escapeHtml(T('study.archiveEmpty')) + '</div>';
+      listEl.innerHTML = '<li class="archive-empty">' + escapeHtml(T('study.archiveEmpty')) + '</li>';
       return;
     }
     const langTag = window.I18N && I18N.lang === 'vi' ? 'vi-VN' : 'en-US';
     list.forEach(st => {
-      const item = document.createElement('div');
-      item.className = 'archive-item';
+      const li = document.createElement('li');
       const d = new Date(st.updatedAt || st.createdAt || Date.now());
       const nodeCount = countTreeNodes(st.root);
-      const customFen = st.initialFen && st.initialFen !== getStartFen();
+      const fenStr = st.initialFen || getStartFen();
 
-      const main = document.createElement('div');
-      main.className = 'ar-main';
-      main.innerHTML =
-        '<div class="ar-title">' + escapeHtml(st.title || T('study.untitled')) +
-        (customFen ? ' <span class="study-fen-badge">FEN</span>' : '') + '</div>' +
-        '<div class="ar-meta">' + escapeHtml(d.toLocaleString(langTag)) + ' · ' +
-        escapeHtml(T('study.archiveNodes', { n: nodeCount })) + '</div>';
-      main.onclick = () => {
+      const titleRow = document.createElement('div');
+      titleRow.className = 'ar-title study-ar-title';
+
+      const titleTxt = document.createElement('span');
+      titleTxt.className = 'study-ar-title-text';
+      titleTxt.textContent = st.title || T('study.untitled');
+
+      const fenBadge = document.createElement('button');
+      fenBadge.type = 'button';
+      fenBadge.className = 'study-fen-badge';
+      fenBadge.textContent = 'FEN';
+      fenBadge.setAttribute('aria-label', 'FEN');
+
+      fenBadge.addEventListener('mouseenter', (ev) => {
+        fenTipHoverBadge = fenBadge;
+        if (!fenTipCopied) showFenTooltip(fenStr, ev.clientX, ev.clientY, false);
+        else positionFenTooltip(ev.clientX, ev.clientY);
+      });
+      fenBadge.addEventListener('mousemove', (ev) => {
+        fenTipHoverBadge = fenBadge;
+        if (fenTipCopied) positionFenTooltip(ev.clientX, ev.clientY);
+        else showFenTooltip(fenStr, ev.clientX, ev.clientY, false);
+      });
+      fenBadge.addEventListener('mouseleave', () => {
+        if (fenTipHoverBadge === fenBadge) fenTipHoverBadge = null;
+        if (!fenTipCopied) hideFenTooltip();
+      });
+      fenBadge.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        fenTipHoverBadge = fenBadge;
+        const rect = fenBadge.getBoundingClientRect();
+        const cx = ev.clientX || (rect.right + 4);
+        const cy = ev.clientY || (rect.top + rect.height / 2);
+        copyToClipboard(fenStr, () => sound('confirm'));
+        fenTipCopied = true;
+        showFenTooltip(T('study.copiedTooltip'), cx, cy, true);
+        clearTimeout(fenTipTimer);
+        fenTipTimer = setTimeout(() => {
+          fenTipCopied = false;
+          if (fenTipHoverBadge === fenBadge) {
+            const r = fenBadge.getBoundingClientRect();
+            showFenTooltip(fenStr, r.right + 4, r.top + r.height / 2, false);
+          } else {
+            hideFenTooltip();
+          }
+        }, 1100);
+      });
+
+      titleRow.appendChild(titleTxt);
+      titleRow.appendChild(fenBadge);
+
+      const metaRow = document.createElement('div');
+      metaRow.className = 'ar-meta';
+      metaRow.textContent = d.toLocaleString(langTag) + ' · ' + T('study.archiveNodes', { n: nodeCount });
+
+      const act = document.createElement('div');
+      act.className = 'ar-actions';
+
+      const openStudyItem = () => {
+        hideFenTooltip();
         ST.study = JSON.parse(JSON.stringify(st));
         ST.collapsedIds.clear();
+        ST.editorInitialized = false;
+        ST.editorDirty = false;
         rebuildIndex();
         ST.mode = 'play';
         navigateTo('root', false);
@@ -1879,21 +2040,20 @@
         sound('confirm');
       };
 
-      const act = document.createElement('div');
-      act.className = 'ar-act';
+      const mkBtn = (label, fn) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'tool-btn';
+        b.textContent = label;
+        b.onclick = (ev) => { ev.stopPropagation(); fn(ev); };
+        act.appendChild(b);
+        return b;
+      };
 
-      const openBtn = document.createElement('button');
-      openBtn.type = 'button';
-      openBtn.textContent = T('study.archiveOpen');
-      openBtn.onclick = (ev) => { ev.stopPropagation(); main.onclick(); };
+      mkBtn(T('study.archiveOpen'), openStudyItem);
 
-      const renBtn = document.createElement('button');
-      renBtn.type = 'button';
-      renBtn.textContent = T('study.renameStudy');
-      renBtn.onclick = (ev) => {
-        ev.stopPropagation();
-        const titleDiv = main.querySelector('.ar-title');
-        if (!titleDiv || titleDiv.querySelector('.study-rename-input')) return;
+      mkBtn(T('study.renameStudy'), () => {
+        if (titleRow.querySelector('.study-rename-input')) return;
         const inp = document.createElement('input');
         inp.type = 'text';
         inp.maxLength = 64;
@@ -1920,39 +2080,28 @@
           else if (e2.key === 'Escape') { e2.preventDefault(); commitRename(false); }
         };
         inp.onblur = () => commitRename(true);
-        titleDiv.innerHTML = '';
-        titleDiv.appendChild(inp);
+        titleRow.innerHTML = '';
+        titleRow.appendChild(inp);
         inp.focus();
         inp.select();
-      };
+      });
 
-      const expBtn = document.createElement('button');
-      expBtn.type = 'button';
-      expBtn.textContent = 'JSON';
-      expBtn.onclick = (ev) => {
-        ev.stopPropagation();
+      mkBtn(T('btn.export'), () => {
         const file = YStorage.exportStudyFile(st);
         if (file) toast(T('archive.exported', { file }));
-      };
+      });
 
-      const delBtn = document.createElement('button');
-      delBtn.type = 'button';
-      delBtn.textContent = T('study.archiveDelete');
-      delBtn.onclick = async (ev) => {
-        ev.stopPropagation();
+      mkBtn(T('study.archiveDelete'), async () => {
         if (!(await askConfirm(T('study.archiveDeleteConfirm', { title: st.title || T('study.untitled') })))) return;
         YStorage.deleteStudy(st.id);
         renderStudyArchive();
         sound('cancel');
-      };
+      });
 
-      act.appendChild(openBtn);
-      act.appendChild(renBtn);
-      act.appendChild(expBtn);
-      act.appendChild(delBtn);
-      item.appendChild(main);
-      item.appendChild(act);
-      listEl.appendChild(item);
+      li.appendChild(titleRow);
+      li.appendChild(metaRow);
+      li.appendChild(act);
+      listEl.appendChild(li);
     });
   }
 
@@ -1993,6 +2142,16 @@
     }
   }
 
+  function openStudyDrawer() {
+    if (els.drawer) els.drawer.classList.add('open');
+    if (els.drawerBackdrop) els.drawerBackdrop.classList.add('open');
+  }
+
+  function closeStudyDrawer() {
+    if (els.drawer) els.drawer.classList.remove('open');
+    if (els.drawerBackdrop) els.drawerBackdrop.classList.remove('open');
+  }
+
   function bindEvents() {
     els.board.addEventListener('pointerdown', onBoardPointerDown);
     els.board.addEventListener('contextmenu', e => e.preventDefault());
@@ -2001,20 +2160,20 @@
     window.addEventListener('pointercancel', cleanupDrags);
     document.addEventListener('keydown', onKeyDown);
 
-    // Top Toolbar
-    $('study-btn-back-menu').onclick = () => {
+    // Shared toolbar & drawer handlers
+    const goBackToMenu = () => {
+      closeStudyDrawer();
       if (window.App && typeof window.App.showMenuScreen === 'function') window.App.showMenuScreen(true);
     };
-    $('study-btn-new').onclick = newBlankStudy;
-    $('study-btn-save').onclick = saveCurrentStudy;
-    $('study-btn-archive').onclick = () => {
+    const openArchiveModal = () => {
+      closeStudyDrawer();
       renderStudyArchive();
       if (window.App && typeof window.App.openModal === 'function') window.App.openModal('modal-study-archive');
     };
-    $('study-btn-lang').onclick = () => {
+    const toggleStudyLang = () => {
       if (window.I18N) I18N.setLang(I18N.lang === 'vi' ? 'en' : 'vi');
     };
-    $('study-btn-audio').onclick = () => {
+    const toggleStudyAudio = () => {
       if (!window.YStorage) return;
       const s = YStorage.saveSettings({ audio: !YStorage.getSettings().audio });
       if (window.YoRHaAudio) YoRHaAudio.setEnabled(s.audio);
@@ -2022,24 +2181,88 @@
       if (window.App && typeof window.App.syncSettingsUI === 'function') window.App.syncSettingsUI();
       sound('confirm');
     };
-    $('study-btn-settings').onclick = () => {
+    const openStudySettings = () => {
+      closeStudyDrawer();
       if (window.App) {
         if (typeof window.App.syncSettingsUI === 'function') window.App.syncSettingsUI();
         if (typeof window.App.openModal === 'function') window.App.openModal('modal-settings');
       }
     };
 
+    // Desktop Top Toolbar
+    $('study-btn-back-menu').onclick = goBackToMenu;
+    $('study-btn-new').onclick = newBlankStudy;
+    $('study-btn-save').onclick = saveCurrentStudy;
+    $('study-btn-archive').onclick = openArchiveModal;
+    $('study-btn-lang').onclick = toggleStudyLang;
+    $('study-btn-audio').onclick = toggleStudyAudio;
+    $('study-btn-settings').onclick = openStudySettings;
+
+    // Mobile Burger & Slide-out Drawer
+    if ($('study-btn-mobile-menu')) $('study-btn-mobile-menu').onclick = openStudyDrawer;
+    if ($('study-drawer-close')) $('study-drawer-close').onclick = closeStudyDrawer;
+    if (els.drawerBackdrop) els.drawerBackdrop.onclick = closeStudyDrawer;
+    if ($('study-drawer-menu')) $('study-drawer-menu').onclick = goBackToMenu;
+    if ($('study-drawer-new')) $('study-drawer-new').onclick = () => { closeStudyDrawer(); newBlankStudy(); };
+    if ($('study-drawer-archive')) $('study-drawer-archive').onclick = openArchiveModal;
+    if ($('study-drawer-lang')) $('study-drawer-lang').onclick = toggleStudyLang;
+    if ($('study-drawer-audio')) $('study-drawer-audio').onclick = toggleStudyAudio;
+    if ($('study-drawer-settings')) $('study-drawer-settings').onclick = openStudySettings;
+
+    if (els.drawer) {
+      const dr = els.drawer;
+      let sx = 0, sy = 0, dx = 0, tracking = false, horiz = false;
+      dr.addEventListener('touchstart', (e) => {
+        if (!dr.classList.contains('open') || e.touches.length !== 1) return;
+        sx = e.touches[0].clientX; sy = e.touches[0].clientY; dx = 0; tracking = true; horiz = false;
+      }, { passive: true });
+      dr.addEventListener('touchmove', (e) => {
+        if (!tracking) return;
+        const mx = e.touches[0].clientX - sx;
+        const my = e.touches[0].clientY - sy;
+        if (!horiz) {
+          if (Math.abs(mx) < 8 && Math.abs(my) < 8) return;
+          if (Math.abs(my) > Math.abs(mx)) { tracking = false; return; }
+          horiz = true;
+          dr.style.transition = 'none';
+        }
+        dx = Math.max(0, mx);
+        dr.style.transform = 'translateX(' + dx + 'px)';
+      }, { passive: true });
+      const endSwipe = () => {
+        if (!tracking) return;
+        tracking = false;
+        dr.style.transition = '';
+        const w = dr.getBoundingClientRect().width;
+        const shouldClose = horiz && dx > w / 2;
+        dr.style.transform = '';
+        if (shouldClose) { closeStudyDrawer(); sound('cancel'); }
+      };
+      dr.addEventListener('touchend', endSwipe);
+      dr.addEventListener('touchcancel', endSwipe);
+    }
+
     const titleInput = $('study-title-input');
     if (titleInput) {
       titleInput.oninput = (e) => { ST.study.title = e.target.value; };
+    }
+
+    // Archive scroll & modal close hide FEN tooltip cleanly
+    const archiveList = $('study-archive-list');
+    if (archiveList) archiveList.addEventListener('scroll', hideFenTooltip);
+    const archiveModal = $('modal-study-archive');
+    if (archiveModal) {
+      archiveModal.addEventListener('click', (e) => {
+        if (e.target === archiveModal || e.target.closest('[data-close="modal-study-archive"]')) hideFenTooltip();
+      });
     }
 
     // Mode switch
     els.modeEditorBtn.onclick = () => enterMode('editor');
     els.modePlayBtn.onclick = () => enterMode('play');
 
-    // Editor tools
-    document.querySelectorAll('#study-panel-editor .study-tool-btn').forEach(btn => {
+    // Editor tools (Desktop & Mobile)
+    document.querySelectorAll('#screen-study .study-tool-btn').forEach(btn => {
       btn.onclick = () => {
         ST.editorTool = btn.dataset.tool || 'move';
         ST.editorSelectedSq = null;
@@ -2047,29 +2270,40 @@
         renderBoard();
       };
     });
-    $('study-btn-startpos').onclick = () => {
+
+    const applyStartPos = () => {
       ST.editorMap = boardMapFromFen(getStartFen());
       ST.editorTurn = 'w';
       ST.editorCastle = { K: true, Q: true, k: true, q: true };
       ST.editorSelectedSq = null;
+      ST.editorInitialized = true;
       ST.editorDirty = true;
       syncEditorControlsUI();
       renderBoard();
     };
-    $('study-btn-clear').onclick = () => {
+    const applyClearBoard = () => {
       ST.editorMap = {};
       ST.editorTurn = 'w';
       ST.editorCastle = { K: false, Q: false, k: false, q: false };
       ST.editorSelectedSq = null;
+      ST.editorInitialized = true;
       ST.editorDirty = true;
       syncEditorControlsUI();
       renderBoard();
     };
-    $('study-btn-flip-ed').onclick = $('study-btn-flip').onclick = () => {
+    const applyFlip = () => {
       ST.orientation = ST.orientation === 'w' ? 'b' : 'w';
       buildStudyBoard();
       renderAll();
     };
+
+    $('study-btn-startpos').onclick = applyStartPos;
+    if ($('study-mob-btn-startpos')) $('study-mob-btn-startpos').onclick = applyStartPos;
+    $('study-btn-clear').onclick = applyClearBoard;
+    if ($('study-mob-btn-clear')) $('study-mob-btn-clear').onclick = applyClearBoard;
+    $('study-btn-flip-ed').onclick = applyFlip;
+    $('study-btn-flip').onclick = applyFlip;
+    if ($('study-mob-btn-flip')) $('study-mob-btn-flip').onclick = applyFlip;
     $('study-turn-w').onclick = () => {
       ST.editorTurn = 'w';
       ST.editorDirty = true;
@@ -2125,12 +2359,7 @@
     };
     $('study-btn-copy-fen').onclick = () => {
       const fen = els.fenInput ? els.fenInput.value : currentNode().fen;
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(fen).then(() => toast(T('study.fenCopied'))).catch(() => {});
-      } else if (els.fenInput) {
-        els.fenInput.select();
-        try { document.execCommand('copy'); toast(T('study.fenCopied')); } catch (ex) { /* ignore */ }
-      }
+      copyToClipboard(fen, () => toast(T('study.fenCopied')));
     };
     els.commitBtn.onclick = commitEditorPosition;
 
@@ -2234,6 +2463,12 @@
     els.navNextVar = $('study-nav-next-var');
     els.langBtn = $('study-btn-lang');
     els.audioBtn = $('study-btn-audio');
+    els.drawer = $('study-mobile-drawer');
+    els.drawerBackdrop = $('study-drawer-backdrop');
+    els.drawerLangLabel = $('study-drawer-lang-label');
+    els.drawerAudioLabel = $('study-drawer-audio-label');
+    els.drawerAudioIcon = $('study-drawer-audio-icon');
+    els.fenTooltip = $('study-fen-tooltip');
   }
 
   function init() {
@@ -2263,6 +2498,8 @@
     onLeave() {
       ST.active = false;
       cleanupDrags();
+      closeStudyDrawer();
+      hideFenTooltip();
       if (window.Engine) Engine.cancelAnalysis('study');
     },
     applyLanguage() {
@@ -2290,7 +2527,9 @@
       toggleHighlight,
       toggleArrow,
       navigateTo,
-      computeBranchResult
+      computeBranchResult,
+      enterMode,
+      loadRootIntoEditor
     }
   };
 })();

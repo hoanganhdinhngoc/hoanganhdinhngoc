@@ -291,7 +291,7 @@
   function exportStudyFile(study) {
     if (!study || !study.root) return '';
     const d = study.updatedAt ? new Date(study.updatedAt) : new Date();
-    const filename = buildFilename(d, 'NieR_Chess_Study_', '.study.json');
+    const filename = buildFilename(d, 'NieR_Study_', '.study.json');
     const payload = {
       format: 'yorha-chess-study',
       version: 1,

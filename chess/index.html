@@ -70,7 +70,7 @@
           </div>
 
           <button id="menu-btn-study" class="themebutton menu-btn" type="button">
-            <span><i class="fas fa-chess-board"></i> <span data-i18n="menu.study">NieR Chess Study / Nghiên Cứu Thế Cờ</span></span>
+            <span><i class="fas fa-book-open"></i> <span data-i18n="menu.study">NieR Study</span></span>
           </button>
 
           <button id="menu-btn-load" class="themebutton menu-btn" type="button">
@@ -318,24 +318,57 @@
       </main>
     </div>
 
-    <!-- ================= STUDY SCREEN (NieR Chess Study) ================= -->
+    <!-- ================= STUDY SCREEN (NieR Study) ================= -->
     <div id="screen-study" class="study-screen hidden">
       <header class="nier-toolbar study-toolbar">
-        <div class="toolbar-group study-toolbar-left">
-          <span class="desktop-toolbar-brand">NieR Chess</span>
-          <span class="study-toolbar-badge" data-i18n="mode.study">NieR Chess Study</span>
+        <div class="study-toolbar-top">
+          <span class="study-toolbar-brand">NieR Study</span>
+          <button id="study-btn-mobile-menu" class="tool-btn study-mobile-burger-btn" type="button" aria-label="Menu">
+            <i class="fas fa-bars"></i>
+          </button>
+        </div>
+        <div class="study-title-save-group">
           <input id="study-title-input" class="study-title-input" type="text" maxlength="64" placeholder="Tên thế cờ nghiên cứu..." />
+          <button id="study-btn-save" class="tool-btn study-save-btn" type="button" data-i18n="study.saveStudy">LƯU THẾ CỜ</button>
         </div>
         <div class="toolbar-group study-toolbar-right">
           <button id="study-btn-back-menu" class="tool-btn" type="button" data-i18n="btn.menu">MENU CHÍNH</button>
           <button id="study-btn-new" class="tool-btn" type="button" data-i18n="study.newStudy">TẠO MỚI</button>
-          <button id="study-btn-save" class="tool-btn" type="button" data-i18n="study.saveStudy">LƯU THẾ CỜ</button>
           <button id="study-btn-archive" class="tool-btn" type="button" data-i18n="study.openStudies">DANH SÁCH THẾ CỜ</button>
           <button id="study-btn-lang" class="tool-btn" type="button" data-i18n-title="settings.language" title="Language">VI</button>
           <button id="study-btn-audio" class="tool-btn" type="button" data-i18n-title="settings.audio" title="Audio"><i class="fas fa-volume-up"></i> ON</button>
           <button id="study-btn-settings" class="tool-btn" type="button" data-i18n="btn.settings">CÀI ĐẶT</button>
         </div>
       </header>
+
+      <!-- Mobile Slide-out Drawer for Study -->
+      <div id="study-drawer-backdrop" class="mobile-drawer-backdrop"></div>
+      <aside id="study-mobile-drawer" class="mobile-drawer" aria-label="Study Menu">
+        <div class="mobile-drawer-header">
+          <span class="mobile-drawer-title">NieR Study</span>
+          <button id="study-drawer-close" class="mobile-drawer-close" type="button" aria-label="Close">&times;</button>
+        </div>
+        <nav class="mobile-drawer-nav">
+          <button id="study-drawer-menu" class="mobile-drawer-item" type="button">
+            <i class="fas fa-home"></i> <span data-i18n="drawer.toMain">Về Menu Chính</span>
+          </button>
+          <button id="study-drawer-new" class="mobile-drawer-item" type="button">
+            <i class="fas fa-plus-square"></i> <span data-i18n="study.newStudy">TẠO MỚI</span>
+          </button>
+          <button id="study-drawer-archive" class="mobile-drawer-item" type="button">
+            <i class="fas fa-folder-open"></i> <span data-i18n="study.openStudies">DANH SÁCH THẾ CỜ</span>
+          </button>
+          <button id="study-drawer-lang" class="mobile-drawer-item" type="button">
+            <i class="fas fa-globe"></i> <span id="study-drawer-lang-label">VI</span>
+          </button>
+          <button id="study-drawer-audio" class="mobile-drawer-item" type="button">
+            <i id="study-drawer-audio-icon" class="fas fa-volume-up"></i> <span id="study-drawer-audio-label">ON</span>
+          </button>
+          <button id="study-drawer-settings" class="mobile-drawer-item" type="button">
+            <i class="fas fa-sliders-h"></i> <span data-i18n="drawer.settings">Cài Đặt</span>
+          </button>
+        </nav>
+      </aside>
 
       <main id="study-workspace" class="study-workspace" data-mobile-tab="tree">
         <!-- LEFT PANEL: Mode Switch + Board Editor / Engine Analysis / Draw & Export -->
@@ -350,26 +383,28 @@
           <!-- Board Editor Module (Panel A) -->
           <section id="study-panel-editor" class="study-card study-panel hidden" data-study-panel="editor">
             <h3 class="study-card-title" data-i18n="study.paletteTools">CÔNG CỤ XẾP QUÂN</h3>
-            <div class="study-tool-row">
-              <button class="themebutton study-tool-btn active" type="button" data-tool="move">
-                <i class="fas fa-hand-pointer"></i> <span data-i18n="study.toolMove">Di chuyển</span>
-              </button>
-              <button class="themebutton study-tool-btn" type="button" data-tool="erase">
-                <i class="fas fa-eraser"></i> <span data-i18n="study.toolErase">Xóa quân</span>
-              </button>
-            </div>
+            <div class="study-desktop-editor-tools">
+              <div class="study-tool-row">
+                <button class="themebutton study-tool-btn active" type="button" data-tool="move">
+                  <i class="fas fa-hand-pointer"></i> <span data-i18n="study.toolMove">Di chuyển</span>
+                </button>
+                <button class="themebutton study-tool-btn" type="button" data-tool="erase">
+                  <i class="fas fa-eraser"></i> <span data-i18n="study.toolErase">Xóa quân</span>
+                </button>
+              </div>
 
-            <div class="study-palette-label" data-i18n="study.whitePieces">Quân Trắng</div>
-            <div id="study-palette-white" class="study-palette-grid"></div>
+              <div class="study-palette-label" data-i18n="study.whitePieces">Quân Trắng</div>
+              <div id="study-palette-white" class="study-palette-grid"></div>
 
-            <div class="study-palette-label" data-i18n="study.blackPieces">Quân Đen</div>
-            <div id="study-palette-black" class="study-palette-grid"></div>
+              <div class="study-palette-label" data-i18n="study.blackPieces">Quân Đen</div>
+              <div id="study-palette-black" class="study-palette-grid"></div>
 
-            <div class="study-palette-label" data-i18n="study.presets">BÀN CỜ MẪU</div>
-            <div class="study-preset-row">
-              <button id="study-btn-startpos" class="themebutton study-mini-btn" type="button" data-i18n="study.startPos">Thế cờ đầu</button>
-              <button id="study-btn-clear" class="themebutton study-mini-btn" type="button" data-i18n="study.clearBoard">Xóa sạch bàn</button>
-              <button id="study-btn-flip-ed" class="themebutton study-mini-btn" type="button" data-i18n="study.flipBoard">Xoay bàn cờ</button>
+              <div class="study-palette-label" data-i18n="study.presets">BÀN CỜ MẪU</div>
+              <div class="study-preset-row">
+                <button id="study-btn-startpos" class="themebutton study-mini-btn" type="button" data-i18n="study.startPos">Thế cờ đầu</button>
+                <button id="study-btn-clear" class="themebutton study-mini-btn" type="button" data-i18n="study.clearBoard">Xóa sạch bàn</button>
+                <button id="study-btn-flip-ed" class="themebutton study-mini-btn" type="button" data-i18n="study.flipBoard">Xoay bàn cờ</button>
+              </div>
             </div>
 
             <div class="study-editor-row">
@@ -446,6 +481,7 @@
 
         <!-- CENTER COLUMN: Eval Bar + Study Board + Separate Annotation/Engine SVG Layers + Nav Controls -->
         <section id="study-col-center" class="study-col-center">
+          <div id="study-mob-palette-top" class="study-mob-palette" aria-label="Black piece palette"></div>
           <div class="study-board-zone">
             <div id="study-eval-bar" class="eval-bar" title="Evaluation">
               <div id="study-eval-fill" class="eval-fill"></div>
@@ -489,13 +525,22 @@
             </div>
           </div>
 
+          <div id="study-mob-palette-bottom" class="study-mob-palette" aria-label="White piece palette"></div>
+
           <div id="study-nav-bar" class="study-nav-bar">
-            <button id="study-nav-start" class="themebutton study-nav-btn" type="button" data-i18n="study.navStart">|&lt; Đầu</button>
-            <button id="study-nav-prev" class="themebutton study-nav-btn" type="button" data-i18n="study.navPrev">&lt; Lùi</button>
-            <button id="study-nav-next" class="themebutton study-nav-btn" type="button" data-i18n="study.navNext">Tiến &gt;</button>
-            <button id="study-nav-end" class="themebutton study-nav-btn" type="button" data-i18n="study.navEnd">Cuối &gt;|</button>
-            <button id="study-nav-prev-var" class="themebutton study-nav-btn" type="button" data-i18n="study.navPrevVar">Nhánh trên</button>
-            <button id="study-nav-next-var" class="themebutton study-nav-btn" type="button" data-i18n="study.navNextVar">Nhánh dưới</button>
+            <button id="study-nav-start" class="themebutton study-nav-btn study-nav-icon-btn" type="button" data-i18n-title="study.navStart" title="Đầu" aria-label="Start"><i class="fas fa-step-backward"></i></button>
+            <button id="study-nav-prev" class="themebutton study-nav-btn study-nav-icon-btn" type="button" data-i18n-title="study.navPrev" title="Lùi" aria-label="Prev"><i class="fas fa-chevron-left"></i></button>
+            <button id="study-nav-next" class="themebutton study-nav-btn study-nav-icon-btn" type="button" data-i18n-title="study.navNext" title="Tiến" aria-label="Next"><i class="fas fa-chevron-right"></i></button>
+            <button id="study-nav-end" class="themebutton study-nav-btn study-nav-icon-btn" type="button" data-i18n-title="study.navEnd" title="Cuối" aria-label="End"><i class="fas fa-step-forward"></i></button>
+            <button id="study-nav-prev-var" class="themebutton study-nav-btn" type="button" data-i18n="study.navPrevVar">Nhánh trước</button>
+            <button id="study-nav-next-var" class="themebutton study-nav-btn" type="button" data-i18n="study.navNextVar">Nhánh sau</button>
+          </div>
+
+          <div id="study-mob-editor-actions" class="study-mob-editor-actions">
+            <button id="study-mob-btn-startpos" class="themebutton study-mini-btn" type="button" data-i18n="study.startPos">Thế cờ đầu</button>
+            <button id="study-mob-btn-move" class="themebutton study-mini-btn study-tool-btn active" type="button" data-tool="move" data-i18n="study.toolMove">Di chuyển</button>
+            <button id="study-mob-btn-clear" class="themebutton study-mini-btn" type="button" data-i18n="study.clearBoard">Xóa sạch bàn</button>
+            <button id="study-mob-btn-flip" class="themebutton study-mini-btn" type="button" data-i18n="study.flipBoard">Xoay bàn cờ</button>
           </div>
 
           <div id="study-shortcuts-hint" class="study-shortcuts-hint" data-i18n="study.shortcuts"></div>
@@ -719,11 +764,11 @@
     <div class="popupSection modal-box modal-wide">
       <h2 class="popupSectionTitle" data-i18n="study.archiveTitle">DANH SÁCH THẾ CỜ NGHIÊN CỨU</h2>
       <div class="popup-boxContent">
-        <div class="archive-top-actions">
-          <button id="study-modal-import-btn" class="themebutton popup-btn" type="button" data-i18n="study.importStudy">NHẬP .STUDY.JSON</button>
+        <div style="margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap;">
+          <button id="study-modal-import-btn" class="themebutton" type="button"><i class="fas fa-file-upload"></i> <span data-i18n="study.importStudy">NHẬP .STUDY.JSON</span></button>
           <input id="study-modal-import-file" type="file" accept=".json,.study.json" class="hidden" />
         </div>
-        <div id="study-archive-list" class="archive-list"></div>
+        <ul id="study-archive-list" class="archive-list"></ul>
         <div class="popup-button-group">
           <button class="themebutton popup-btn" type="button" data-close="modal-study-archive" data-i18n="btn.close">ĐÓNG</button>
         </div>
@@ -731,6 +776,7 @@
     </div>
   </div>
 
+  <div id="study-fen-tooltip" class="study-fen-tooltip" role="tooltip" aria-hidden="true"></div>
   <div id="toast" class="toast hidden"></div>
 
   <!-- ================= SCRIPTS ================= -->
