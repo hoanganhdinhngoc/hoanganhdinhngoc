@@ -1,0 +1,21 @@
+{
+  "id": "tactics-custom-01",
+  "cat": "tactics",
+  "sub": "fork",
+  "rating": 1200,
+  "source": "Tên ván đấu / Năm (không bắt buộc)",
+  "fen": "FEN đầy đủ 6 trường (có thể xuất thẳng từ NieR Study -> Sao chép FEN)",
+  "moves": ["e5f7", "d8e7", "f7h8"],
+  "title": {
+    "vi": "Tên thế cờ bằng Tiếng Việt",
+    "en": "Puzzle Title in English"
+  },
+  "goal": {
+    "vi": "Mục tiêu ngắn gọn (ví dụ: Chiếu hết trong 2 nước / Bắt Hậu)",
+    "en": "Short objective (e.g. Mate in 2 / Win the Queen)"
+  },
+  "explain": {
+    "vi": "Giải thích ý đồ chiến thuật sau khi giải xong hoặc xem hết đáp án.",
+    "en": "Tactical explanation shown after solving or finishing the solution."
+  }
+}

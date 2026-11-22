@@ -15,6 +15,7 @@
   const sideName = (c) => T(c === 'w' ? 'ui.whiteSide' : 'ui.blackSide');
   const PIECE_GLYPH = { p: '♟\uFE0E', n: '♞\uFE0E', b: '♝\uFE0E', r: '♜\uFE0E', q: '♛\uFE0E', k: '♚\uFE0E' };
   const ARROW_COLORS = { cyan: '#2B8C84', green: '#4E7A45', red: '#B83A2D', orange: '#C9772B' };
+  const USER_ANNOT_COLORS = { yellow: '#C99A2E', green: '#4E7A45', red: '#B83A2D', blue: '#3A6EA5' };
   const CLS_COLORS = {
     brilliant: '#2B8C84', best: '#4E7A45', great: '#4A6A8A', book: '#8A6E4B', good: '#6E7350',
     inaccuracy: '#B88A2D', mistake: '#C9772B', blunder: '#B83A2D'
@@ -59,6 +60,7 @@
     gameOver: false, result: null, termination: null,
     selected: null, legal: [],
     arrows: [],
+    userAnnot: { arrows: [], highlights: [] },
     viewFen: null,           // when set, board shows this FEN (preview / review)
     coach: { entry: null, optimalShown: false },
     review: { active: false, index: 0, fens: [], ready: false, token: 0, summary: null },
@@ -78,6 +80,7 @@
   const els = {};
   let squares = {};
   let drag = null;
+  let annotDrag = null;
   let promoResolve = null;
   let confirmResolve = null;
   let pauseHoldRaf = null;
@@ -165,7 +168,8 @@
 
   function pauseGame() {
     if (S.paused || S.gameOver || S.review.active || ['bot', 'pvp', 'puzzle'].indexOf(S.mode) < 0) return;
-    if (drag) onPointerCancel();
+    if (drag || annotDrag) onPointerCancel();
+    clearUserAnnotations();
     if (S.clock.enabled && S.clock.timer) {
       const now = Date.now();
       const turn = S.chess.turn();
@@ -225,6 +229,7 @@
     }
     closeMobileDrawer();
     clearPauseCover();
+    clearUserAnnotations();
     S.moveToken++;
     S.review.token++;
     if (S.review.active) exitReview();
@@ -256,6 +261,7 @@
   function showStudyScreen() {
     closeMobileDrawer();
     clearPauseCover();
+    clearUserAnnotations();
     S.moveToken++;
     S.review.token++;
     if (S.review.active) exitReview();
@@ -283,6 +289,15 @@
     }
   }
 
+  function syncModeChrome() {
+    const isPuzzle = S.mode === 'puzzle' && !S.review.active;
+    const brand = isPuzzle ? 'NieR Chess || Puzzle' : 'NieR Chess';
+    if (els.desktopBrand) els.desktopBrand.textContent = brand;
+    if (els.mobileBrand) els.mobileBrand.textContent = brand;
+    if (els.sideBoxTitle) els.sideBoxTitle.textContent = T(isPuzzle ? 'ui.puzzleBox' : 'ui.movesReview');
+    if (els.puzzleTopControls) els.puzzleTopControls.classList.toggle('hidden', !isPuzzle);
+  }
+
   function syncAnalysisVisibility() {
     const showAnalysis = S.liveEval || S.review.active;
     document.body.dataset.liveEval = showAnalysis ? 'true' : 'false';
@@ -293,6 +308,7 @@
     if (els.paneBot) els.paneBot.classList.toggle('hidden', S.mode !== 'bot');
     if (els.panePuzzleActive) els.panePuzzleActive.classList.toggle('hidden', S.mode !== 'puzzle');
     if (els.coachSource) els.coachSource.classList.add('hidden');
+    syncModeChrome();
     syncBoardControlsPlacement();
   }
 
@@ -449,6 +465,7 @@
     if (S.puzzle && S.puzzle.hintSq && squares[S.puzzle.hintSq]) squares[S.puzzle.hintSq].classList.add('hint-sq');
     runPendingAnimations();
     renderArrows();
+    renderUserAnnotations();
     renderPlayers();
   }
 
@@ -493,6 +510,96 @@
       line.setAttribute('marker-end', 'url(#ah-' + (a.color || 'cyan') + ')');
       line.setAttribute('class', 'arrow-anim');
       g.appendChild(line);
+    });
+  }
+
+  /* ---------- desktop gameplay annotations ---------- */
+  function userAnnotColor(e) {
+    if (e.ctrlKey) return 'red';
+    if (e.altKey) return 'blue';
+    if (e.shiftKey) return 'green';
+    return 'yellow';
+  }
+  function canUseBoardAnnotations(e) {
+    return !!(e && e.pointerType === 'mouse' && (S.mode === 'bot' || S.mode === 'pvp') && !S.paused && !S.review.active);
+  }
+  function clearUserAnnotations() {
+    S.userAnnot.arrows = [];
+    S.userAnnot.highlights = [];
+    annotDrag = null;
+    renderUserAnnotations();
+  }
+  function toggleUserHighlight(sq, color) {
+    const list = S.userAnnot.highlights;
+    const idx = list.findIndex(h => h.sq === sq);
+    if (idx >= 0) {
+      if (list[idx].color === color) list.splice(idx, 1);
+      else list[idx].color = color;
+    } else {
+      list.push({ sq, color });
+    }
+  }
+  function toggleUserArrow(from, to, color) {
+    if (!from || !to || from === to) return;
+    const list = S.userAnnot.arrows;
+    const idx = list.findIndex(a => a.from === from && a.to === to);
+    if (idx >= 0) {
+      if (list[idx].color === color) list.splice(idx, 1);
+      else list[idx].color = color;
+    } else {
+      list.push({ from, to, color });
+    }
+  }
+  function renderUserAnnotations(previewItem) {
+    const hlGroup = els.userAnnotHighlights;
+    const arrGroup = els.userAnnotArrows;
+    if (!hlGroup || !arrGroup) return;
+    hlGroup.innerHTML = '';
+    arrGroup.innerHTML = '';
+    if (S.mode !== 'bot' && S.mode !== 'pvp') return;
+
+    const hls = S.userAnnot.highlights.slice();
+    if (previewItem && previewItem.sq) hls.push(previewItem);
+    hls.forEach(h => {
+      if (!h || !h.sq || !squares[h.sq]) return;
+      const c = sqCenter(h.sq);
+      const col = Math.floor(c.x / 100);
+      const row = Math.floor(c.y / 100);
+      const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      rect.setAttribute('x', col * 100);
+      rect.setAttribute('y', row * 100);
+      rect.setAttribute('width', '100');
+      rect.setAttribute('height', '100');
+      rect.setAttribute('fill', USER_ANNOT_COLORS[h.color] || USER_ANNOT_COLORS.yellow);
+      rect.setAttribute('fill-opacity', previewItem && h === previewItem ? '0.28' : '0.42');
+      hlGroup.appendChild(rect);
+    });
+
+    const arrs = S.userAnnot.arrows.slice();
+    if (previewItem && previewItem.from && previewItem.to && previewItem.from !== previewItem.to) {
+      arrs.push(previewItem);
+    }
+    arrs.forEach(a => {
+      if (!a || !a.from || !a.to || a.from === a.to) return;
+      const p1 = sqCenter(a.from);
+      const p2 = sqCenter(a.to);
+      const dx = p2.x - p1.x;
+      const dy = p2.y - p1.y;
+      const len = Math.hypot(dx, dy);
+      if (!len) return;
+      const ux = dx / len;
+      const uy = dy / len;
+      const colorName = USER_ANNOT_COLORS[a.color] ? a.color : 'yellow';
+      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      line.setAttribute('x1', p1.x + ux * 16);
+      line.setAttribute('y1', p1.y + uy * 16);
+      line.setAttribute('x2', p2.x - ux * 32);
+      line.setAttribute('y2', p2.y - uy * 32);
+      line.setAttribute('stroke', USER_ANNOT_COLORS[colorName]);
+      line.setAttribute('stroke-width', '16');
+      line.setAttribute('stroke-opacity', previewItem && a === previewItem ? '0.55' : '0.88');
+      line.setAttribute('marker-end', 'url(#ua-ah-' + colorName + ')');
+      arrGroup.appendChild(line);
     });
   }
 
@@ -586,7 +693,22 @@
   function deselect() { S.selected = null; S.legal = []; render(); }
 
   function onPointerDown(e) {
+    if (e.button === 2) {
+      if (canUseBoardAnnotations(e)) {
+        e.preventDefault();
+        YoRHaAudio.init();
+        const sq = squareFromPoint(e.clientX, e.clientY);
+        if (!sq) return;
+        annotDrag = { id: e.pointerId, startSq: sq, curSq: sq, color: userAnnotColor(e) };
+        try { els.board.setPointerCapture(e.pointerId); } catch (x) { /* */ }
+        renderUserAnnotations({ sq, color: annotDrag.color });
+      }
+      return;
+    }
     if (e.button !== undefined && e.button !== 0 && e.pointerType === 'mouse') return;
+    if (e.pointerType === 'mouse' && (S.userAnnot.arrows.length || S.userAnnot.highlights.length)) {
+      clearUserAnnotations();
+    }
     YoRHaAudio.init();
     if (S.viewFen && !S.review.active) { exitPreview(); return; }
     if (!canInteract()) return;
@@ -621,6 +743,15 @@
   }
 
   function onPointerMove(e) {
+    if (annotDrag && e.pointerId === annotDrag.id) {
+      const sq = squareFromPoint(e.clientX, e.clientY);
+      if (sq && sq !== annotDrag.curSq) {
+        annotDrag.curSq = sq;
+        if (sq === annotDrag.startSq) renderUserAnnotations({ sq, color: annotDrag.color });
+        else renderUserAnnotations({ from: annotDrag.startSq, to: sq, color: annotDrag.color });
+      }
+      return;
+    }
     if (!drag || e.pointerId !== drag.id) return;
     const dist = Math.hypot(e.clientX - drag.x, e.clientY - drag.y);
     if (!drag.dragging && dist > 3) {
@@ -648,6 +779,18 @@
   }
 
   function onPointerUp(e) {
+    if (annotDrag && e.pointerId === annotDrag.id) {
+      const a = annotDrag;
+      annotDrag = null;
+      try { els.board.releasePointerCapture(e.pointerId); } catch (x) { /* */ }
+      const endSq = squareFromPoint(e.clientX, e.clientY) || a.curSq;
+      if (endSq) {
+        if (endSq === a.startSq) toggleUserHighlight(endSq, a.color);
+        else toggleUserArrow(a.startSq, endSq, a.color);
+      }
+      renderUserAnnotations();
+      return;
+    }
     if (!drag || e.pointerId !== drag.id) return;
     const d = drag;
     drag = null;
@@ -672,6 +815,10 @@
   }
 
   function onPointerCancel() {
+    if (annotDrag) {
+      annotDrag = null;
+      renderUserAnnotations();
+    }
     if (!drag) return;
     if (drag.ghost) drag.ghost.remove();
     if (squares[drag.from] && squares[drag.from]._piece) {
@@ -924,6 +1071,7 @@
     clearPauseCover();
     S.history = []; S.gameOver = false; S.result = null; S.termination = null;
     S.selected = null; S.legal = []; S.viewFen = null; S.arrows = [];
+    clearUserAnnotations();
     S.pendingAnims = [];
     S.coach = { entry: null, optimalShown: false };
     S.review = { active: false, index: 0, fens: [], ready: false, token: S.review.token, summary: null };
@@ -1298,6 +1446,7 @@
     S.review.index = S.history.length;
     S.viewFen = S.review.fens[S.review.index];
     S.selected = null; S.legal = [];
+    clearUserAnnotations();
     if (S.mode !== 'review') S.reviewFrom = S.mode;
     S.mode = 'review';
     S.coach.entry = null;
@@ -1630,15 +1779,23 @@
   function renderPuzzleFilter() {
     const sel = els.puzzleFilter;
     if (!sel) return;
+    const all = window.PUZZLES || [];
     const cur = S.puzzleFilter;
     sel.innerHTML = '';
     const add = (v, label) => { const o = document.createElement('option'); o.value = v; o.textContent = label; sel.appendChild(o); };
-    add('all', T('puzzle.all'));
+    add('all', T('puzzle.all', { n: all.length }));
     (window.PUZZLE_CATEGORIES || []).forEach(cat => {
+      if (!all.some(p => p.cat === cat.id)) return;
       add(cat.id, '■ ' + I18N.pick(cat.name));
-      (cat.subs || []).forEach(s => add(cat.id + ':' + s.id, '   └ ' + I18N.pick(s.name)));
+      (cat.subs || []).forEach(s => {
+        if (all.some(p => p.cat === cat.id && p.sub === s.id)) {
+          add(cat.id + ':' + s.id, '   └ ' + I18N.pick(s.name));
+        }
+      });
     });
-    sel.value = cur;
+    const hasCur = [...sel.options].some(o => o.value === cur);
+    if (!hasCur) S.puzzleFilter = 'all';
+    sel.value = S.puzzleFilter;
     syncCustomSelect(sel);
   }
 
@@ -1649,7 +1806,7 @@
     ul.innerHTML = '';
     const list = filteredPuzzles();
     let lastCat = null;
-    list.forEach((p, i) => {
+    list.forEach((p) => {
       if (p.cat !== lastCat) {
         lastCat = p.cat;
         const cat = (window.PUZZLE_CATEGORIES || []).find(c => c.id === p.cat);
@@ -1659,7 +1816,7 @@
       }
       const li = document.createElement('li');
       li.className = (solved[p.id] ? 'solved' : '') + (S.puzzle && S.puzzle.data.id === p.id ? ' active' : '');
-      li.innerHTML = '<span class="pz-state">' + (solved[p.id] ? '✓' : String(i + 1).padStart(2, '0')) + '</span>' +
+      li.innerHTML = '<span class="pz-state">' + (solved[p.id] ? '✓' : '–') + '</span>' +
         '<span>' + escapeHtml(I18N.pick(p.title)) + '</span><span class="pz-rating">' + (p.rating || '') + '</span>';
       li.onclick = () => loadPuzzle(p.id, true);
       ul.appendChild(li);
@@ -1688,7 +1845,7 @@
     S.startFen = p.fen;
     setupClock('none');
     const color = S.chess.turn();
-    S.puzzle = { data: p, step: 0, attempts: 0, solved: false, playerColor: color, canonical: null, feedback: null, busy: false, hintSq: null };
+    S.puzzle = { data: p, step: 0, attempts: 0, solved: false, playerColor: color, canonical: null, feedback: null, busy: false, hintSq: null, assistStage: 'hint' };
     const profile = YStorage.getProfile();
     const human = { name: profile.p1.name, elo: profile.p1.elo, isBot: false, botId: null };
     const opp = { name: T('mode.puzzle'), elo: p.rating || '', isBot: false, botId: null };
@@ -1707,10 +1864,17 @@
     if (S.liveEval) prefetch();
   }
 
+  function puzzleAssistLabel() {
+    if (!S.puzzle) return T('btn.hint');
+    if (S.puzzle.assistStage === 'solution') return T('btn.canonical');
+    if (S.puzzle.assistStage === 'next') return T('btn.canonicalNext');
+    return T('btn.hint');
+  }
+
   function renderPuzzleInfo() {
     const box = els.puzzleInfo;
     if (!box) return;
-    if (!S.puzzle) { box.innerHTML = '<div class="pz-meta">' + T('puzzle.select') + '</div>'; updateCanonicalBtn(); return; }
+    if (!S.puzzle) { box.innerHTML = '<div class="pz-meta">' + T('puzzle.select') + '</div>'; return; }
     const p = S.puzzle.data;
     const cat = (window.PUZZLE_CATEGORIES || []).find(c => c.id === p.cat);
     const sub = cat && (cat.subs || []).find(s => s.id === p.sub);
@@ -1718,6 +1882,10 @@
       '<div class="pz-meta">' + (cat ? escapeHtml(I18N.pick(cat.name)) : '') + (sub ? ' / ' + escapeHtml(I18N.pick(sub.name)) : '') +
       ' · ' + T('puzzle.rating', { r: p.rating || '?' }) + (p.source ? ' · ' + T('puzzle.source', { s: escapeHtml(p.source) }) : '') + '</div>' +
       '<div class="pz-goal">▶ ' + escapeHtml(I18N.pick(p.goal)) + ' — ' + T('puzzle.toMove', { color: sideName(S.puzzle.playerColor) }) + '</div>';
+    if (!S.puzzle.solved) {
+      html += '<div class="pz-assist-row"><button id="btn-puzzle-assist" class="tool-btn pz-assist-btn" type="button">' +
+        escapeHtml(puzzleAssistLabel()) + '</button></div>';
+    }
     if (S.puzzle.feedback) {
       const fb = S.puzzle.feedback;
       html += '<div class="pz-feedback ' + fb.type + '">' + escapeHtml(fb.fn()) + '</div>';
@@ -1726,14 +1894,17 @@
       html += '<div class="y-sep"></div><div>' + escapeHtml(I18N.pick(p.explain)) + '</div>';
     }
     box.innerHTML = html;
-    updateCanonicalBtn();
+    const assistBtn = box.querySelector('.pz-assist-btn');
+    if (assistBtn) assistBtn.onclick = puzzleAssistAction;
   }
-  function updateCanonicalBtn() {
-    const b = els.btnCanonical;
-    if (!b) return;
-    const active = S.puzzle && S.puzzle.canonical && !S.puzzle.canonical.done;
-    b.textContent = T(active ? 'btn.canonicalNext' : 'btn.canonical');
+
+  function puzzleAssistAction() {
+    if (checkPausedBlock()) return;
+    if (S.mode !== 'puzzle' || !S.puzzle || S.puzzle.solved) return;
+    if (S.puzzle.assistStage === 'hint') puzzleHint();
+    else puzzleCanonical();
   }
+
   function puzzleFeedback(type, fn) { if (!S.puzzle) return; S.puzzle.feedback = { type, fn }; renderPuzzleInfo(); }
 
   async function puzzleOnMove(entry) {
@@ -1758,6 +1929,8 @@
       return;
     }
     pz.step++;
+    pz.hintSq = null;
+    pz.assistStage = 'hint';
     if (S.chess.in_checkmate() || pz.step >= pz.data.moves.length) { puzzleSolved(); return; }
     puzzleFeedback('ok', () => T('puzzle.correct'));
     sound('confirm');
@@ -1781,6 +1954,8 @@
   function puzzleSolved() {
     const pz = S.puzzle;
     pz.solved = true;
+    pz.hintSq = null;
+    pz.assistStage = 'hint';
     YStorage.markSolved(pz.data.id, pz.attempts + 1);
     sound('brilliant');
     puzzleFeedback('ok', () => T('puzzle.solved'));
@@ -1791,15 +1966,29 @@
   function puzzleHint() {
     if (checkPausedBlock()) return;
     if (S.mode !== 'puzzle' || !S.puzzle || S.puzzle.solved) return;
-    const mv = S.puzzle.data.moves[S.puzzle.step];
+    const pz = S.puzzle;
+    if (pz.canonical && pz.canonical.done) {
+      S.moveToken++;
+      S.chess = new Chess();
+      S.chess.load(pz.data.fen);
+      S.history = [];
+      S.viewFen = null;
+      S.selected = null;
+      S.legal = [];
+      S.arrows = [];
+      pz.step = 0;
+      pz.canonical = null;
+    }
+    const mv = pz.data.moves[pz.step];
     if (!mv) return;
     const sq = mv.slice(0, 2);
     const p = S.chess.get(sq);
-    S.puzzle.hintSq = sq;
-    S.puzzle.attempts++;
+    pz.hintSq = sq;
+    pz.attempts++;
+    pz.assistStage = 'solution';
     sound('click');
     puzzleFeedback('info', () => T('puzzle.hint', { piece: I18N.t('piece.pl.' + (p ? p.type : 'p')), square: sq }));
-    render();
+    render(); renderMoveList();
   }
   function puzzleRetry() {
     if (checkPausedBlock()) return;
@@ -1831,12 +2020,12 @@
     }
     const c = pz.canonical;
     const moves = pz.data.moves;
-    if (c.i >= moves.length) { c.done = true; updateCanonicalBtn(); return; }
+    if (c.i >= moves.length) { c.done = true; pz.assistStage = 'hint'; renderPuzzleInfo(); return; }
     const uci = moves[c.i];
     const fenBefore = S.chess.fen();
     const desc = Engine.describeMove(fenBefore, uci);
     const m = S.chess.move(Engine.parseUci(uci));
-    if (!m) { c.done = true; return; }
+    if (!m) { c.done = true; pz.assistStage = 'hint'; renderPuzzleInfo(); return; }
     recordMove(m, fenBefore);
     moveSound(m);
     queueMoveAnimation(m);
@@ -1844,7 +2033,13 @@
     const isPlayer = m.color === pz.playerColor;
     S.arrows = [{ from: m.from, to: m.to, color: isPlayer ? 'cyan' : 'orange' }];
     const i = c.i, n = moves.length;
-    if (c.i >= moves.length) { c.done = true; pz.solved = false; }
+    if (c.i >= moves.length) {
+      c.done = true;
+      pz.solved = false;
+      pz.assistStage = 'hint';
+    } else {
+      pz.assistStage = 'next';
+    }
     puzzleFeedback('info', () => T('puzzle.canonicalStep', { i, n, move: desc }) + (c.done ? ' — ' + T('puzzle.canonicalDone') : ''));
     render(); renderMoveList();
     if (S.liveEval) prefetch();
@@ -2057,6 +2252,7 @@
     renderPuzzleInfo();
     renderArchive();
     renderGameOver();
+    syncModeChrome();
     if (window.Study && Study.applyLanguage) Study.applyLanguage();
   }
 
@@ -2262,7 +2458,6 @@
 
     // Puzzles
     els.puzzleFilter.onchange = (e) => { S.puzzleFilter = e.target.value; renderPuzzleList(); };
-    $('btn-puzzle-hint').onclick = puzzleHint;
     $('btn-puzzle-retry').onclick = puzzleRetry;
     $('btn-puzzle-next').onclick = puzzleNext;
     if ($('btn-puzzle-choose')) {
@@ -2272,7 +2467,6 @@
         openModal('modal-puzzles');
       };
     }
-    els.btnCanonical.onclick = puzzleCanonical;
 
     // Settings Modal
     document.querySelectorAll('#set-lang .seg-btn').forEach(b => b.onclick = () => I18N.setLang(b.dataset.lang));
@@ -2320,6 +2514,10 @@
     els.screenMenu = $('screen-menu');
     els.screenGame = $('screen-game');
     els.screenStudy = $('screen-study');
+    els.mobileBrand = $('mobile-toolbar-brand');
+    els.desktopBrand = $('desktop-toolbar-brand');
+    els.sideBoxTitle = $('side-box-title');
+    els.puzzleTopControls = $('puzzle-top-controls');
     els.board = $('board');
     els.colCenter = $('col-center');
     els.boardControls = $('board-controls');
@@ -2330,6 +2528,8 @@
     els.mobileDrawer = $('mobile-drawer');
     els.mobileDrawerBackdrop = $('mobile-drawer-backdrop');
     els.arrowGroup = $('arrow-group');
+    els.userAnnotHighlights = $('user-annot-highlights');
+    els.userAnnotArrows = $('user-annot-arrows');
     els.evalBar = $('eval-bar'); els.evalFill = $('eval-fill'); els.evalText = $('eval-text');
     els.barTop = $('bar-top'); els.barBottom = $('bar-bottom');
     els.status = $('status-line');
@@ -2344,7 +2544,7 @@
     els.moveList = $('move-list'); els.reviewSummary = $('review-summary'); els.evalGraph = $('eval-graph');
     els.reviewComment = $('review-comment'); els.reviewProgress = $('review-progress');
     els.puzzleFilter = $('puzzle-filter'); els.puzzleList = $('puzzle-list'); els.puzzleInfo = $('puzzle-info');
-    els.puzzleProgress = $('puzzle-progress'); els.btnCanonical = $('btn-canonical');
+    els.puzzleProgress = $('puzzle-progress');
     els.archiveList = $('archive-list');
     els.botRoster = $('bot-roster'); els.botSelectedDesc = $('bot-selected-desc');
     els.botPortrait = $('bot-portrait'); els.botName = $('bot-name');
@@ -2388,9 +2588,11 @@
     init,
     showMenuScreen, showGameScreen, showStudyScreen,
     newGame, loadPuzzle, startReview, applyLanguage, render, syncSettingsUI,
-    drawArrows, clearArrows, takeback, resign, flip, showOptimal,
+    drawArrows, clearArrows, clearUserAnnotations, userAnnotColor, canUseBoardAnnotations,
+    takeback, resign, flip, showOptimal,
     reviewGo, nextCritical, buildMatchRecord, onPlayerMove: playerMove,
-    pieceSVG, toast, askConfirm, askPromotion, openModal, closeModal
+    pieceSVG, toast, askConfirm, askPromotion, openModal, closeModal,
+    _annotHandlers: { onPointerDown, onPointerMove, onPointerUp, onPointerCancel }
   };
 
   document.addEventListener('DOMContentLoaded', init);

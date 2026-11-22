@@ -65,7 +65,7 @@
               <i class="fas fa-user-friends"></i> <span data-i18n="menu.playPvp">2 Người Chơi (Cùng máy)</span>
             </button>
             <button id="menu-sub-puzzles" class="dropContent menu-sub-btn" type="button">
-              <i class="fas fa-puzzle-piece"></i> <span data-i18n="menu.playPuzzles">Cờ Thế & Câu Đố (100)</span>
+              <i class="fas fa-puzzle-piece"></i> <span data-i18n="menu.playPuzzles">Cờ Thế &amp; Câu Đố</span>
             </button>
           </div>
 
@@ -93,14 +93,14 @@
       <!-- Top Command Bar -->
       <header class="nier-toolbar">
         <!-- Mobile Compact Header (Burger left, NieR Chess right) -->
-        <span class="mobile-toolbar-brand">NieR Chess</span>
+        <span id="mobile-toolbar-brand" class="mobile-toolbar-brand">NieR Chess</span>
         <button id="btn-mobile-menu" class="tool-btn mobile-burger-btn" type="button" aria-label="Menu">
           <i class="fas fa-bars"></i>
         </button>
 
         <!-- Desktop Header Groups -->
         <div class="toolbar-group desktop-toolbar-group">
-          <span class="desktop-toolbar-brand">NieR Chess</span>
+          <span id="desktop-toolbar-brand" class="desktop-toolbar-brand">NieR Chess</span>
         </div>
         <div class="toolbar-group desktop-toolbar-group">
           <span id="status-line" class="toolbar-status" data-i18n="status.idle">Chọn chế độ chơi từ menu để bắt đầu.</span>
@@ -178,6 +178,26 @@
                   <g id="arrow-group"></g>
                 </svg>
 
+                <!-- Upper SVG Layer: Desktop User Annotations (Arrows & Highlights) -->
+                <svg id="user-annot-layer" class="arrow-layer user-annot-svg" viewBox="0 0 800 800" preserveAspectRatio="none" aria-hidden="true">
+                  <defs>
+                    <marker id="ua-ah-yellow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="3.2" markerHeight="3.2" orient="auto-start-reverse">
+                      <path d="M0,0 L10,5 L0,10 Z" fill="#C99A2E" />
+                    </marker>
+                    <marker id="ua-ah-green" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="3.2" markerHeight="3.2" orient="auto-start-reverse">
+                      <path d="M0,0 L10,5 L0,10 Z" fill="#4E7A45" />
+                    </marker>
+                    <marker id="ua-ah-red" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="3.2" markerHeight="3.2" orient="auto-start-reverse">
+                      <path d="M0,0 L10,5 L0,10 Z" fill="#B83A2D" />
+                    </marker>
+                    <marker id="ua-ah-blue" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="3.2" markerHeight="3.2" orient="auto-start-reverse">
+                      <path d="M0,0 L10,5 L0,10 Z" fill="#3A6EA5" />
+                    </marker>
+                  </defs>
+                  <g id="user-annot-highlights"></g>
+                  <g id="user-annot-arrows"></g>
+                </svg>
+
                 <!-- Full-Board Pause Cover Overlay (Fade in/out 0.2s, Hold 3s to resume) -->
                 <div id="board-pause-cover" class="board-pause-cover" aria-hidden="true">
                   <div class="pause-center-content">
@@ -232,9 +252,14 @@
 
         <!-- RIGHT: Single Large Box for Move Log + Optional Collapsible Analysis -->
         <aside id="col-right" class="side-column">
+          <div id="puzzle-top-controls" class="puzzle-top-controls hidden">
+            <button id="btn-puzzle-choose" class="tool-btn" type="button" data-i18n="btn.selectPuzzle">ĐỔI CÂU ĐỐ</button>
+            <button id="btn-puzzle-retry" class="tool-btn" type="button" data-i18n="btn.retry">THỬ LẠI</button>
+            <button id="btn-puzzle-next" class="tool-btn" type="button" data-i18n="btn.nextPuzzle">BÀI TIẾP &gt;</button>
+          </div>
           <section class="section side-box">
             <div class="sectionTitle side-box-header">
-              <span data-i18n="ui.movesReview">BIÊN BẢN VÁN CỜ</span>
+              <span id="side-box-title" data-i18n="ui.movesReview">BIÊN BẢN VÁN CỜ</span>
               <button id="toggle-live" class="tool-btn analysis-toggle-btn" type="button" aria-pressed="false">
                 <i class="fas fa-microscope"></i>
                 <span data-i18n="ui.liveEval">PHÂN TÍCH</span>
@@ -258,13 +283,6 @@
               <!-- Puzzle Objective Banner (only in Puzzle mode) -->
               <div id="pane-puzzle-active" class="puzzle-banner hidden">
                 <div id="puzzle-info" class="puzzle-info"></div>
-                <div class="puzzle-actions">
-                  <button id="btn-puzzle-hint" class="tool-btn" type="button" data-i18n="btn.hint">GỢI Ý</button>
-                  <button id="btn-puzzle-retry" class="tool-btn" type="button" data-i18n="btn.retry">THỬ LẠI</button>
-                  <button id="btn-canonical" class="tool-btn" type="button" data-i18n="btn.canonical">XEM ĐÁP ÁN CHUẨN</button>
-                  <button id="btn-puzzle-next" class="tool-btn" type="button" data-i18n="btn.nextPuzzle">BÀI TIẾP &gt;</button>
-                  <button id="btn-puzzle-choose" class="tool-btn" type="button" data-i18n="btn.selectPuzzle">ĐỔI CÂU ĐỐ</button>
-                </div>
               </div>
 
               <!-- Post-Game Review Progress -->
@@ -463,10 +481,10 @@
               <button id="study-btn-clear-annot" class="themebutton study-mini-btn" type="button" data-i18n="study.clearAnnot">XÓA VẼ Ở NƯỚC NÀY</button>
             </div>
             <div id="study-draw-colors" class="study-draw-colors">
-              <button class="study-color-swatch active" type="button" data-color="green" title="Green"></button>
-              <button class="study-color-swatch" type="button" data-color="red" title="Red"></button>
-              <button class="study-color-swatch" type="button" data-color="blue" title="Blue"></button>
-              <button class="study-color-swatch" type="button" data-color="yellow" title="Yellow"></button>
+              <button class="study-color-swatch active" type="button" data-color="yellow" data-i18n-title="study.annotColor.yellow" title="Yellow"></button>
+              <button class="study-color-swatch" type="button" data-color="green" data-i18n-title="study.annotColor.green" title="Green"></button>
+              <button class="study-color-swatch" type="button" data-color="red" data-i18n-title="study.annotColor.red" title="Red"></button>
+              <button class="study-color-swatch" type="button" data-color="blue" data-i18n-title="study.annotColor.blue" title="Blue"></button>
             </div>
             <p class="study-draw-hint" data-i18n="study.drawHintDesktop">Chuột phải + kéo để vẽ mũi tên; chuột phải vào ô để tô màu.</p>
 

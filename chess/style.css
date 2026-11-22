@@ -782,6 +782,10 @@ button, input, select {
   z-index: 4;
 }
 
+.user-annot-svg {
+  z-index: 5;
+}
+
 .arrow-layer line {
   stroke-linecap: butt;
 }
@@ -1200,6 +1204,39 @@ button, input, select {
 .pz-feedback.ok { background: rgba(78, 122, 69, 0.18); color: var(--best-green); }
 .pz-feedback.bad { background: rgba(184, 58, 45, 0.16); color: var(--alert-red); }
 .pz-feedback.info { background: rgba(43, 140, 132, 0.14); color: var(--brilliant-cyan); }
+
+.puzzle-top-controls {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin-bottom: 8px;
+  width: 100%;
+}
+
+.puzzle-top-controls.hidden {
+  display: none !important;
+}
+
+.puzzle-top-controls .tool-btn {
+  width: 100%;
+  padding: 6px 6px;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.puzzle-info .pz-assist-row {
+  display: flex;
+  justify-content: flex-start;
+  margin-top: 8px;
+}
+
+.puzzle-info .pz-assist-btn {
+  width: auto;
+  flex: 0 0 auto;
+  white-space: nowrap;
+  padding: 5px 12px;
+  font-size: 11px;
+}
 
 .puzzle-actions {
   display: flex;
@@ -1869,6 +1906,14 @@ body[data-mode="review"] #review-comment {
   display: none !important;
 }
 
+/* Puzzle Mode UI Rules (hide unneeded player bars, board buttons, and match archive footer) */
+body[data-mode="puzzle"] #bar-top,
+body[data-mode="puzzle"] #bar-bottom,
+body[data-mode="puzzle"] #board-controls,
+body[data-mode="puzzle"] .file-actions {
+  display: none !important;
+}
+
 /* Full-Board Pause Cover Overlay (0.2s fade in / fade out) */
 .board-pause-cover {
   position: absolute;
@@ -2010,6 +2055,25 @@ body[data-mode="review"] #review-comment {
     --board-size: max(210px, min(86vw, calc(100dvh - 392px), 336px));
   }
 
+  body[data-mode="puzzle"] {
+    --board-size: min(92vw, calc(100dvh - 230px), 440px);
+  }
+
+  body[data-mode="puzzle"][data-live-eval="true"] {
+    --board-size: max(220px, min(88vw, calc(100dvh - 330px), 350px));
+  }
+
+  .puzzle-top-controls {
+    gap: 5px;
+    margin-bottom: 5px;
+  }
+
+  .puzzle-top-controls .tool-btn {
+    padding: 6px 4px;
+    font-size: 10.5px;
+    min-height: 30px;
+  }
+
   .coreSystem {
     padding: 6px 8px;
   }
@@ -2037,11 +2101,12 @@ body[data-mode="review"] #review-comment {
   .mobile-toolbar-brand {
     display: inline-block;
     font-family: var(--font);
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 700;
     color: var(--nier-dark);
-    letter-spacing: 1px;
+    letter-spacing: 0.8px;
     text-shadow: 2px 2px rgba(162, 156, 142, 0.7);
+    white-space: nowrap;
   }
 
   /* Single-column tight workspace on mobile */
@@ -2656,9 +2721,7 @@ body[data-mode="review"] #review-comment {
 }
 
 .study-draw-controls {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 6px;
+  display: none;
 }
 
 .study-draw-colors {
@@ -3127,6 +3190,12 @@ body[data-mode="review"] #review-comment {
   .study-workspace[data-mobile-tab="engine"] #study-panel-engine,
   .study-workspace[data-mobile-tab="draw"] #study-panel-draw {
     display: flex !important;
+  }
+
+  .study-draw-controls {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
   }
 
   .study-nav-bar {

@@ -12,10 +12,10 @@
   const FILES = 'abcdefgh';
   const T = (k, p) => (window.I18N ? I18N.t(k, p) : k);
   const ANNOT_COLORS = {
+    yellow: '#C99A2E',
     green: '#4E7A45',
     red: '#B83A2D',
-    blue: '#3A6EA5',
-    yellow: '#C99A2E'
+    blue: '#3A6EA5'
   };
   const CLS_COLORS = {
     brilliant: '#2B8C84', best: '#4E7A45', great: '#4A6A8A', book: '#8A6E4B', good: '#6E7350',
@@ -64,8 +64,8 @@
   function cloneAnnotations(a) {
     const src = a && typeof a === 'object' ? a : {};
     return {
-      arrows: Array.isArray(src.arrows) ? src.arrows.map(x => ({ from: x.from, to: x.to, color: x.color || 'green' })) : [],
-      highlights: Array.isArray(src.highlights) ? src.highlights.map(x => ({ sq: x.sq, color: x.color || 'green' })) : []
+      arrows: Array.isArray(src.arrows) ? src.arrows.map(x => ({ from: x.from, to: x.to, color: x.color || 'yellow' })) : [],
+      highlights: Array.isArray(src.highlights) ? src.highlights.map(x => ({ sq: x.sq, color: x.color || 'yellow' })) : []
     };
   }
 
@@ -269,7 +269,7 @@
     orientation: 'w',     // 'w' | 'b'
     selfAnalysis: false,
     drawMode: false,
-    drawColor: 'green',
+    drawColor: 'yellow',
     selectedSq: null,
     legalMoves: [],
     study: createEmptyStudy(),
@@ -953,7 +953,7 @@
       rect.setAttribute('y', c.row * 100);
       rect.setAttribute('width', '100');
       rect.setAttribute('height', '100');
-      rect.setAttribute('fill', ANNOT_COLORS[h.color] || ANNOT_COLORS.green);
+      rect.setAttribute('fill', ANNOT_COLORS[h.color] || ANNOT_COLORS.yellow);
       rect.setAttribute('fill-opacity', previewItem && h === previewItem ? '0.28' : '0.42');
       hlGroup.appendChild(rect);
     });
@@ -972,7 +972,7 @@
       if (!len) return;
       const ux = dx / len;
       const uy = dy / len;
-      const colorName = ANNOT_COLORS[a.color] ? a.color : 'green';
+      const colorName = ANNOT_COLORS[a.color] ? a.color : 'yellow';
       const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
       line.setAttribute('x1', p1.x + ux * 16);
       line.setAttribute('y1', p1.y + uy * 16);
@@ -1378,10 +1378,10 @@
   }
 
   function modifierColor(e) {
-    if (e.shiftKey && e.altKey) return 'yellow';
-    if (e.shiftKey) return 'red';
+    if (e.ctrlKey) return 'red';
     if (e.altKey) return 'blue';
-    return 'green';
+    if (e.shiftKey) return 'green';
+    return ST.drawColor || 'yellow';
   }
 
   function makeGhostSvg(color, type) {
@@ -1435,7 +1435,7 @@
         pointerId: e.pointerId,
         startSq: sq,
         curSq: sq,
-        color: ST.drawColor
+        color: ST.drawColor || 'yellow'
       };
       try { els.board.setPointerCapture(e.pointerId); } catch (ex) { /* ignore */ }
       renderAnnotLayer({ sq, color: drawDrag.color });
@@ -1449,7 +1449,10 @@
       return;
     }
 
-    // 4. Play Mode: Piece Selection & Legal Move Execution (left-click NEVER clears annotations!)
+    // 4. Play Mode: Desktop left-click/drag immediately clears node annotations; touch preserves them until Clear button
+    if (e.pointerType === 'mouse' && ST.mode === 'play') {
+      clearCurrentNodeAnnotations();
+    }
     const node = currentNode();
     const chess = new window.Chess(node.fen);
     const p = chess.get(sq);
@@ -2127,7 +2130,6 @@
       if (k === 'Home') { e.preventDefault(); navigateTo('root', false); return; }
       if (k === 'End') { e.preventDefault(); endOfMainline(); return; }
       if (k === 'l' || k === 'L') { e.preventDefault(); setSelfAnalysis(!ST.selfAnalysis); return; }
-      if (k === 'c' || k === 'C') { e.preventDefault(); clearCurrentNodeAnnotations(); sound('cancel'); return; }
     }
     if (k === 'f' || k === 'F') {
       e.preventDefault();
@@ -2372,7 +2374,7 @@
     $('study-btn-clear-annot').onclick = () => { clearCurrentNodeAnnotations(); sound('cancel'); };
     document.querySelectorAll('#study-draw-colors .study-color-swatch').forEach(btn => {
       btn.onclick = () => {
-        ST.drawColor = btn.dataset.color || 'green';
+        ST.drawColor = btn.dataset.color || 'yellow';
         syncModeAndToggleUI();
       };
     });
@@ -2529,7 +2531,10 @@
       navigateTo,
       computeBranchResult,
       enterMode,
-      loadRootIntoEditor
+      loadRootIntoEditor,
+      modifierColor,
+      clearCurrentNodeAnnotations,
+      onBoardPointerDown
     }
   };
 })();

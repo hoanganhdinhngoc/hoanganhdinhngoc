@@ -1,9 +1,10 @@
 /* =====================================================================
    YoRHa Tactical Chess System — tools/validate-puzzles.js
-   Validates all 100 puzzles against chess.js 0.10.3:
-   - Exact count = 100 (40 tactics, 25 mates, 15 endgames, 20 historical)
+   Validates all puzzles against chess.js 0.10.3:
    - Unique IDs, valid bilingual metadata (title, goal, explain in vi/en)
-   - Valid FEN and every move in `moves[]` is 100% legal
+   - Strict chess rule legality on starting FEN (1 W King, 1 B King,
+     non-adjacent kings, no pawns on rank 1/8, opponent not in check)
+   - Every move in `moves[]` is legal, and every `mates` puzzle ends in checkmate
    ===================================================================== */
 const fs = require('fs');
 const path = require('path');
@@ -22,6 +23,42 @@ const CATS = sandbox.window.PUZZLE_CATEGORIES || [];
 console.log('Total puzzles:', PUZZLES.length);
 console.log('Total categories:', CATS.length);
 
+const FILES = 'abcdefgh';
+function checkFenLegality(fen) {
+  const parts = String(fen || '').trim().split(/\s+/);
+  const rows = (parts[0] || '').split('/');
+  if (rows.length !== 8) return 'bad FEN rows';
+  const wk = [], bk = [];
+  for (let r = 0; r < 8; r++) {
+    let f = 0;
+    for (const ch of rows[r]) {
+      if (ch >= '1' && ch <= '8') {
+        f += parseInt(ch, 10);
+      } else {
+        const sq = FILES[f] + (8 - r);
+        const t = ch.toLowerCase();
+        const col = ch === ch.toUpperCase() ? 'w' : 'b';
+        if (t === 'k') (col === 'w' ? wk : bk).push(sq);
+        if (t === 'p' && (r === 0 || r === 7)) return 'pawn on rank 1/8 at ' + sq;
+        f++;
+      }
+    }
+    if (f !== 8) return 'bad FEN file count';
+  }
+  if (wk.length !== 1) return 'invalid White King count: ' + wk.length;
+  if (bk.length !== 1) return 'invalid Black King count: ' + bk.length;
+  const wf = FILES.indexOf(wk[0][0]), wr = parseInt(wk[0][1], 10);
+  const bf = FILES.indexOf(bk[0][0]), br = parseInt(bk[0][1], 10);
+  if (Math.max(Math.abs(wf - bf), Math.abs(wr - br)) <= 1) return 'adjacent kings';
+  const turn = parts[1];
+  const opp = turn === 'w' ? 'b' : 'w';
+  const oppFen = [parts[0], opp, parts[2] || '-', '-', '0', '1'].join(' ');
+  const oppChecker = new Chess();
+  if (!oppChecker.load(oppFen)) return 'invalid opponent FEN';
+  if (oppChecker.in_check()) return 'side not to move is already in check';
+  return null;
+}
+
 const byCat = {};
 const ids = new Set();
 const errors = [];
@@ -36,12 +73,19 @@ PUZZLES.forEach((p, idx) => {
   if (!p.explain || !p.explain.vi || !p.explain.en) errors.push(`${p.id}: missing bilingual explain`);
   if (!Array.isArray(p.moves) || !p.moves.length) errors.push(`${p.id}: empty moves`);
 
+  const ruleErr = checkFenLegality(p.fen);
+  if (ruleErr) {
+    errors.push(`${p.id} (#${idx + 1}): rule violation (${ruleErr}) "${p.fen}"`);
+    return;
+  }
+
   const c = new Chess();
   if (!c.load(p.fen)) {
     errors.push(`${p.id} (#${idx + 1}): invalid FEN "${p.fen}"`);
     return;
   }
 
+  let allOk = true;
   for (let i = 0; i < p.moves.length; i++) {
     const uci = p.moves[i];
     const mv = {
@@ -52,8 +96,12 @@ PUZZLES.forEach((p, idx) => {
     const res = c.move(mv);
     if (!res) {
       errors.push(`${p.id}: illegal move #${i + 1} "${uci}" from FEN "${c.fen()}"`);
+      allOk = false;
       break;
     }
+  }
+  if (allOk && p.cat === 'mates' && !c.in_checkmate()) {
+    errors.push(`${p.id}: mate puzzle solution does not end in checkmate (end FEN "${c.fen()}")`);
   }
 });
 
@@ -92,5 +140,5 @@ if (errors.length) {
   process.exit(1);
 } else {
   console.log('DOM IDs verified, i18n keys verified, pawn promotion verified.');
-  console.log('ALL 100 PUZZLES VALIDATED SUCCESSFULLY!');
+  console.log('ALL ' + PUZZLES.length + ' PUZZLES VALIDATED SUCCESSFULLY!');
 }
