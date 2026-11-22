@@ -1213,6 +1213,10 @@ button, input, select {
   width: 100%;
 }
 
+.side-box-body .puzzle-top-controls {
+  margin-bottom: 0;
+}
+
 .puzzle-top-controls.hidden {
   display: none !important;
 }
@@ -1464,12 +1468,14 @@ select.popup-input option {
   font-weight: 600;
 }
 
-.check-row input[type="checkbox"] {
+.check-row input[type="checkbox"],
+.study-check input[type="checkbox"] {
   -webkit-appearance: none;
   appearance: none;
   position: relative;
   width: 18px;
   height: 18px;
+  margin: 0;
   flex: none;
   background: var(--nier-text-light);
   border: 2px solid var(--nier-dark);
@@ -1477,11 +1483,13 @@ select.popup-input option {
   transition: background 0.15s ease;
 }
 
-.check-row input[type="checkbox"]:checked {
+.check-row input[type="checkbox"]:checked,
+.study-check input[type="checkbox"]:checked {
   background: var(--nier-dark);
 }
 
-.check-row input[type="checkbox"]:checked::after {
+.check-row input[type="checkbox"]:checked::after,
+.study-check input[type="checkbox"]:checked::after {
   content: "";
   position: absolute;
   left: 4px;
@@ -2568,7 +2576,7 @@ body[data-mode="puzzle"] .file-actions {
 .study-castle-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 4px 8px;
+  gap: 6px 8px;
   font-family: var(--font-mono);
   font-size: 11.5px;
   color: var(--nier-dark);
@@ -2577,7 +2585,11 @@ body[data-mode="puzzle"] .file-actions {
 .study-check {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
+  padding: 2px 0;
+  font-weight: 600;
+  white-space: nowrap;
+  user-select: none;
   cursor: pointer;
 }
 

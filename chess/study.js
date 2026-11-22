@@ -932,6 +932,83 @@
     g.appendChild(line);
   }
 
+  function buildAnnotArrowPath(p1, p2) {
+    if (!p1 || !p2 || (p1.x === p2.x && p1.y === p2.y)) return null;
+    const w = 7.5;
+    const hw = 21;
+    const headLen = 35;
+    const tipInset = 9;
+    const edgePeek = 12;
+    const f = (n) => Number(n.toFixed(2));
+    const ptsStr = (pts) => 'M ' + pts.map(p => f(p[0]) + ' ' + f(p[1])).join(' L ') + ' Z';
+
+    const dx = p2.x - p1.x;
+    const dy = p2.y - p1.y;
+    const adx = Math.abs(dx);
+    const ady = Math.abs(dy);
+
+    if ((Math.abs(adx - 200) < 1 && Math.abs(ady - 100) < 1) || (Math.abs(adx - 100) < 1 && Math.abs(ady - 200) < 1)) {
+      const horizMajor = adx > ady;
+      const u1x = horizMajor ? Math.sign(dx) : 0;
+      const u1y = horizMajor ? 0 : Math.sign(dy);
+      const u2x = horizMajor ? 0 : Math.sign(dx);
+      const u2y = horizMajor ? Math.sign(dy) : 0;
+      const cx = horizMajor ? p2.x : p1.x;
+      const cy = horizMajor ? p1.y : p2.y;
+
+      const startOffset = 50 - edgePeek;
+      const sx = p1.x + u1x * startOffset;
+      const sy = p1.y + u1y * startOffset;
+      const bx = p2.x - u2x * (tipInset + headLen);
+      const by = p2.y - u2y * (tipInset + headLen);
+      const tx = p2.x - u2x * tipInset;
+      const ty = p2.y - u2y * tipInset;
+
+      return {
+        isKnight: true,
+        d: ptsStr([
+          [sx - u2x * w, sy - u2y * w],
+          [cx + u1x * w - u2x * w, cy + u1y * w - u2y * w],
+          [bx + u1x * w, by + u1y * w],
+          [bx + u1x * hw, by + u1y * hw],
+          [tx, ty],
+          [bx - u1x * hw, by - u1y * hw],
+          [bx - u1x * w, by - u1y * w],
+          [cx - u1x * w + u2x * w, cy - u1y * w + u2y * w],
+          [sx + u2x * w, sy + u2y * w]
+        ])
+      };
+    }
+
+    const len = Math.hypot(dx, dy);
+    if (!len) return null;
+    const ux = dx / len;
+    const uy = dy / len;
+    const nx = -uy;
+    const ny = ux;
+    const dEdge = 50 / Math.max(Math.abs(ux), Math.abs(uy));
+    const startOffset = Math.min(len - headLen - tipInset - 6, Math.max(24, dEdge - edgePeek));
+    const sx = p1.x + ux * startOffset;
+    const sy = p1.y + uy * startOffset;
+    const bx = p2.x - ux * (tipInset + headLen);
+    const by = p2.y - uy * (tipInset + headLen);
+    const tx = p2.x - ux * tipInset;
+    const ty = p2.y - uy * tipInset;
+
+    return {
+      isKnight: false,
+      d: ptsStr([
+        [sx + nx * w, sy + ny * w],
+        [bx + nx * w, by + ny * w],
+        [bx + nx * hw, by + ny * hw],
+        [tx, ty],
+        [bx - nx * hw, by - ny * hw],
+        [bx - nx * w, by - ny * w],
+        [sx - nx * w, sy - ny * w]
+      ])
+    };
+  }
+
   function renderAnnotLayer(previewItem) {
     const hlGroup = els.annotHighlights;
     const arrGroup = els.annotArrows;
@@ -966,23 +1043,15 @@
       if (!a || !a.from || !a.to || a.from === a.to) return;
       const p1 = sqCenter(a.from);
       const p2 = sqCenter(a.to);
-      const dx = p2.x - p1.x;
-      const dy = p2.y - p1.y;
-      const len = Math.hypot(dx, dy);
-      if (!len) return;
-      const ux = dx / len;
-      const uy = dy / len;
+      const geom = buildAnnotArrowPath(p1, p2);
+      if (!geom) return;
       const colorName = ANNOT_COLORS[a.color] ? a.color : 'yellow';
-      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-      line.setAttribute('x1', p1.x + ux * 16);
-      line.setAttribute('y1', p1.y + uy * 16);
-      line.setAttribute('x2', p2.x - ux * 32);
-      line.setAttribute('y2', p2.y - uy * 32);
-      line.setAttribute('stroke', ANNOT_COLORS[colorName]);
-      line.setAttribute('stroke-width', '16');
-      line.setAttribute('stroke-opacity', previewItem && a === previewItem ? '0.55' : '0.88');
-      line.setAttribute('marker-end', 'url(#st-ah-' + colorName + ')');
-      arrGroup.appendChild(line);
+      const pathEl = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      pathEl.setAttribute('d', geom.d);
+      pathEl.setAttribute('fill', ANNOT_COLORS[colorName]);
+      pathEl.setAttribute('fill-opacity', previewItem && a === previewItem ? '0.55' : '0.88');
+      pathEl.setAttribute('data-knight', geom.isKnight ? 'true' : 'false');
+      arrGroup.appendChild(pathEl);
     });
   }
 
@@ -2534,7 +2603,9 @@
       loadRootIntoEditor,
       modifierColor,
       clearCurrentNodeAnnotations,
-      onBoardPointerDown
+      onBoardPointerDown,
+      buildAnnotArrowPath,
+      renderAnnotLayer
     }
   };
 })();
