@@ -838,6 +838,17 @@ button, input, select {
   gap: 10px;
 }
 
+.side-box-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.annot-toggle-btn {
+  display: none;
+}
+
 .analysis-toggle-btn {
   padding: 5px 10px;
   font-size: 11px;
@@ -1922,6 +1933,14 @@ body[data-mode="puzzle"] .file-actions {
   display: none !important;
 }
 
+/* Post-Game Review: hide redundant Takeback, Resign, Game Review buttons & Annotation toggle */
+body[data-mode="review"] #btn-takeback,
+body[data-mode="review"] #btn-resign,
+body[data-mode="review"] #btn-analyze,
+body[data-mode="review"] .annot-toggle-btn {
+  display: none !important;
+}
+
 /* Full-Board Pause Cover Overlay (0.2s fade in / fade out) */
 .board-pause-cover {
   position: absolute;
@@ -2199,6 +2218,25 @@ body[data-mode="puzzle"] .file-actions {
     white-space: nowrap;
   }
 
+  body[data-mode="review"] .board-controls {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  body[data-mode="review"] .file-actions {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 5px;
+    width: 100%;
+  }
+
+  body[data-mode="review"] .file-actions .tool-btn {
+    width: 100%;
+    padding: 6px 4px;
+    min-height: 30px;
+    font-size: 10.5px;
+    white-space: nowrap;
+  }
+
   /* Hide opponent info banner inside Move List on mobile to save space for Analysis */
   #pane-bot {
     display: none !important;
@@ -2208,11 +2246,22 @@ body[data-mode="puzzle"] .file-actions {
   .side-box-header {
     padding: 5px 10px;
     font-size: 12px;
+    gap: 6px;
+  }
+
+  .side-box-header-actions {
+    gap: 4px;
+  }
+
+  .annot-toggle-btn {
+    display: inline-flex;
   }
 
   .analysis-toggle-btn {
-    padding: 4px 8px;
-    font-size: 10.5px;
+    padding: 3px 6px;
+    font-size: 9.5px;
+    gap: 4px;
+    min-height: 26px;
   }
 
   .side-box-body {
@@ -2941,6 +2990,31 @@ body[data-mode="puzzle"] .file-actions {
   align-items: center;
   gap: 6px;
   flex-wrap: wrap;
+}
+
+.study-archive-section {
+  margin-bottom: 12px;
+}
+
+.study-archive-section:last-of-type {
+  margin-bottom: 0;
+}
+
+.study-archive-heading {
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: var(--nier-dark);
+  border-left: 4px solid var(--nier-dark);
+  background: rgba(75, 67, 64, 0.08);
+  padding: 4px 8px;
+  margin-bottom: 6px;
+}
+
+.study-archive-sublist {
+  max-height: 200px;
+  overflow-y: auto;
 }
 
 .study-fen-badge {

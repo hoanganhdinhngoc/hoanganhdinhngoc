@@ -63,9 +63,23 @@
 
   function cloneAnnotations(a) {
     const src = a && typeof a === 'object' ? a : {};
+    const arrowMap = new Map();
+    if (Array.isArray(src.arrows)) {
+      src.arrows.forEach(x => {
+        if (!x || !x.from || !x.to || x.from === x.to) return;
+        arrowMap.set(x.from + '>' + x.to, { from: x.from, to: x.to, color: x.color || 'yellow' });
+      });
+    }
+    const hlMap = new Map();
+    if (Array.isArray(src.highlights)) {
+      src.highlights.forEach(x => {
+        if (!x || !x.sq) return;
+        hlMap.set(x.sq, { sq: x.sq, color: x.color || 'yellow' });
+      });
+    }
     return {
-      arrows: Array.isArray(src.arrows) ? src.arrows.map(x => ({ from: x.from, to: x.to, color: x.color || 'yellow' })) : [],
-      highlights: Array.isArray(src.highlights) ? src.highlights.map(x => ({ sq: x.sq, color: x.color || 'yellow' })) : []
+      arrows: Array.from(arrowMap.values()),
+      highlights: Array.from(hlMap.values())
     };
   }
 
@@ -295,6 +309,8 @@
   let drag = null;
   let drawDrag = null;
   let edDrag = null;
+  const studyAnnotPathCache = new Map();
+  let lastStudyAnnotSig = '';
   let fenTipTimer = null;
   let fenTipHoverBadge = null;
   let fenTipCopied = false;
@@ -754,6 +770,7 @@
     const board = els.board;
     if (!board) return;
     board.innerHTML = '';
+    lastStudyAnnotSig = '';
     for (const k of Object.keys(boardSquares)) delete boardSquares[k];
 
     for (let row = 0; row < 8; row++) {
@@ -934,6 +951,10 @@
 
   function buildAnnotArrowPath(p1, p2) {
     if (!p1 || !p2 || (p1.x === p2.x && p1.y === p2.y)) return null;
+    const cacheKey = p1.x + ',' + p1.y + ',' + p2.x + ',' + p2.y;
+    const cached = studyAnnotPathCache.get(cacheKey);
+    if (cached) return cached;
+
     const w = 7.5;
     const hw = 21;
     const headLen = 35;
@@ -947,6 +968,7 @@
     const adx = Math.abs(dx);
     const ady = Math.abs(dy);
 
+    let out = null;
     if ((Math.abs(adx - 200) < 1 && Math.abs(ady - 100) < 1) || (Math.abs(adx - 100) < 1 && Math.abs(ady - 200) < 1)) {
       const horizMajor = adx > ady;
       const u1x = horizMajor ? Math.sign(dx) : 0;
@@ -964,7 +986,7 @@
       const tx = p2.x - u2x * tipInset;
       const ty = p2.y - u2y * tipInset;
 
-      return {
+      out = {
         isKnight: true,
         d: ptsStr([
           [sx - u2x * w, sy - u2y * w],
@@ -978,52 +1000,86 @@
           [sx + u2x * w, sy + u2y * w]
         ])
       };
+    } else {
+      const len = Math.hypot(dx, dy);
+      if (!len) return null;
+      const ux = dx / len;
+      const uy = dy / len;
+      const nx = -uy;
+      const ny = ux;
+      const dEdge = 50 / Math.max(Math.abs(ux), Math.abs(uy));
+      const startOffset = Math.min(len - headLen - tipInset - 6, Math.max(24, dEdge - edgePeek));
+      const sx = p1.x + ux * startOffset;
+      const sy = p1.y + uy * startOffset;
+      const bx = p2.x - ux * (tipInset + headLen);
+      const by = p2.y - uy * (tipInset + headLen);
+      const tx = p2.x - ux * tipInset;
+      const ty = p2.y - uy * tipInset;
+
+      out = {
+        isKnight: false,
+        d: ptsStr([
+          [sx + nx * w, sy + ny * w],
+          [bx + nx * w, by + ny * w],
+          [bx + nx * hw, by + ny * hw],
+          [tx, ty],
+          [bx - nx * hw, by - ny * hw],
+          [bx - nx * w, by - ny * w],
+          [sx - nx * w, sy - ny * w]
+        ])
+      };
     }
-
-    const len = Math.hypot(dx, dy);
-    if (!len) return null;
-    const ux = dx / len;
-    const uy = dy / len;
-    const nx = -uy;
-    const ny = ux;
-    const dEdge = 50 / Math.max(Math.abs(ux), Math.abs(uy));
-    const startOffset = Math.min(len - headLen - tipInset - 6, Math.max(24, dEdge - edgePeek));
-    const sx = p1.x + ux * startOffset;
-    const sy = p1.y + uy * startOffset;
-    const bx = p2.x - ux * (tipInset + headLen);
-    const by = p2.y - uy * (tipInset + headLen);
-    const tx = p2.x - ux * tipInset;
-    const ty = p2.y - uy * tipInset;
-
-    return {
-      isKnight: false,
-      d: ptsStr([
-        [sx + nx * w, sy + ny * w],
-        [bx + nx * w, by + ny * w],
-        [bx + nx * hw, by + ny * hw],
-        [tx, ty],
-        [bx - nx * hw, by - ny * hw],
-        [bx - nx * w, by - ny * w],
-        [sx - nx * w, sy - ny * w]
-      ])
-    };
+    studyAnnotPathCache.set(cacheKey, out);
+    return out;
   }
 
   function renderAnnotLayer(previewItem) {
     const hlGroup = els.annotHighlights;
     const arrGroup = els.annotArrows;
     if (!hlGroup || !arrGroup) return;
-    hlGroup.innerHTML = '';
-    arrGroup.innerHTML = '';
-    if (ST.mode !== 'play') return;
+    if (ST.mode !== 'play') {
+      if (lastStudyAnnotSig !== '') {
+        hlGroup.innerHTML = '';
+        arrGroup.innerHTML = '';
+        lastStudyAnnotSig = '';
+      }
+      return;
+    }
 
     const node = currentNode();
-    const ann = node.annotations || { arrows: [], highlights: [] };
+    const ann = (node && node.annotations) || { arrows: [], highlights: [] };
 
-    const hls = ann.highlights.slice();
-    if (previewItem && previewItem.sq) hls.push(previewItem);
-    hls.forEach(h => {
-      if (!h || !h.sq || !boardSquares[h.sq]) return;
+    const hlMap = new Map();
+    ann.highlights.forEach(h => {
+      if (h && h.sq && boardSquares[h.sq]) hlMap.set(h.sq, { sq: h.sq, color: h.color, preview: false });
+    });
+    if (previewItem && previewItem.sq && boardSquares[previewItem.sq]) {
+      hlMap.set(previewItem.sq, { sq: previewItem.sq, color: previewItem.color, preview: true });
+    }
+
+    const arrMap = new Map();
+    ann.arrows.forEach(a => {
+      if (a && a.from && a.to && a.from !== a.to) {
+        arrMap.set(a.from + '>' + a.to, { from: a.from, to: a.to, color: a.color, preview: false });
+      }
+    });
+    if (previewItem && previewItem.from && previewItem.to && previewItem.from !== previewItem.to) {
+      arrMap.set(previewItem.from + '>' + previewItem.to, {
+        from: previewItem.from, to: previewItem.to, color: previewItem.color, preview: true
+      });
+    }
+
+    const sigParts = [ST.mode, ST.orientation, ST.currentNodeId];
+    hlMap.forEach(h => sigParts.push('H:' + h.sq + ':' + (h.color || 'yellow') + ':' + (h.preview ? 1 : 0)));
+    arrMap.forEach(a => sigParts.push('A:' + a.from + '>' + a.to + ':' + (a.color || 'yellow') + ':' + (a.preview ? 1 : 0)));
+    const sig = sigParts.join('|');
+    if (sig === lastStudyAnnotSig) return;
+    lastStudyAnnotSig = sig;
+
+    hlGroup.innerHTML = '';
+    arrGroup.innerHTML = '';
+
+    hlMap.forEach(h => {
       const c = sqCenter(h.sq);
       const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
       rect.setAttribute('x', c.col * 100);
@@ -1031,16 +1087,11 @@
       rect.setAttribute('width', '100');
       rect.setAttribute('height', '100');
       rect.setAttribute('fill', ANNOT_COLORS[h.color] || ANNOT_COLORS.yellow);
-      rect.setAttribute('fill-opacity', previewItem && h === previewItem ? '0.28' : '0.42');
+      rect.setAttribute('fill-opacity', h.preview ? '0.28' : '0.42');
       hlGroup.appendChild(rect);
     });
 
-    const arrs = ann.arrows.slice();
-    if (previewItem && previewItem.from && previewItem.to && previewItem.from !== previewItem.to) {
-      arrs.push(previewItem);
-    }
-    arrs.forEach(a => {
-      if (!a || !a.from || !a.to || a.from === a.to) return;
+    arrMap.forEach(a => {
       const p1 = sqCenter(a.from);
       const p2 = sqCenter(a.to);
       const geom = buildAnnotArrowPath(p1, p2);
@@ -1049,7 +1100,7 @@
       const pathEl = document.createElementNS('http://www.w3.org/2000/svg', 'path');
       pathEl.setAttribute('d', geom.d);
       pathEl.setAttribute('fill', ANNOT_COLORS[colorName]);
-      pathEl.setAttribute('fill-opacity', previewItem && a === previewItem ? '0.55' : '0.88');
+      pathEl.setAttribute('fill-opacity', a.preview ? '0.55' : '0.88');
       pathEl.setAttribute('data-knight', geom.isKnight ? 'true' : 'false');
       arrGroup.appendChild(pathEl);
     });
@@ -1075,7 +1126,13 @@
     if (!node || from === to) return;
     if (!node.annotations) node.annotations = { arrows: [], highlights: [] };
     const list = node.annotations.arrows;
-    const idx = list.findIndex(a => a.from === from && a.to === to);
+    for (let i = list.length - 1; i >= 0; i--) {
+      if (list[i] && list[i].from === from && list[i].to === to) {
+        const firstIdx = list.findIndex(a => a && a.from === from && a.to === to);
+        if (i !== firstIdx) list.splice(i, 1);
+      }
+    }
+    const idx = list.findIndex(a => a && a.from === from && a.to === to);
     if (idx >= 0) {
       if (list[idx].color === color) list.splice(idx, 1);
       else list[idx].color = color;
@@ -1088,6 +1145,7 @@
     const node = currentNode();
     if (!node) return;
     node.annotations = { arrows: [], highlights: [] };
+    lastStudyAnnotSig = '';
     renderAnnotLayer();
   }
 
@@ -1470,10 +1528,29 @@
     if (edDrag && edDrag.originSq && boardSquares[edDrag.originSq]) {
       boardSquares[edDrag.originSq]._piece.style.opacity = '';
     }
+    if (drawDrag) {
+      try { if (els.board && drawDrag.pointerId != null) els.board.releasePointerCapture(drawDrag.pointerId); } catch (ex) { /* ignore */ }
+    }
     drag = null;
     drawDrag = null;
     edDrag = null;
     Object.values(boardSquares).forEach(s => s.classList.remove('drag-over'));
+    renderAnnotLayer();
+  }
+
+  function finalizeDrawDrag(clientX, clientY) {
+    if (!drawDrag) return;
+    const d = drawDrag;
+    drawDrag = null;
+    try { if (els.board && d.pointerId != null) els.board.releasePointerCapture(d.pointerId); } catch (ex) { /* ignore */ }
+    const ptSq = (typeof clientX === 'number' && typeof clientY === 'number') ? squareFromPoint(clientX, clientY) : null;
+    const endSq = ptSq || d.curSq;
+    const node = currentNode();
+    if (endSq && node) {
+      if (endSq === d.startSq) toggleHighlight(node, endSq, d.color);
+      else toggleArrow(node, d.startSq, endSq, d.color);
+    }
+    renderAnnotLayer();
   }
 
   function onBoardPointerDown(e) {
@@ -1488,7 +1565,8 @@
         pointerId: e.pointerId,
         startSq: sq,
         curSq: sq,
-        color: modifierColor(e)
+        color: modifierColor(e),
+        isTouchMode: false
       };
       try { els.board.setPointerCapture(e.pointerId); } catch (ex) { /* ignore */ }
       renderAnnotLayer({ sq, color: drawDrag.color });
@@ -1504,7 +1582,8 @@
         pointerId: e.pointerId,
         startSq: sq,
         curSq: sq,
-        color: ST.drawColor || 'yellow'
+        color: ST.drawColor || 'yellow',
+        isTouchMode: true
       };
       try { els.board.setPointerCapture(e.pointerId); } catch (ex) { /* ignore */ }
       renderAnnotLayer({ sq, color: drawDrag.color });
@@ -1638,6 +1717,14 @@
     if (!ST.active) return;
 
     if (drawDrag && e.pointerId === drawDrag.pointerId) {
+      // Opera Mouse Gestures workaround: commit immediately if button was released without pointerup
+      if (e.pointerType === 'mouse' && typeof e.buttons === 'number') {
+        const expectedMask = drawDrag.isTouchMode ? 1 : 2;
+        if ((e.buttons & expectedMask) === 0) {
+          finalizeDrawDrag();
+          return;
+        }
+      }
       const sq = squareFromPoint(e.clientX, e.clientY);
       if (sq && sq !== drawDrag.curSq) {
         drawDrag.curSq = sq;
@@ -1688,15 +1775,8 @@
   function onGlobalPointerUp(e) {
     if (!ST.active) return;
 
-    if (drawDrag && e.pointerId === drawDrag.pointerId) {
-      const endSq = squareFromPoint(e.clientX, e.clientY) || drawDrag.curSq;
-      const node = currentNode();
-      if (endSq) {
-        if (endSq === drawDrag.startSq) toggleHighlight(node, endSq, drawDrag.color);
-        else toggleArrow(node, drawDrag.startSq, endSq, drawDrag.color);
-      }
-      drawDrag = null;
-      renderAnnotLayer();
+    if (drawDrag && (e.pointerId === drawDrag.pointerId || e.pointerId === undefined)) {
+      finalizeDrawDrag(e.clientX, e.clientY);
       return;
     }
 
@@ -1922,7 +2002,7 @@
     if (!window.YStorage || !file) return;
     try {
       const data = await YStorage.importStudyFile(file);
-      ST.study = {
+      const loaded = {
         format: 'yorha-chess-study',
         version: 1,
         id: data.id || null,
@@ -1932,12 +2012,16 @@
         updatedAt: new Date().toISOString(),
         root: data.root
       };
+      const saved = YStorage.saveStudy(loaded);
+      ST.study = saved || loaded;
       ST.collapsedIds.clear();
       ST.editorInitialized = false;
       ST.editorDirty = false;
       rebuildIndex();
+      buildStudyBoard();
       ST.mode = 'play';
       navigateTo('root', false);
+      renderStudyArchive();
       if (window.App && typeof window.App.closeModal === 'function') window.App.closeModal('modal-study-archive');
       sound('confirm');
       toast(T('study.importedToast', { title: ST.study.title }));
@@ -2024,17 +2108,98 @@
     tip.setAttribute('aria-hidden', 'true');
   }
 
+  function openMatchInStudy(m) {
+    if (!m || !window.YStorage || typeof YStorage.matchToStudy !== 'function') return false;
+    const studyData = YStorage.matchToStudy(m);
+    if (!studyData) {
+      sound('error');
+      toast(T('archive.importFail'), true);
+      return false;
+    }
+    hideFenTooltip();
+    ST.study = studyData;
+    const humanBlack = m.black && !m.black.isBot && m.white && m.white.isBot;
+    ST.orientation = humanBlack ? 'b' : 'w';
+    ST.collapsedIds.clear();
+    ST.editorInitialized = false;
+    ST.editorDirty = false;
+    rebuildIndex();
+    buildStudyBoard();
+    ST.mode = 'play';
+    navigateTo('root', false);
+    if (window.App && typeof window.App.closeModal === 'function') window.App.closeModal('modal-study-archive');
+    sound('confirm');
+    return true;
+  }
+
   function renderStudyArchive() {
+    const lastEl = $('study-lastgames-list');
     const listEl = $('study-archive-list');
     if (!listEl || !window.YStorage) return;
     hideFenTooltip();
+    const langTag = window.I18N && I18N.lang === 'vi' ? 'vi-VN' : 'en-US';
+
+    if (lastEl) {
+      const saves = YStorage.listSaves().slice().sort((a, b) => {
+        const ta = new Date((a && (a.savedAt || a.timestamp)) || 0).getTime() || 0;
+        const tb = new Date((b && (b.savedAt || b.timestamp)) || 0).getTime() || 0;
+        return tb - ta;
+      });
+      lastEl.innerHTML = '';
+      if (!saves.length) {
+        lastEl.innerHTML = '<li class="archive-empty">' + escapeHtml(T('study.lastGamesEmpty')) + '</li>';
+      } else {
+        saves.forEach(m => {
+          const li = document.createElement('li');
+          const d = new Date(m.savedAt || m.timestamp || Date.now());
+          const displayTitle = m.title || YStorage.formatMatchDefaultTitle(m);
+          const modeKey = m.mode === 'pvp' ? 'pvp' : m.mode === 'puzzle' ? 'puzzle' : m.mode === 'study' ? 'study' : 'bot';
+
+          const titleRow = document.createElement('div');
+          titleRow.className = 'ar-title study-ar-title';
+          if (m.favorite) {
+            const fav = document.createElement('span');
+            fav.className = 'ar-fav';
+            fav.textContent = '★';
+            titleRow.appendChild(fav);
+          }
+          const titleTxt = document.createElement('span');
+          titleTxt.className = 'study-ar-title-text';
+          titleTxt.textContent = displayTitle;
+          titleRow.appendChild(titleTxt);
+
+          const metaRow = document.createElement('div');
+          metaRow.className = 'ar-meta';
+          const modeLabel = modeKey === 'pvp' ? T('mode.pvp') : modeKey === 'puzzle' ? T('mode.puzzle') : modeKey === 'study' ? T('mode.study') : T('mode.bot');
+          metaRow.textContent = d.toLocaleString(langTag) + ' · ' + modeLabel +
+            ' · ' + (m.result || '*') + ' · ' + T('archive.moves', { n: (m.moves || []).length });
+
+          const act = document.createElement('div');
+          act.className = 'ar-actions';
+          const openBtn = document.createElement('button');
+          openBtn.type = 'button';
+          openBtn.className = 'tool-btn';
+          openBtn.textContent = T('study.archiveOpen');
+          openBtn.onclick = (ev) => {
+            ev.stopPropagation();
+            openMatchInStudy(YStorage.getMatch(m.id) || m);
+          };
+          act.appendChild(openBtn);
+
+          li.appendChild(titleRow);
+          li.appendChild(metaRow);
+          li.appendChild(act);
+          lastEl.appendChild(li);
+        });
+      }
+    }
+
     const list = YStorage.listStudies();
     listEl.innerHTML = '';
     if (!list.length) {
       listEl.innerHTML = '<li class="archive-empty">' + escapeHtml(T('study.archiveEmpty')) + '</li>';
       return;
     }
-    const langTag = window.I18N && I18N.lang === 'vi' ? 'vi-VN' : 'en-US';
     list.forEach(st => {
       const li = document.createElement('li');
       const d = new Date(st.updatedAt || st.createdAt || Date.now());
@@ -2225,10 +2390,29 @@
 
   function bindEvents() {
     els.board.addEventListener('pointerdown', onBoardPointerDown);
-    els.board.addEventListener('contextmenu', e => e.preventDefault());
+    els.board.addEventListener('mousedown', (e) => {
+      if (ST.active && e.button === 2 && ST.mode === 'play') e.preventDefault();
+    });
+    els.board.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      if (ST.active && drawDrag && !drawDrag.isTouchMode) finalizeDrawDrag(e.clientX, e.clientY);
+    });
+    els.board.addEventListener('lostpointercapture', (e) => {
+      if (drawDrag && e.pointerId === drawDrag.pointerId) finalizeDrawDrag();
+    });
     window.addEventListener('pointermove', onGlobalPointerMove);
-    window.addEventListener('pointerup', onGlobalPointerUp);
+    window.addEventListener('pointerup', onGlobalPointerUp, true);
     window.addEventListener('pointercancel', cleanupDrags);
+    window.addEventListener('mouseup', (e) => {
+      if (ST.active && drawDrag && !drawDrag.isTouchMode && e.button === 2) finalizeDrawDrag(e.clientX, e.clientY);
+    }, true);
+    window.addEventListener('contextmenu', (e) => {
+      if (ST.active && drawDrag && !drawDrag.isTouchMode) {
+        e.preventDefault();
+        finalizeDrawDrag(e.clientX, e.clientY);
+      }
+    }, true);
+    window.addEventListener('blur', cleanupDrags);
     document.addEventListener('keydown', onKeyDown);
 
     // Shared toolbar & drawer handlers
@@ -2605,7 +2789,11 @@
       clearCurrentNodeAnnotations,
       onBoardPointerDown,
       buildAnnotArrowPath,
-      renderAnnotLayer
+      renderAnnotLayer,
+      openMatchInStudy,
+      renderStudyArchive,
+      finalizeDrawDrag,
+      onGlobalPointerMove
     }
   };
 })();

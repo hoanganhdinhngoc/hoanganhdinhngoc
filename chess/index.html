@@ -260,11 +260,18 @@
           <section class="section side-box">
             <div class="sectionTitle side-box-header">
               <span id="side-box-title" data-i18n="ui.movesReview">BIÊN BẢN VÁN CỜ</span>
-              <button id="toggle-live" class="tool-btn analysis-toggle-btn" type="button" aria-pressed="false">
-                <i class="fas fa-microscope"></i>
-                <span data-i18n="ui.liveEval">PHÂN TÍCH</span>
-                <b class="tg-state">[OFF]</b>
-              </button>
+              <div class="side-box-header-actions">
+                <button id="toggle-annot" class="tool-btn analysis-toggle-btn annot-toggle-btn" type="button" aria-pressed="false">
+                  <i class="fas fa-location-arrow"></i>
+                  <span data-i18n="ui.annotMode">ANNOTATION</span>
+                  <b class="tg-state">[OFF]</b>
+                </button>
+                <button id="toggle-live" class="tool-btn analysis-toggle-btn" type="button" aria-pressed="false">
+                  <i class="fas fa-microscope"></i>
+                  <span data-i18n="ui.liveEval">PHÂN TÍCH</span>
+                  <b class="tg-state">[OFF]</b>
+                </button>
+              </div>
             </div>
 
             <div class="side-box-body">
@@ -491,8 +498,8 @@
             <div class="study-export-grid">
               <button id="study-btn-export-branch" class="themebutton study-mini-btn" type="button" data-i18n="study.exportBranch">XUẤT NHÁNH (.JSON)</button>
               <button id="study-btn-export-study" class="themebutton study-mini-btn" type="button" data-i18n="study.exportStudy">XUẤT .STUDY.JSON</button>
-              <button id="study-btn-import-study" class="themebutton study-mini-btn" type="button" data-i18n="study.importStudy">NHẬP .STUDY.JSON</button>
-              <input id="study-import-file" type="file" accept=".json,.study.json" class="hidden" />
+              <button id="study-btn-import-study" class="themebutton study-mini-btn" type="button" data-i18n="study.importStudy">NHẬP FILE .JSON</button>
+              <input id="study-import-file" type="file" accept=".json,.study.json,application/json" class="hidden" />
             </div>
           </section>
         </aside>
@@ -777,16 +784,38 @@
     </div>
   </div>
 
+  <!-- 10. Save / Rename Match Modal -->
+  <div id="modal-match-name" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="popupSection modal-box modal-small">
+      <h2 id="match-name-title" class="popupSectionTitle" data-i18n="archive.saveTitle">LƯU VÁN CỜ</h2>
+      <div class="popup-boxContent">
+        <label class="field-label" for="match-name-input" data-i18n="archive.nameLabel">TÊN VÁN CỜ</label>
+        <input id="match-name-input" class="popup-input" type="text" maxlength="80" autocomplete="off" />
+        <div class="popup-button-group">
+          <button id="btn-match-name-confirm" class="themebutton popup-btn" type="button" data-i18n="btn.confirm">XÁC NHẬN</button>
+          <button id="btn-match-name-cancel" class="themebutton popup-btn" type="button" data-i18n="btn.cancel">HỦY</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- 9. Saved Studies Archive Modal (Strictly Separate from Match Archive) -->
   <div id="modal-study-archive" class="modal hidden" role="dialog" aria-modal="true">
     <div class="popupSection modal-box modal-wide">
       <h2 class="popupSectionTitle" data-i18n="study.archiveTitle">DANH SÁCH THẾ CỜ NGHIÊN CỨU</h2>
       <div class="popup-boxContent">
         <div style="margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap;">
-          <button id="study-modal-import-btn" class="themebutton" type="button"><i class="fas fa-file-upload"></i> <span data-i18n="study.importStudy">NHẬP .STUDY.JSON</span></button>
-          <input id="study-modal-import-file" type="file" accept=".json,.study.json" class="hidden" />
+          <button id="study-modal-import-btn" class="themebutton" type="button"><i class="fas fa-file-upload"></i> <span data-i18n="study.importStudy">NHẬP FILE .JSON</span></button>
+          <input id="study-modal-import-file" type="file" accept=".json,.study.json,application/json" class="hidden" />
         </div>
-        <ul id="study-archive-list" class="archive-list"></ul>
+        <div class="study-archive-section">
+          <div class="study-archive-heading" data-i18n="study.lastGamesHeading">CÁC VÁN VỪA CHƠI (LAST GAMES)</div>
+          <ul id="study-lastgames-list" class="archive-list study-archive-sublist"></ul>
+        </div>
+        <div class="study-archive-section">
+          <div class="study-archive-heading" data-i18n="study.savedStudiesHeading">THẾ CỜ NGHIÊN CỨU ĐÃ LƯU (SAVED STUDIES)</div>
+          <ul id="study-archive-list" class="archive-list study-archive-sublist"></ul>
+        </div>
         <div class="popup-button-group">
           <button class="themebutton popup-btn" type="button" data-close="modal-study-archive" data-i18n="btn.close">ĐÓNG</button>
         </div>

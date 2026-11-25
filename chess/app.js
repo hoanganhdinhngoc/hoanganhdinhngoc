@@ -54,6 +54,7 @@
     white: null, black: null,
     history: [],
     liveEval: false,
+    annotMode: false,
     timeControl: 'none',
     clock: { enabled: false, w: 0, b: 0, inc: 0, last: 0, timer: null },
     paused: false,
@@ -68,6 +69,8 @@
     moveToken: 0,
     matchId: null,
     matchTimestamp: null,
+    matchTitle: null,
+    matchFavorite: false,
     setup: { mode: 'bot', botId: 'cadet', color: 'w' },
     statusFn: null, statusAlert: false,
     coachFn: null,
@@ -81,8 +84,11 @@
   let squares = {};
   let drag = null;
   let annotDrag = null;
+  const annotPathCache = new Map();
+  let lastAnnotRenderSig = '';
   let promoResolve = null;
   let confirmResolve = null;
+  let matchNameResolve = null;
   let pauseHoldRaf = null;
   let pauseHoldStart = 0;
 
@@ -123,6 +129,54 @@
       if (yesBtn) yesBtn.onclick = () => { sound('confirm'); finish(true); };
       if (noBtn) noBtn.onclick = () => { sound('cancel'); finish(false); };
       openModal('modal-confirm');
+    });
+  }
+
+  function askMatchName(titleKey, defaultValue) {
+    return new Promise(resolve => {
+      if (matchNameResolve) {
+        const prev = matchNameResolve;
+        matchNameResolve = null;
+        prev(null);
+      }
+      matchNameResolve = resolve;
+      const titleEl = $('match-name-title');
+      if (titleEl) titleEl.textContent = T(titleKey || 'archive.saveTitle');
+      const inp = $('match-name-input');
+      if (inp) inp.value = String(defaultValue || '');
+      const okBtn = $('btn-match-name-confirm');
+      const cancelBtn = $('btn-match-name-cancel');
+      const finish = (val) => {
+        const r = matchNameResolve;
+        matchNameResolve = null;
+        closeModal('modal-match-name');
+        if (r) r(val);
+      };
+      if (okBtn) okBtn.onclick = () => {
+        sound('confirm');
+        finish(inp ? inp.value : String(defaultValue || ''));
+      };
+      if (cancelBtn) cancelBtn.onclick = () => {
+        sound('cancel');
+        finish(null);
+      };
+      if (inp) {
+        inp.onkeydown = (e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            sound('confirm');
+            finish(inp.value);
+          } else if (e.key === 'Escape') {
+            e.preventDefault();
+            sound('cancel');
+            finish(null);
+          }
+        };
+      }
+      openModal('modal-match-name');
+      if (inp) {
+        setTimeout(() => { try { inp.focus(); inp.select(); } catch (x) { /* */ } }, 15);
+      }
     });
   }
 
@@ -169,6 +223,10 @@
   function pauseGame() {
     if (S.paused || S.gameOver || S.review.active || ['bot', 'pvp', 'puzzle'].indexOf(S.mode) < 0) return;
     if (drag || annotDrag) onPointerCancel();
+    if (S.annotMode) {
+      S.annotMode = false;
+      syncAnnotToggleUI();
+    }
     clearUserAnnotations();
     if (S.clock.enabled && S.clock.timer) {
       const now = Date.now();
@@ -229,6 +287,7 @@
     }
     closeMobileDrawer();
     clearPauseCover();
+    if (S.annotMode) { S.annotMode = false; syncAnnotToggleUI(); }
     clearUserAnnotations();
     S.moveToken++;
     S.review.token++;
@@ -261,6 +320,7 @@
   function showStudyScreen() {
     closeMobileDrawer();
     clearPauseCover();
+    if (S.annotMode) { S.annotMode = false; syncAnnotToggleUI(); }
     clearUserAnnotations();
     S.moveToken++;
     S.review.token++;
@@ -309,6 +369,7 @@
     if (els.mobileBrand) els.mobileBrand.textContent = brand;
     if (els.sideBoxTitle) els.sideBoxTitle.textContent = T(isPuzzle ? 'ui.puzzleBox' : 'ui.movesReview');
     if (els.puzzleTopControls) els.puzzleTopControls.classList.toggle('hidden', !isPuzzle);
+    syncAnnotToggleUI();
   }
 
   function syncAnalysisVisibility() {
@@ -345,7 +406,7 @@
     return false;
   }
   function canInteract() {
-    return !S.paused && ['bot', 'pvp', 'puzzle'].indexOf(S.mode) >= 0 && !S.gameOver && !S.viewFen && isHumanTurn() && !promoResolve;
+    return !S.paused && !S.annotMode && ['bot', 'pvp', 'puzzle'].indexOf(S.mode) >= 0 && !S.gameOver && !S.viewFen && isHumanTurn() && !promoResolve;
   }
   function setStatus(fn, alert) { S.statusFn = fn; S.statusAlert = !!alert; renderStatus(); }
   function renderStatus() {
@@ -361,6 +422,7 @@
     const board = els.board;
     board.innerHTML = '';
     squares = {};
+    lastAnnotRenderSig = '';
     for (let row = 0; row < 8; row++) {
       for (let col = 0; col < 8; col++) {
         const file = S.orientation === 'w' ? col : 7 - col;
@@ -540,6 +602,7 @@
     S.userAnnot.arrows = [];
     S.userAnnot.highlights = [];
     annotDrag = null;
+    lastAnnotRenderSig = '';
     renderUserAnnotations();
   }
   function toggleUserHighlight(sq, color) {
@@ -555,16 +618,28 @@
   function toggleUserArrow(from, to, color) {
     if (!from || !to || from === to) return;
     const list = S.userAnnot.arrows;
-    const idx = list.findIndex(a => a.from === from && a.to === to);
-    if (idx >= 0) {
-      if (list[idx].color === color) list.splice(idx, 1);
-      else list[idx].color = color;
+    let firstIdx = -1;
+    // Ensure deduplication even if duplicate entries somehow existed
+    for (let i = list.length - 1; i >= 0; i--) {
+      if (list[i] && list[i].from === from && list[i].to === to) {
+        if (firstIdx < 0) firstIdx = i;
+        else list.splice(i, 1);
+      }
+    }
+    firstIdx = list.findIndex(a => a && a.from === from && a.to === to);
+    if (firstIdx >= 0) {
+      if (list[firstIdx].color === color) list.splice(firstIdx, 1);
+      else list[firstIdx].color = color;
     } else {
       list.push({ from, to, color });
     }
   }
   function buildAnnotArrowPath(p1, p2) {
     if (!p1 || !p2 || (p1.x === p2.x && p1.y === p2.y)) return null;
+    const cacheKey = p1.x + ',' + p1.y + ',' + p2.x + ',' + p2.y;
+    const cached = annotPathCache.get(cacheKey);
+    if (cached) return cached;
+
     const w = 7.5;
     const hw = 21;
     const headLen = 35;
@@ -578,6 +653,7 @@
     const adx = Math.abs(dx);
     const ady = Math.abs(dy);
 
+    let out = null;
     if ((Math.abs(adx - 200) < 1 && Math.abs(ady - 100) < 1) || (Math.abs(adx - 100) < 1 && Math.abs(ady - 200) < 1)) {
       const horizMajor = adx > ady;
       const u1x = horizMajor ? Math.sign(dx) : 0;
@@ -595,7 +671,7 @@
       const tx = p2.x - u2x * tipInset;
       const ty = p2.y - u2y * tipInset;
 
-      return {
+      out = {
         isKnight: true,
         d: ptsStr([
           [sx - u2x * w, sy - u2y * w],
@@ -609,48 +685,82 @@
           [sx + u2x * w, sy + u2y * w]
         ])
       };
+    } else {
+      const len = Math.hypot(dx, dy);
+      if (!len) return null;
+      const ux = dx / len;
+      const uy = dy / len;
+      const nx = -uy;
+      const ny = ux;
+      const dEdge = 50 / Math.max(Math.abs(ux), Math.abs(uy));
+      const startOffset = Math.min(len - headLen - tipInset - 6, Math.max(24, dEdge - edgePeek));
+      const sx = p1.x + ux * startOffset;
+      const sy = p1.y + uy * startOffset;
+      const bx = p2.x - ux * (tipInset + headLen);
+      const by = p2.y - uy * (tipInset + headLen);
+      const tx = p2.x - ux * tipInset;
+      const ty = p2.y - uy * tipInset;
+
+      out = {
+        isKnight: false,
+        d: ptsStr([
+          [sx + nx * w, sy + ny * w],
+          [bx + nx * w, by + ny * w],
+          [bx + nx * hw, by + ny * hw],
+          [tx, ty],
+          [bx - nx * hw, by - ny * hw],
+          [bx - nx * w, by - ny * w],
+          [sx - nx * w, sy - ny * w]
+        ])
+      };
     }
-
-    const len = Math.hypot(dx, dy);
-    if (!len) return null;
-    const ux = dx / len;
-    const uy = dy / len;
-    const nx = -uy;
-    const ny = ux;
-    const dEdge = 50 / Math.max(Math.abs(ux), Math.abs(uy));
-    const startOffset = Math.min(len - headLen - tipInset - 6, Math.max(24, dEdge - edgePeek));
-    const sx = p1.x + ux * startOffset;
-    const sy = p1.y + uy * startOffset;
-    const bx = p2.x - ux * (tipInset + headLen);
-    const by = p2.y - uy * (tipInset + headLen);
-    const tx = p2.x - ux * tipInset;
-    const ty = p2.y - uy * tipInset;
-
-    return {
-      isKnight: false,
-      d: ptsStr([
-        [sx + nx * w, sy + ny * w],
-        [bx + nx * w, by + ny * w],
-        [bx + nx * hw, by + ny * hw],
-        [tx, ty],
-        [bx - nx * hw, by - ny * hw],
-        [bx - nx * w, by - ny * w],
-        [sx - nx * w, sy - ny * w]
-      ])
-    };
+    annotPathCache.set(cacheKey, out);
+    return out;
   }
   function renderUserAnnotations(previewItem) {
     const hlGroup = els.userAnnotHighlights;
     const arrGroup = els.userAnnotArrows;
     if (!hlGroup || !arrGroup) return;
+    if (S.mode !== 'bot' && S.mode !== 'pvp' && S.mode !== 'puzzle') {
+      if (lastAnnotRenderSig !== '') {
+        hlGroup.innerHTML = '';
+        arrGroup.innerHTML = '';
+        lastAnnotRenderSig = '';
+      }
+      return;
+    }
+
+    const hlMap = new Map();
+    S.userAnnot.highlights.forEach(h => {
+      if (h && h.sq && squares[h.sq]) hlMap.set(h.sq, { sq: h.sq, color: h.color, preview: false });
+    });
+    if (previewItem && previewItem.sq && squares[previewItem.sq]) {
+      hlMap.set(previewItem.sq, { sq: previewItem.sq, color: previewItem.color, preview: true });
+    }
+
+    const arrMap = new Map();
+    S.userAnnot.arrows.forEach(a => {
+      if (a && a.from && a.to && a.from !== a.to) {
+        arrMap.set(a.from + '>' + a.to, { from: a.from, to: a.to, color: a.color, preview: false });
+      }
+    });
+    if (previewItem && previewItem.from && previewItem.to && previewItem.from !== previewItem.to) {
+      arrMap.set(previewItem.from + '>' + previewItem.to, {
+        from: previewItem.from, to: previewItem.to, color: previewItem.color, preview: true
+      });
+    }
+
+    const sigParts = [S.mode, S.orientation];
+    hlMap.forEach(h => sigParts.push('H:' + h.sq + ':' + (h.color || 'yellow') + ':' + (h.preview ? 1 : 0)));
+    arrMap.forEach(a => sigParts.push('A:' + a.from + '>' + a.to + ':' + (a.color || 'yellow') + ':' + (a.preview ? 1 : 0)));
+    const sig = sigParts.join('|');
+    if (sig === lastAnnotRenderSig) return;
+    lastAnnotRenderSig = sig;
+
     hlGroup.innerHTML = '';
     arrGroup.innerHTML = '';
-    if (S.mode !== 'bot' && S.mode !== 'pvp' && S.mode !== 'puzzle') return;
 
-    const hls = S.userAnnot.highlights.slice();
-    if (previewItem && previewItem.sq) hls.push(previewItem);
-    hls.forEach(h => {
-      if (!h || !h.sq || !squares[h.sq]) return;
+    hlMap.forEach(h => {
       const c = sqCenter(h.sq);
       const col = Math.floor(c.x / 100);
       const row = Math.floor(c.y / 100);
@@ -660,16 +770,11 @@
       rect.setAttribute('width', '100');
       rect.setAttribute('height', '100');
       rect.setAttribute('fill', USER_ANNOT_COLORS[h.color] || USER_ANNOT_COLORS.yellow);
-      rect.setAttribute('fill-opacity', previewItem && h === previewItem ? '0.28' : '0.42');
+      rect.setAttribute('fill-opacity', h.preview ? '0.28' : '0.42');
       hlGroup.appendChild(rect);
     });
 
-    const arrs = S.userAnnot.arrows.slice();
-    if (previewItem && previewItem.from && previewItem.to && previewItem.from !== previewItem.to) {
-      arrs.push(previewItem);
-    }
-    arrs.forEach(a => {
-      if (!a || !a.from || !a.to || a.from === a.to) return;
+    arrMap.forEach(a => {
       const p1 = sqCenter(a.from);
       const p2 = sqCenter(a.to);
       const geom = buildAnnotArrowPath(p1, p2);
@@ -678,7 +783,7 @@
       const pathEl = document.createElementNS('http://www.w3.org/2000/svg', 'path');
       pathEl.setAttribute('d', geom.d);
       pathEl.setAttribute('fill', USER_ANNOT_COLORS[colorName]);
-      pathEl.setAttribute('fill-opacity', previewItem && a === previewItem ? '0.55' : '0.88');
+      pathEl.setAttribute('fill-opacity', a.preview ? '0.55' : '0.88');
       pathEl.setAttribute('data-knight', geom.isKnight ? 'true' : 'false');
       arrGroup.appendChild(pathEl);
     });
@@ -773,6 +878,20 @@
   }
   function deselect() { S.selected = null; S.legal = []; render(); }
 
+  function finalizeAnnotDrag(clientX, clientY) {
+    if (!annotDrag) return;
+    const a = annotDrag;
+    annotDrag = null;
+    try { if (els.board && a.id != null) els.board.releasePointerCapture(a.id); } catch (x) { /* */ }
+    const ptSq = (typeof clientX === 'number' && typeof clientY === 'number') ? squareFromPoint(clientX, clientY) : null;
+    const endSq = ptSq || a.curSq;
+    if (endSq) {
+      if (endSq === a.startSq) toggleUserHighlight(endSq, a.color);
+      else toggleUserArrow(a.startSq, endSq, a.color);
+    }
+    renderUserAnnotations();
+  }
+
   function onPointerDown(e) {
     if (e.button === 2) {
       if (canUseBoardAnnotations(e)) {
@@ -780,10 +899,20 @@
         YoRHaAudio.init();
         const sq = squareFromPoint(e.clientX, e.clientY);
         if (!sq) return;
-        annotDrag = { id: e.pointerId, startSq: sq, curSq: sq, color: userAnnotColor(e) };
+        annotDrag = { id: e.pointerId, startSq: sq, curSq: sq, color: userAnnotColor(e), isTouchMode: false };
         try { els.board.setPointerCapture(e.pointerId); } catch (x) { /* */ }
         renderUserAnnotations({ sq, color: annotDrag.color });
       }
+      return;
+    }
+    if (S.annotMode && (S.mode === 'bot' || S.mode === 'pvp' || S.mode === 'puzzle') && !S.paused && !S.review.active && (e.button === 0 || e.button === undefined)) {
+      e.preventDefault();
+      YoRHaAudio.init();
+      const sq = squareFromPoint(e.clientX, e.clientY);
+      if (!sq) return;
+      annotDrag = { id: e.pointerId, startSq: sq, curSq: sq, color: 'yellow', isTouchMode: true };
+      try { els.board.setPointerCapture(e.pointerId); } catch (x) { /* */ }
+      renderUserAnnotations({ sq, color: 'yellow' });
       return;
     }
     if (e.button !== undefined && e.button !== 0 && e.pointerType === 'mouse') return;
@@ -825,6 +954,14 @@
 
   function onPointerMove(e) {
     if (annotDrag && e.pointerId === annotDrag.id) {
+      // Opera Mouse Gestures workaround: if right button (or primary touch button) is no longer held, commit immediately
+      if (e.pointerType === 'mouse' && typeof e.buttons === 'number') {
+        const expectedMask = annotDrag.isTouchMode ? 1 : 2;
+        if ((e.buttons & expectedMask) === 0) {
+          finalizeAnnotDrag();
+          return;
+        }
+      }
       const sq = squareFromPoint(e.clientX, e.clientY);
       if (sq && sq !== annotDrag.curSq) {
         annotDrag.curSq = sq;
@@ -860,16 +997,8 @@
   }
 
   function onPointerUp(e) {
-    if (annotDrag && e.pointerId === annotDrag.id) {
-      const a = annotDrag;
-      annotDrag = null;
-      try { els.board.releasePointerCapture(e.pointerId); } catch (x) { /* */ }
-      const endSq = squareFromPoint(e.clientX, e.clientY) || a.curSq;
-      if (endSq) {
-        if (endSq === a.startSq) toggleUserHighlight(endSq, a.color);
-        else toggleUserArrow(a.startSq, endSq, a.color);
-      }
-      renderUserAnnotations();
+    if (annotDrag && (e.pointerId === annotDrag.id || e.pointerId === undefined)) {
+      finalizeAnnotDrag(e.clientX, e.clientY);
       return;
     }
     if (!drag || e.pointerId !== drag.id) return;
@@ -897,6 +1026,7 @@
 
   function onPointerCancel() {
     if (annotDrag) {
+      try { if (els.board && annotDrag.id != null) els.board.releasePointerCapture(annotDrag.id); } catch (x) { /* */ }
       annotDrag = null;
       renderUserAnnotations();
     }
@@ -985,6 +1115,7 @@
     renderMoveList();
     if (S.mode === 'puzzle') { puzzleOnMove(entry); return; }
     if (checkGameEnd()) return;
+    autoSaveCurrentMatch();
     startTurn();
     if (S.liveEval) coachEvaluate(entry);
   }
@@ -1023,6 +1154,18 @@
     }
   }
 
+  function autoSaveCurrentMatch() {
+    if ((S.mode !== 'bot' && S.mode !== 'pvp') || !S.history.length) return;
+    try {
+      const rec = buildMatchRecord();
+      const saved = YStorage.saveMatch(rec);
+      if (saved && saved.id) S.matchId = saved.id;
+      renderArchive();
+    } catch (e) {
+      console.warn(e);
+    }
+  }
+
   async function botMove() {
     const token = S.moveToken;
     const bot = S.bot;
@@ -1056,6 +1199,7 @@
       renderCoachText();
     }
     if (checkGameEnd()) return;
+    autoSaveCurrentMatch();
     startTurn();
   }
 
@@ -1157,6 +1301,8 @@
     S.coach = { entry: null, optimalShown: false };
     S.review = { active: false, index: 0, fens: [], ready: false, token: S.review.token, summary: null };
     S.puzzle = null; S.matchId = null; S.matchTimestamp = new Date().toISOString();
+    S.matchTitle = null; S.matchFavorite = false;
+    if (S.annotMode) { S.annotMode = false; syncAnnotToggleUI(); }
     S.coachFn = null; S.goFn = null;
     els.reviewSummary.classList.add('hidden');
     els.evalGraph.classList.add('hidden');
@@ -1527,6 +1673,7 @@
     S.review.index = S.history.length;
     S.viewFen = S.review.fens[S.review.index];
     S.selected = null; S.legal = [];
+    if (S.annotMode) { S.annotMode = false; syncAnnotToggleUI(); }
     clearUserAnnotations();
     if (S.mode !== 'review') S.reviewFrom = S.mode;
     S.mode = 'review';
@@ -1720,7 +1867,7 @@
       'Result', S.result || '*', 'TimeControl', S.timeControl || 'none');
     const mode = S.mode === 'review' ? (S.reviewFrom || S.importedMode || 'bot') : S.mode;
     const acc = S.review.summary ? { white: S.review.summary.w.accuracy, black: S.review.summary.b.accuracy } : null;
-    return {
+    const rec = {
       format: 'yorha-chess-match', version: 1,
       id: S.matchId || ('m_' + Date.now()),
       timestamp: ts,
@@ -1743,6 +1890,8 @@
       favorite: S.matchFavorite || false,
       lang: I18N.lang
     };
+    rec.title = S.matchTitle || YStorage.formatMatchDefaultTitle(rec);
+    return rec;
   }
 
   function loadMatch(match) {
@@ -1773,6 +1922,7 @@
       S.timeControl = match.timeControl || 'none';
       S.matchId = match.id || null;
       S.matchTimestamp = match.timestamp || new Date().toISOString();
+      S.matchTitle = match.title || null;
       S.matchFavorite = !!match.favorite;
       S.gameOver = true;
       S.clock.enabled = false;
@@ -1784,13 +1934,19 @@
     } catch (e) { console.error(e); return false; }
   }
 
-  function saveCurrent() {
+  async function saveCurrent() {
     if (!S.history.length) { toast(T('alert.noMoves')); return; }
-    const rec = buildMatchRecord();
-    rec.favorite = true;
+    const draft = buildMatchRecord();
+    const defaultName = S.matchTitle || YStorage.formatMatchDefaultTitle(draft);
+    const entered = await askMatchName('archive.saveTitle', defaultName);
+    if (entered === null) return;
+    const finalName = String(entered || '').trim() || defaultName;
+    S.matchTitle = finalName;
     S.matchFavorite = true;
-    YStorage.saveMatch(rec);
-    S.matchId = rec.id;
+    draft.title = finalName;
+    draft.favorite = true;
+    const saved = YStorage.saveMatch(draft);
+    S.matchId = saved ? saved.id : draft.id;
     renderArchive();
     toast(T('archive.saved'));
     sound('confirm');
@@ -1822,10 +1978,9 @@
     saves.forEach(m => {
       const li = document.createElement('li');
       const d = new Date(m.timestamp);
-      const wName = m.white.isBot && Bots.get(m.white.botId) ? I18N.pick(Bots.get(m.white.botId).name) : m.white.name;
-      const bName = m.black.isBot && Bots.get(m.black.botId) ? I18N.pick(Bots.get(m.black.botId).name) : m.black.name;
+      const displayTitle = m.title || YStorage.formatMatchDefaultTitle(m);
       li.innerHTML = '<div class="ar-title">' + (m.favorite ? '<span class="ar-fav">★</span> ' : '') +
-        escapeHtml(T('archive.vs', { w: wName, we: m.white.elo, b: bName, be: m.black.elo })) + '</div>' +
+        escapeHtml(displayTitle) + '</div>' +
         '<div class="ar-meta">' + d.toLocaleString(I18N.lang === 'vi' ? 'vi-VN' : 'en-US') + ' · ' + T('mode.' + (m.mode === 'pvp' ? 'pvp' : m.mode === 'puzzle' ? 'puzzle' : m.mode === 'study' ? 'study' : 'bot')) +
         ' · ' + (m.result || '*') + ' · ' + T('archive.moves', { n: (m.moves || []).length }) +
         (m.accuracy ? ' · ' + m.accuracy.white + '% / ' + m.accuracy.black + '%' : '') + '</div>' +
@@ -1840,6 +1995,16 @@
         act.appendChild(b);
       };
       mkBtn(T('btn.load'), () => { startReview(YStorage.getMatch(m.id)); });
+      mkBtn(T('btn.rename'), async () => {
+        const curName = m.title || YStorage.formatMatchDefaultTitle(m);
+        const nextName = await askMatchName('archive.renameTitle', curName);
+        if (nextName === null) return;
+        const renamed = YStorage.renameMatch(m.id, nextName);
+        if (renamed && S.matchId === m.id) S.matchTitle = renamed.title;
+        renderArchive();
+        toast(T('archive.renamed'));
+        sound('confirm');
+      });
       mkBtn(T('btn.export'), () => { const f = YStorage.exportMatch(YStorage.getMatch(m.id)); toast(T('archive.exported', { file: f })); });
       mkBtn(T(m.favorite ? 'btn.unfavorite' : 'btn.favorite'), () => { YStorage.toggleFavorite(m.id); renderArchive(); sound('click'); });
       mkBtn(T('btn.delete'), () => { YStorage.deleteMatch(m.id); renderArchive(); toast(T('archive.deleted')); sound('cancel'); });
@@ -2217,6 +2382,11 @@
       confirmResolve = null;
       r(false);
     }
+    if (id === 'modal-match-name' && matchNameResolve) {
+      const r = matchNameResolve;
+      matchNameResolve = null;
+      r(null);
+    }
   }
 
   function openProfile() {
@@ -2301,6 +2471,35 @@
     }
     render();
     renderMoveList();
+  }
+
+  function syncAnnotToggleUI() {
+    const tg = els.toggleAnnot;
+    if (!tg) return;
+    tg.classList.toggle('on', !!S.annotMode);
+    tg.setAttribute('aria-pressed', S.annotMode ? 'true' : 'false');
+    const st = tg.querySelector('.tg-state');
+    if (st) st.textContent = S.annotMode ? '[ON]' : '[OFF]';
+  }
+
+  function setAnnotMode(on) {
+    const next = !!on;
+    if (next) {
+      if (checkPausedBlock()) return;
+      if (S.review.active || ['bot', 'pvp', 'puzzle'].indexOf(S.mode) < 0) return;
+      S.annotMode = true;
+      S.selected = null;
+      S.legal = [];
+      syncAnnotToggleUI();
+      sound('confirm');
+      render();
+    } else {
+      S.annotMode = false;
+      syncAnnotToggleUI();
+      clearUserAnnotations();
+      sound('cancel');
+      render();
+    }
   }
 
   /* ------------------------------------------------------------------
@@ -2408,7 +2607,30 @@
     els.board.addEventListener('pointermove', onPointerMove);
     els.board.addEventListener('pointerup', onPointerUp);
     els.board.addEventListener('pointercancel', onPointerCancel);
-    els.board.addEventListener('contextmenu', e => e.preventDefault());
+    els.board.addEventListener('mousedown', (e) => {
+      if (e.button === 2 && canUseBoardAnnotations({ pointerType: 'mouse' })) e.preventDefault();
+    });
+    els.board.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      if (annotDrag && !annotDrag.isTouchMode) finalizeAnnotDrag(e.clientX, e.clientY);
+    });
+    els.board.addEventListener('lostpointercapture', (e) => {
+      if (annotDrag && e.pointerId === annotDrag.id) finalizeAnnotDrag();
+    });
+    window.addEventListener('pointermove', (e) => {
+      if (annotDrag && e.pointerId === annotDrag.id) onPointerMove(e);
+    });
+    window.addEventListener('pointerup', onPointerUp, true);
+    window.addEventListener('mouseup', (e) => {
+      if (annotDrag && !annotDrag.isTouchMode && e.button === 2) finalizeAnnotDrag(e.clientX, e.clientY);
+    }, true);
+    window.addEventListener('contextmenu', (e) => {
+      if (annotDrag && !annotDrag.isTouchMode) {
+        e.preventDefault();
+        finalizeAnnotDrag(e.clientX, e.clientY);
+      }
+    }, true);
+    window.addEventListener('blur', onPointerCancel);
 
     // Game Screen Toolbar
     $('btn-back-menu').onclick = () => showMenuScreen(false);
@@ -2512,6 +2734,7 @@
     $('btn-takeback').onclick = takeback;
     $('btn-resign').onclick = resign;
     els.toggleLive.onclick = () => setLiveEval(!S.liveEval);
+    if (els.toggleAnnot) els.toggleAnnot.onclick = () => setAnnotMode(!S.annotMode);
 
     // Coach
     els.btnOptimal.onclick = showOptimal;
@@ -2633,6 +2856,7 @@
     els.botPortrait = $('bot-portrait'); els.botName = $('bot-name');
     els.botElo = $('bot-elo'); els.botDialogue = $('bot-dialogue');
     els.btnLang = $('btn-lang'); els.btnBgm = $('btn-bgm'); els.btnAudio = $('btn-audio'); els.toggleLive = $('toggle-live');
+    els.toggleAnnot = $('toggle-annot');
     els.tcSelect = $('tc-select');
 
     const settings = YStorage.getSettings();
@@ -2672,11 +2896,12 @@
     showMenuScreen, showGameScreen, showStudyScreen,
     newGame, loadPuzzle, startReview, applyLanguage, render, syncSettingsUI,
     syncBoardControlsPlacement,
+    setAnnotMode, canInteract, askMatchName, autoSaveCurrentMatch, renderArchive,
     drawArrows, clearArrows, clearUserAnnotations, userAnnotColor, canUseBoardAnnotations, buildAnnotArrowPath,
     takeback, resign, flip, showOptimal,
     reviewGo, nextCritical, buildMatchRecord, onPlayerMove: playerMove,
     pieceSVG, toast, askConfirm, askPromotion, openModal, closeModal,
-    _annotHandlers: { onPointerDown, onPointerMove, onPointerUp, onPointerCancel }
+    _annotHandlers: { onPointerDown, onPointerMove, onPointerUp, onPointerCancel, finalizeAnnotDrag, renderUserAnnotations }
   };
 
   document.addEventListener('DOMContentLoaded', init);
