@@ -73,7 +73,9 @@
   function buildInviteUrl(roomId) {
     const id = encodeURIComponent(String(roomId || '').trim().toUpperCase());
     if (typeof window !== 'undefined' && window.location && /^https?:$/i.test(window.location.protocol)) {
-      return window.location.origin + window.location.pathname + '?join=' + id;
+      let path = window.location.pathname || '/';
+      if (!path.endsWith('/') && !/\.html?$/i.test(path)) path += '/';
+      return window.location.origin + path + '?join=' + id;
     }
     return 'https://hoanganhdinhngoc.io.vn/chess/?join=' + id;
   }

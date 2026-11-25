@@ -72,7 +72,7 @@
     matchTitle: null,
     matchFavorite: false,
     online: { active: false, roomId: null, inviteUrl: null, opponentConnected: false, gameSeq: 0, rematchPending: false },
-    setup: { mode: 'bot', botId: 'cadet', color: 'w', onlineColor: 'w', onlineTab: 'create' },
+    setup: { mode: 'bot', botId: 'cadet', color: 'w', onlineColor: 'w', onlineTab: 'create', pvpTopColor: 'w', pvpP2Name: '' },
     statusFn: null, statusAlert: false,
     coachFn: null,
     goFn: null,
@@ -1402,11 +1402,45 @@
     resetEvalBar();
   }
 
+  function renderPvpColorBadges() {
+    const topCol = S.setup.pvpTopColor === 'b' ? 'b' : 'w';
+    const botCol = topCol === 'w' ? 'b' : 'w';
+    const topEl = $('pvp-king-top');
+    const botEl = $('pvp-king-bottom');
+    if (topEl) {
+      topEl.innerHTML = pieceSVG(topCol, 'k');
+      topEl.classList.toggle('is-white', topCol === 'w');
+      topEl.classList.toggle('is-black', topCol === 'b');
+      topEl.title = sideName(topCol);
+    }
+    if (botEl) {
+      botEl.innerHTML = pieceSVG(botCol, 'k');
+      botEl.classList.toggle('is-white', botCol === 'w');
+      botEl.classList.toggle('is-black', botCol === 'b');
+      botEl.title = sideName(botCol);
+    }
+    const swBtn = $('btn-pvp-switch');
+    if (swBtn) swBtn.classList.toggle('swapped', topCol === 'b');
+  }
+
+  function initPvpSetupFields() {
+    const profile = YStorage.getProfile();
+    S.setup.pvpTopColor = 'w';
+    const p1El = $('pvp-player1-name');
+    const p2El = $('pvp-player2-name');
+    if (p1El) p1El.value = profile.p1.name || 'Player 1';
+    if (p2El) {
+      p2El.value = S.setup.pvpP2Name || (profile.p2.name && profile.p2.name !== 'Player 2' ? profile.p2.name : '');
+    }
+    renderPvpColorBadges();
+  }
+
   function openSetupModal(mode) {
     if (mode) S.setup.mode = mode;
     document.querySelectorAll('#mode-select .seg-btn').forEach(x => x.classList.toggle('active', x.dataset.mode === S.setup.mode));
     $('bot-setup').classList.toggle('hidden', S.setup.mode !== 'bot');
     $('pvp-setup').classList.toggle('hidden', S.setup.mode !== 'pvp');
+    initPvpSetupFields();
     renderBotRoster();
     if (els.tcSelect) syncCustomSelect(els.tcSelect);
     openModal('modal-setup');
@@ -1619,8 +1653,13 @@
         if (!st) return;
         const sess = OnlineClient.getSession();
         if (st.status === 'waiting') {
+          const inviteUrl = sess.inviteUrl || '';
           if ($('online-room-code')) $('online-room-code').textContent = sess.roomId || st.roomId;
-          if ($('online-invite-url')) $('online-invite-url').value = sess.inviteUrl || '';
+          if ($('online-invite-url')) {
+            $('online-invite-url').value = inviteUrl;
+            $('online-invite-url').scrollLeft = $('online-invite-url').scrollWidth;
+          }
+          if ($('btn-online-copy')) $('btn-online-copy').disabled = !inviteUrl;
           if ($('online-waiting-box')) $('online-waiting-box').classList.remove('hidden');
           setOnlineLobbyStatus('online-wait-status', T('online.waiting'), false);
         } else if (st.status === 'playing' || st.status === 'ended') {
@@ -1719,8 +1758,20 @@
     } else {
       S.bot = null;
       S.playerColor = 'both';
-      S.white = { name: profile.p1.name, elo: profile.p1.elo, isBot: false, botId: null };
-      S.black = { name: profile.p2.name, elo: profile.p2.elo, isBot: false, botId: null };
+      const p1Input = $('pvp-player1-name');
+      const p2Input = $('pvp-player2-name');
+      const rawTop = String(p1Input ? p1Input.value : '').trim().slice(0, 24);
+      const rawBot = String(p2Input ? p2Input.value : '').trim().slice(0, 24);
+      S.setup.pvpP2Name = rawBot;
+      const topPlayer = { name: rawTop || profile.p1.name || 'Player 1', elo: profile.p1.elo, isBot: false, botId: null, slot: 'p1' };
+      const botPlayer = { name: rawBot || profile.p2.name || 'Player 2', elo: profile.p2.elo, isBot: false, botId: null, slot: 'p2' };
+      if (S.setup.pvpTopColor === 'b') {
+        S.white = botPlayer;
+        S.black = topPlayer;
+      } else {
+        S.white = topPlayer;
+        S.black = botPlayer;
+      }
       S.orientation = 'w';
       YStorage.saveSettings({ timeControl: S.timeControl });
       renderBotCard();
@@ -2773,10 +2824,18 @@
       onboarded: true
     };
     YStorage.saveProfile(p);
-    if (S.white && !S.white.isBot) { S.white.name = p.p1.name; S.white.elo = p.p1.elo; }
-    if (S.black && !S.black.isBot) {
-      if (S.mode === 'pvp') { S.black.name = p.p2.name; S.black.elo = p.p2.elo; }
-      else { S.black.name = p.p1.name; S.black.elo = p.p1.elo; }
+    if (S.mode === 'pvp') {
+      if (S.white && !S.white.isBot) {
+        const sW = S.white.slot === 'p2' ? p.p2 : p.p1;
+        S.white.name = sW.name; S.white.elo = sW.elo;
+      }
+      if (S.black && !S.black.isBot) {
+        const sB = S.black.slot === 'p1' ? p.p1 : p.p2;
+        S.black.name = sB.name; S.black.elo = sB.elo;
+      }
+    } else if (S.mode !== 'online') {
+      if (S.white && !S.white.isBot) { S.white.name = p.p1.name; S.white.elo = p.p1.elo; }
+      if (S.black && !S.black.isBot) { S.black.name = p.p1.name; S.black.elo = p.p1.elo; }
     }
     closeModal('modal-profile');
     toast(T('profile.saved'));
@@ -2911,6 +2970,7 @@
     renderPuzzleInfo();
     renderArchive();
     renderGameOver();
+    renderPvpColorBadges();
     syncModeChrome();
     if (window.Study && Study.applyLanguage) Study.applyLanguage();
   }
@@ -3094,6 +3154,13 @@
       S.setup.color = b.dataset.color;
       document.querySelectorAll('#color-select .seg-btn').forEach(x => x.classList.toggle('active', x === b));
     });
+    if ($('btn-pvp-switch')) {
+      $('btn-pvp-switch').onclick = () => {
+        S.setup.pvpTopColor = S.setup.pvpTopColor === 'w' ? 'b' : 'w';
+        renderPvpColorBadges();
+        sound('select');
+      };
+    }
     $('btn-start').onclick = () => {
       newGame({ mode: S.setup.mode, force: true });
     };
@@ -3105,16 +3172,77 @@
       S.setup.onlineColor = b.dataset.color || 'w';
       document.querySelectorAll('#online-color-select .seg-btn').forEach(x => x.classList.toggle('active', x === b));
     });
+    const highlightInviteEnd = (inputEl, text) => {
+      if (!inputEl) return;
+      if (text && inputEl.value !== text) inputEl.value = text;
+      const len = String(inputEl.value || '').length;
+      const applySel = () => {
+        try {
+          if (typeof inputEl.focus === 'function') {
+            try { inputEl.focus({ preventScroll: true }); } catch (e) { inputEl.focus(); }
+          }
+          if (typeof inputEl.setSelectionRange === 'function') {
+            inputEl.setSelectionRange(0, len, 'forward');
+          } else if (typeof inputEl.select === 'function') {
+            inputEl.select();
+          }
+          if (typeof inputEl.scrollWidth === 'number') {
+            inputEl.scrollLeft = inputEl.scrollWidth;
+          }
+        } catch (x) { /* ignore */ }
+      };
+      applySel();
+      setTimeout(applySel, 0);
+    };
+    const fallbackCopyText = (text, inputEl) => {
+      let ok = false;
+      try {
+        if (inputEl && document.execCommand) {
+          highlightInviteEnd(inputEl, text);
+          ok = !!document.execCommand('copy');
+        }
+      } catch (e) { ok = false; }
+      if (!ok && document.createElement && document.body && document.body.appendChild) {
+        try {
+          const ta = document.createElement('textarea');
+          ta.value = text;
+          ta.setAttribute('readonly', '');
+          ta.style.position = 'fixed';
+          ta.style.top = '-9999px';
+          ta.style.left = '-9999px';
+          ta.style.opacity = '0';
+          document.body.appendChild(ta);
+          if (typeof ta.focus === 'function') ta.focus();
+          if (typeof ta.select === 'function') ta.select();
+          if (typeof ta.setSelectionRange === 'function') ta.setSelectionRange(0, text.length);
+          ok = !!(document.execCommand && document.execCommand('copy'));
+          ta.remove();
+        } catch (e) { ok = false; }
+      }
+      return ok;
+    };
     const copyOnlineUrl = () => {
       const inp = $('online-invite-url');
-      const url = (inp && inp.value) || S.online.inviteUrl || (window.OnlineClient && OnlineClient.getSession().inviteUrl) || '';
+      const url = (window.OnlineClient && OnlineClient.getSession().inviteUrl) || S.online.inviteUrl || (inp && inp.value) || '';
       if (!url) return;
+      const modalOpen = $('modal-online') && !$('modal-online').classList.contains('hidden');
+      const finishCopy = (copied) => {
+        if (modalOpen && inp) highlightInviteEnd(inp, url);
+        if (copied) {
+          toast(T('online.linkCopied'));
+          sound('confirm');
+        } else {
+          sound('error');
+        }
+      };
       if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(url).then(() => toast(T('online.linkCopied'))).catch(() => {});
-      } else if (inp) {
-        try { inp.select(); document.execCommand('copy'); toast(T('online.linkCopied')); } catch (x) { /* */ }
+        if (modalOpen && inp) highlightInviteEnd(inp, url);
+        navigator.clipboard.writeText(url)
+          .then(() => finishCopy(true))
+          .catch(() => finishCopy(fallbackCopyText(url, modalOpen ? inp : null)));
+      } else {
+        finishCopy(fallbackCopyText(url, modalOpen ? inp : null));
       }
-      sound('confirm');
     };
     if ($('btn-online-copy')) $('btn-online-copy').onclick = copyOnlineUrl;
     if ($('btn-online-banner-copy')) $('btn-online-banner-copy').onclick = copyOnlineUrl;
@@ -3122,6 +3250,9 @@
       $('btn-online-cancel').onclick = () => {
         if (window.OnlineClient) OnlineClient.leaveRoom(false);
         if ($('online-waiting-box')) $('online-waiting-box').classList.add('hidden');
+        if ($('online-room-code')) $('online-room-code').textContent = '------';
+        if ($('online-invite-url')) $('online-invite-url').value = '';
+        if ($('btn-online-copy')) $('btn-online-copy').disabled = true;
         setOnlineLobbyStatus('online-wait-status', '', false);
         sound('cancel');
       };
@@ -3132,7 +3263,11 @@
         if (!p || !window.OnlineClient) return;
         const tc = $('online-tc-select') ? $('online-tc-select').value : 'none';
         const btn = $('btn-online-create');
+        const copyBtn = $('btn-online-copy');
         btn.disabled = true;
+        if (copyBtn) copyBtn.disabled = true;
+        if ($('online-room-code')) $('online-room-code').textContent = '------';
+        if ($('online-invite-url')) $('online-invite-url').value = '';
         setOnlineLobbyStatus('online-wait-status', T('online.connecting'), false);
         if ($('online-waiting-box')) $('online-waiting-box').classList.remove('hidden');
         try {
@@ -3143,7 +3278,11 @@
             timeControl: tc
           });
           if ($('online-room-code')) $('online-room-code').textContent = sess.roomId;
-          if ($('online-invite-url')) $('online-invite-url').value = sess.inviteUrl;
+          if ($('online-invite-url')) {
+            $('online-invite-url').value = sess.inviteUrl;
+            $('online-invite-url').scrollLeft = $('online-invite-url').scrollWidth;
+          }
+          if (copyBtn) copyBtn.disabled = false;
           setOnlineLobbyStatus('online-wait-status', T('online.waiting'), false);
         } catch (err) {
           if ($('online-waiting-box')) $('online-waiting-box').classList.add('hidden');

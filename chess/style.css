@@ -273,8 +273,29 @@ button, input, select {
   font-size: 14px;
 }
 
-.menu-btn i {
-  margin-right: 8px;
+.menu-btn > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.menu-btn > span > i,
+.menu-sub-btn i {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  min-width: 20px;
+  height: 16px;
+  font-size: 14px;
+  line-height: 1;
+  text-align: center;
+  margin-right: 0;
+  flex-shrink: 0;
+}
+
+.menu-sub-btn {
+  gap: 10px;
 }
 
 .menu-caret {
@@ -2062,14 +2083,30 @@ body[data-mode="online"] #toggle-live {
   display: grid;
   grid-template-columns: 1fr auto;
   gap: 6px;
-  align-items: center;
+  align-items: stretch;
   margin-bottom: 8px;
 }
 
 .online-link-row .popup-input {
+  height: 36px;
+  padding: 0 10px;
+  line-height: 32px;
   margin-bottom: 0;
   font-family: var(--font-mono);
   font-size: 11.5px;
+  min-width: 0;
+}
+
+.online-action-btn {
+  height: 36px;
+  min-height: 36px;
+  padding: 0 14px;
+  font-size: 12px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
 }
 
 .online-status-msg {
@@ -2082,6 +2119,79 @@ body[data-mode="online"] #toggle-live {
 
 .online-status-msg.err {
   color: var(--alert-red);
+}
+
+/* Pass & Play Player Name & Color Switcher */
+.pvp-players-grid {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  align-items: stretch;
+  margin-bottom: 12px;
+}
+
+.pvp-players-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.pvp-player-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pvp-king-badge {
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid var(--nier-dark);
+  transition: background-color 0.16s ease;
+}
+
+.pvp-king-badge.is-white {
+  background: var(--sq-light);
+}
+
+.pvp-king-badge.is-black {
+  background: var(--sq-dark);
+}
+
+.pvp-king-badge svg {
+  width: 28px;
+  height: 28px;
+  display: block;
+}
+
+.pvp-name-input {
+  flex: 1;
+  min-width: 0;
+  height: 38px;
+  margin-bottom: 0 !important;
+}
+
+.pvp-switch-btn {
+  width: 42px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+}
+
+.pvp-switch-btn i {
+  display: inline-block;
+  transform: rotate(90deg);
+  transition: transform 0.2s ease;
+}
+
+.pvp-switch-btn.swapped i {
+  transform: rotate(270deg);
 }
 
 /* Full-Board Pause Cover Overlay (0.2s fade in / fade out) */
@@ -2538,6 +2648,13 @@ body[data-mode="online"] #toggle-live {
   .profile-set label {
     grid-template-columns: 1fr;
     gap: 4px;
+  }
+
+  .online-action-btn {
+    height: 36px;
+    min-height: 36px;
+    padding: 0 11px;
+    font-size: 11.5px;
   }
 }
 

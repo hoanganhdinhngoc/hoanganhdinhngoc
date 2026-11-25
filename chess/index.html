@@ -636,6 +636,22 @@
         </div>
 
         <div id="pvp-setup" class="hidden">
+          <div class="field-label" data-i18n="pvp.playersLabel">NGƯỜI CHƠI &amp; MÀU QUÂN</div>
+          <div class="pvp-players-grid">
+            <div class="pvp-players-rows">
+              <div class="pvp-player-row">
+                <span id="pvp-king-top" class="pvp-king-badge is-white" aria-hidden="true"></span>
+                <input id="pvp-player1-name" class="popup-input pvp-name-input" type="text" maxlength="24" autocomplete="off" data-i18n-placeholder="pvp.p1Placeholder" placeholder="Tên người chơi 1" />
+              </div>
+              <div class="pvp-player-row">
+                <span id="pvp-king-bottom" class="pvp-king-badge is-black" aria-hidden="true"></span>
+                <input id="pvp-player2-name" class="popup-input pvp-name-input" type="text" maxlength="24" autocomplete="off" data-i18n-placeholder="pvp.p2Placeholder" placeholder="Nhập tên người chơi 2..." />
+              </div>
+            </div>
+            <button id="btn-pvp-switch" class="themebutton pvp-switch-btn" type="button" data-i18n-title="pvp.switchColor" title="Đổi màu Trắng / Đen giữa 2 người" aria-label="Switch White and Black">
+              <i class="fas fa-exchange-alt"></i>
+            </button>
+          </div>
           <label class="check-row"><input type="checkbox" id="opt-autoflip" /> <span data-i18n="settings.autoFlip">Tự động xoay bàn cờ mỗi lượt (chế độ 2 người)</span></label>
         </div>
 
@@ -875,7 +891,7 @@
           </select>
 
           <div class="popup-button-group" style="margin-top: 8px; justify-content: flex-start;">
-            <button id="btn-online-create" class="themebutton popup-btn" type="button" data-i18n="online.btnCreate">TẠO PHÒNG &amp; LẤY LINK</button>
+            <button id="btn-online-create" class="themebutton popup-btn online-action-btn" type="button" data-i18n="online.btnCreate">TẠO PHÒNG &amp; LẤY LINK</button>
           </div>
 
           <div id="online-waiting-box" class="online-waiting-box hidden">
@@ -885,12 +901,12 @@
             </div>
             <div class="field-label" data-i18n="online.inviteLink">LINK MỜI ĐỐI THỦ</div>
             <div class="online-link-row">
-              <input id="online-invite-url" class="popup-input" type="text" readonly />
-              <button id="btn-online-copy" class="themebutton" type="button" data-i18n="online.copyLink">SAO CHÉP LINK</button>
+              <input id="online-invite-url" class="popup-input" type="text" readonly inputmode="none" />
+              <button id="btn-online-copy" class="themebutton online-action-btn" type="button" data-i18n="online.copyLink">SAO CHÉP LINK</button>
             </div>
             <div id="online-wait-status" class="online-status-msg" data-i18n="online.waiting">Đang chờ đối thủ kết nối vào phòng...</div>
             <div class="popup-button-group" style="margin-top: 8px; justify-content: flex-start;">
-              <button id="btn-online-cancel" class="themebutton popup-btn" type="button" data-i18n="online.cancelRoom">HỦY PHÒNG</button>
+              <button id="btn-online-cancel" class="themebutton popup-btn online-action-btn" type="button" data-i18n="online.cancelRoom">HỦY PHÒNG</button>
             </div>
           </div>
         </div>
@@ -899,7 +915,7 @@
           <div class="field-label" data-i18n="online.joinLabel">LINK MỜI HOẶC MÃ PHÒNG</div>
           <input id="online-join-input" class="popup-input" type="text" autocomplete="off" data-i18n-placeholder="online.joinPlaceholder" placeholder="Dán link hoặc mã phòng..." />
           <div class="popup-button-group" style="margin-top: 4px; justify-content: flex-start;">
-            <button id="btn-online-join" class="themebutton popup-btn" type="button" data-i18n="online.btnJoin">KẾT NỐI &amp; VÀO VÁN</button>
+            <button id="btn-online-join" class="themebutton popup-btn online-action-btn" type="button" data-i18n="online.btnJoin">KẾT NỐI &amp; VÀO VÁN</button>
           </div>
           <div id="online-join-status" class="online-status-msg"></div>
         </div>

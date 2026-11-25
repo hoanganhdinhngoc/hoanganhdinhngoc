@@ -411,7 +411,7 @@
     'online.copyLink': 'SAO CHÉP LINK',
     'online.linkCopied': 'Đã sao chép link mời phòng chơi!',
     'online.waiting': 'Đang chờ đối thủ kết nối vào phòng...',
-    'online.connecting': 'Đang kết nối tới máy chủ Cloudflare...',
+    'online.connecting': 'Đang kết nối...',
     'online.cancelRoom': 'HỦY PHÒNG',
     'online.errName': 'Vui lòng nhập tên người chơi trước khi kết nối.',
     'online.errInvalidCode': 'Link mời hoặc mã phòng không hợp lệ.',
@@ -435,6 +435,12 @@
     'online.badgeConnected': 'ONLINE · PHÒNG {room}',
     'online.badgeOffline': 'ĐỐI THỦ ĐÃ RỜI PHÒNG',
     'online.leaveConfirm': 'Rời khỏi phòng sẽ ngắt kết nối trận đấu online hiện tại. Tiếp tục?',
+
+    /* ---------- Pass & Play Setup ---------- */
+    'pvp.playersLabel': 'NGƯỜI CHƠI & MÀU QUÂN',
+    'pvp.p1Placeholder': 'Tên người chơi 1',
+    'pvp.p2Placeholder': 'Nhập tên người chơi 2...',
+    'pvp.switchColor': 'Đổi màu Trắng / Đen giữa 2 người',
 
     /* ---------- Pieces ---------- */
     'piece.p': 'Tốt', 'piece.n': 'Mã', 'piece.b': 'Tượng', 'piece.r': 'Xe', 'piece.q': 'Hậu', 'piece.k': 'Vua',
@@ -831,7 +837,7 @@
     'online.copyLink': 'COPY LINK',
     'online.linkCopied': 'Invite link copied to clipboard!',
     'online.waiting': 'Waiting for opponent to join...',
-    'online.connecting': 'Connecting to Cloudflare server...',
+    'online.connecting': 'Connecting...',
     'online.cancelRoom': 'CANCEL ROOM',
     'online.errName': 'Please enter your player name first.',
     'online.errInvalidCode': 'Invalid invite link or room code.',
@@ -855,6 +861,11 @@
     'online.badgeConnected': 'ONLINE · ROOM {room}',
     'online.badgeOffline': 'OPPONENT DISCONNECTED',
     'online.leaveConfirm': 'Leaving will disconnect you from the current online match. Continue?',
+
+    'pvp.playersLabel': 'PLAYERS & PIECE COLOR',
+    'pvp.p1Placeholder': 'Player 1 name',
+    'pvp.p2Placeholder': 'Enter Player 2 name...',
+    'pvp.switchColor': 'Switch White / Black between players',
 
     'piece.p': 'Pawn', 'piece.n': 'Knight', 'piece.b': 'Bishop', 'piece.r': 'Rook', 'piece.q': 'Queen', 'piece.k': 'King',
     'piece.pl.p': 'pawn', 'piece.pl.n': 'knight', 'piece.pl.b': 'bishop', 'piece.pl.r': 'rook', 'piece.pl.q': 'queen', 'piece.pl.k': 'king'
