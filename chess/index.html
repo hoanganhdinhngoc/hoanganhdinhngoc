@@ -64,6 +64,9 @@
             <button id="menu-sub-pvp" class="dropContent menu-sub-btn" type="button">
               <i class="fas fa-user-friends"></i> <span data-i18n="menu.playPvp">2 Người Chơi (Cùng máy)</span>
             </button>
+            <button id="menu-sub-online" class="dropContent menu-sub-btn" type="button">
+              <i class="fas fa-globe"></i> <span data-i18n="menu.playOnline">Player vs. Player (Online)</span>
+            </button>
             <button id="menu-sub-puzzles" class="dropContent menu-sub-btn" type="button">
               <i class="fas fa-puzzle-piece"></i> <span data-i18n="menu.playPuzzles">Cờ Thế &amp; Câu Đố</span>
             </button>
@@ -275,6 +278,13 @@
             </div>
 
             <div class="side-box-body">
+              <!-- Compact Online Match Room Banner -->
+              <div id="pane-online" class="online-banner hidden">
+                <span id="online-status-dot" class="online-dot"></span>
+                <span id="online-room-label" class="online-room-label">ONLINE</span>
+                <button id="btn-online-banner-copy" class="tool-btn online-mini-btn" type="button" data-i18n="online.copyLink">SAO CHÉP LINK</button>
+              </div>
+
               <!-- Compact Bot Dialogue Banner (only when playing vs Bot) -->
               <div id="pane-bot" class="bot-banner hidden">
                 <div id="bot-portrait" class="bot-portrait-mini"></div>
@@ -823,6 +833,98 @@
     </div>
   </div>
 
+  <!-- 11. Player vs. Player (Online) Lobby Modal -->
+  <div id="modal-online" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="popupSection modal-box modal-wide">
+      <h2 class="popupSectionTitle" data-i18n="online.title">PLAYER VS. PLAYER (ONLINE)</h2>
+      <div class="popup-boxContent">
+        <div class="online-guide">
+          <div class="online-guide-title" data-i18n="online.guideTitle">HƯỚNG DẪN KẾT NỐI NHANH</div>
+          <p data-i18n="online.guideStep1">1. Điền Tên &amp; Elo hiển thị trên bảng tên của bạn.</p>
+          <p data-i18n="online.guideStep2">2. Tạo phòng để lấy link mời và gửi cho bạn bè, hoặc dán link / mã phòng vào mục Tham gia rồi bấm Kết nối.</p>
+          <p data-i18n="online.guideStep3">3. Sau khi kết thúc ván, cả hai có thể xem Phân tích ván đấu hoặc bấm Ván mới để thách đấu tiếp ngay trong phòng.</p>
+        </div>
+
+        <div class="field-label" data-i18n="online.yourInfo">THÔNG TIN NGƯỜI CHƠI</div>
+        <div class="online-player-grid">
+          <input id="online-player-name" class="popup-input" type="text" maxlength="24" autocomplete="off" data-i18n-placeholder="profile.name" placeholder="Tên hiển thị" />
+          <input id="online-player-elo" class="popup-input" type="number" min="100" max="3500" step="1" value="600" />
+        </div>
+
+        <div id="online-tab-select" class="seg" style="margin-bottom: 14px;">
+          <button class="seg-btn active" type="button" data-tab="create" data-i18n="online.tabCreate">TẠO PHÒNG MỚI</button>
+          <button class="seg-btn" type="button" data-tab="join" data-i18n="online.tabJoin">THAM GIA PHÒNG</button>
+        </div>
+
+        <div id="online-pane-create">
+          <div class="field-label" data-i18n="ui.yourColor">QUÂN CỦA BẠN</div>
+          <div id="online-color-select" class="seg">
+            <button class="seg-btn active" type="button" data-color="w" data-i18n="ui.white">TRẮNG</button>
+            <button class="seg-btn" type="button" data-color="random" data-i18n="ui.random">NGẪU NHIÊN</button>
+            <button class="seg-btn" type="button" data-color="b" data-i18n="ui.black">ĐEN</button>
+          </div>
+
+          <div class="field-label" data-i18n="ui.timeControl">THỜI GIAN SUY NGHĨ</div>
+          <select id="online-tc-select" class="popup-input">
+            <option value="none" data-i18n="tc.none">Không giới hạn thời gian</option>
+            <option value="3+2">3 + 2 (Blitz)</option>
+            <option value="5+0">5 + 0 (Blitz)</option>
+            <option value="10+0">10 + 0 (Rapid)</option>
+            <option value="15+10">15 + 10 (Rapid)</option>
+            <option value="30+0">30 + 0 (Classical)</option>
+          </select>
+
+          <div class="popup-button-group" style="margin-top: 8px; justify-content: flex-start;">
+            <button id="btn-online-create" class="themebutton popup-btn" type="button" data-i18n="online.btnCreate">TẠO PHÒNG &amp; LẤY LINK</button>
+          </div>
+
+          <div id="online-waiting-box" class="online-waiting-box hidden">
+            <div class="online-code-row">
+              <span class="field-label" style="margin: 0;" data-i18n="online.roomCode">MÃ PHÒNG</span>
+              <span id="online-room-code" class="online-code-pill">------</span>
+            </div>
+            <div class="field-label" data-i18n="online.inviteLink">LINK MỜI ĐỐI THỦ</div>
+            <div class="online-link-row">
+              <input id="online-invite-url" class="popup-input" type="text" readonly />
+              <button id="btn-online-copy" class="themebutton" type="button" data-i18n="online.copyLink">SAO CHÉP LINK</button>
+            </div>
+            <div id="online-wait-status" class="online-status-msg" data-i18n="online.waiting">Đang chờ đối thủ kết nối vào phòng...</div>
+            <div class="popup-button-group" style="margin-top: 8px; justify-content: flex-start;">
+              <button id="btn-online-cancel" class="themebutton popup-btn" type="button" data-i18n="online.cancelRoom">HỦY PHÒNG</button>
+            </div>
+          </div>
+        </div>
+
+        <div id="online-pane-join" class="hidden">
+          <div class="field-label" data-i18n="online.joinLabel">LINK MỜI HOẶC MÃ PHÒNG</div>
+          <input id="online-join-input" class="popup-input" type="text" autocomplete="off" data-i18n-placeholder="online.joinPlaceholder" placeholder="Dán link hoặc mã phòng..." />
+          <div class="popup-button-group" style="margin-top: 4px; justify-content: flex-start;">
+            <button id="btn-online-join" class="themebutton popup-btn" type="button" data-i18n="online.btnJoin">KẾT NỐI &amp; VÀO VÁN</button>
+          </div>
+          <div id="online-join-status" class="online-status-msg"></div>
+        </div>
+
+        <div class="popup-button-group">
+          <button class="themebutton popup-btn" type="button" data-close="modal-online" data-i18n="btn.close">ĐÓNG</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 12. Online Rematch Invitation Modal -->
+  <div id="modal-rematch" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="popupSection modal-box modal-small">
+      <h2 id="rematch-title" class="popupSectionTitle" data-i18n="online.rematchTitle">LỜI MỜI ĐẤU VÁN MỚI</h2>
+      <div class="popup-boxContent">
+        <p id="rematch-text" class="go-text"></p>
+        <div class="popup-button-group">
+          <button id="btn-rematch-accept" class="themebutton popup-btn" type="button" data-i18n="online.rematchAccept">ĐỒNG Ý CHƠI TIẾP</button>
+          <button id="btn-rematch-decline" class="themebutton popup-btn" type="button" data-i18n="online.rematchDecline">TỪ CHỐI</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div id="study-fen-tooltip" class="study-fen-tooltip" role="tooltip" aria-hidden="true"></div>
   <div id="toast" class="toast hidden"></div>
 
@@ -836,6 +938,7 @@
   <script src="puzzles.js"></script>
   <script src="commentary.js"></script>
   <script src="engine.js"></script>
+  <script src="online.js"></script>
   <script src="app.js"></script>
   <script src="study.js"></script>
 </body>

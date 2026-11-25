@@ -2153,7 +2153,7 @@
           const li = document.createElement('li');
           const d = new Date(m.savedAt || m.timestamp || Date.now());
           const displayTitle = m.title || YStorage.formatMatchDefaultTitle(m);
-          const modeKey = m.mode === 'pvp' ? 'pvp' : m.mode === 'puzzle' ? 'puzzle' : m.mode === 'study' ? 'study' : 'bot';
+          const modeKey = m.mode === 'pvp' ? 'pvp' : m.mode === 'online' ? 'online' : m.mode === 'puzzle' ? 'puzzle' : m.mode === 'study' ? 'study' : 'bot';
 
           const titleRow = document.createElement('div');
           titleRow.className = 'ar-title study-ar-title';
@@ -2170,7 +2170,7 @@
 
           const metaRow = document.createElement('div');
           metaRow.className = 'ar-meta';
-          const modeLabel = modeKey === 'pvp' ? T('mode.pvp') : modeKey === 'puzzle' ? T('mode.puzzle') : modeKey === 'study' ? T('mode.study') : T('mode.bot');
+          const modeLabel = modeKey === 'pvp' ? T('mode.pvp') : modeKey === 'online' ? T('mode.online') : modeKey === 'puzzle' ? T('mode.puzzle') : modeKey === 'study' ? T('mode.study') : T('mode.bot');
           metaRow.textContent = d.toLocaleString(langTag) + ' · ' + modeLabel +
             ' · ' + (m.result || '*') + ' · ' + T('archive.moves', { n: (m.moves || []).length });
 

@@ -71,7 +71,8 @@
     matchTimestamp: null,
     matchTitle: null,
     matchFavorite: false,
-    setup: { mode: 'bot', botId: 'cadet', color: 'w' },
+    online: { active: false, roomId: null, inviteUrl: null, opponentConnected: false, gameSeq: 0, rematchPending: false },
+    setup: { mode: 'bot', botId: 'cadet', color: 'w', onlineColor: 'w', onlineTab: 'create' },
     statusFn: null, statusAlert: false,
     coachFn: null,
     goFn: null,
@@ -281,9 +282,39 @@
     pauseHoldRaf = requestAnimationFrame(tick);
   }
 
+  function disconnectOnlineSession() {
+    if (window.OnlineClient && S.online.active) {
+      OnlineClient.leaveRoom(false);
+    }
+    S.online = { active: false, roomId: null, inviteUrl: null, opponentConnected: false, gameSeq: 0, rematchPending: false };
+    syncOnlineBanner();
+  }
+
+  function syncOnlineBanner() {
+    const pane = els.paneOnline;
+    if (!pane) return;
+    const show = !!S.online.active;
+    pane.classList.toggle('hidden', !show);
+    if (!show) return;
+    if (els.onlineStatusDot) {
+      els.onlineStatusDot.classList.toggle('connected', !!S.online.opponentConnected);
+      els.onlineStatusDot.classList.toggle('offline', !S.online.opponentConnected);
+    }
+    if (els.onlineRoomLabel) {
+      els.onlineRoomLabel.textContent = S.online.opponentConnected
+        ? T('online.badgeConnected', { room: S.online.roomId || '' })
+        : T('online.badgeOffline');
+    }
+  }
+
   async function showMenuScreen(force) {
-    if (!force && S.history.length && !S.gameOver && ['bot', 'pvp'].indexOf(S.mode) >= 0) {
+    if (!force && S.online.active) {
+      if (!(await askConfirm(T('online.leaveConfirm')))) return false;
+      disconnectOnlineSession();
+    } else if (!force && S.history.length && !S.gameOver && ['bot', 'pvp'].indexOf(S.mode) >= 0) {
       if (!(await askConfirm(T('alert.confirmNew')))) return false;
+    } else if (S.online.active) {
+      disconnectOnlineSession();
     }
     closeMobileDrawer();
     clearPauseCover();
@@ -318,6 +349,7 @@
   }
 
   function showStudyScreen() {
+    if (S.online.active) disconnectOnlineSession();
     closeMobileDrawer();
     clearPauseCover();
     if (S.annotMode) { S.annotMode = false; syncAnnotToggleUI(); }
@@ -364,7 +396,8 @@
 
   function syncModeChrome() {
     const isPuzzle = S.mode === 'puzzle' && !S.review.active;
-    const brand = isPuzzle ? 'NieR Chess || Puzzle' : 'NieR Chess';
+    const isOnline = S.mode === 'online' && !S.review.active;
+    const brand = isPuzzle ? 'NieR Chess || Puzzle' : (isOnline ? 'NieR Chess || Online' : 'NieR Chess');
     if (els.desktopBrand) els.desktopBrand.textContent = brand;
     if (els.mobileBrand) els.mobileBrand.textContent = brand;
     if (els.sideBoxTitle) els.sideBoxTitle.textContent = T(isPuzzle ? 'ui.puzzleBox' : 'ui.movesReview');
@@ -381,6 +414,7 @@
     if (els.reviewControlsWrap) els.reviewControlsWrap.classList.toggle('hidden', !S.review.active);
     if (els.paneBot) els.paneBot.classList.toggle('hidden', S.mode !== 'bot');
     if (els.panePuzzleActive) els.panePuzzleActive.classList.toggle('hidden', S.mode !== 'puzzle');
+    syncOnlineBanner();
     if (els.coachSource) els.coachSource.classList.add('hidden');
     syncModeChrome();
     syncBoardControlsPlacement();
@@ -402,11 +436,12 @@
     const turn = S.chess.turn();
     if (S.mode === 'pvp') return true;
     if (S.mode === 'bot') return turn === S.playerColor;
+    if (S.mode === 'online') return S.online.active && !S.gameOver && turn === S.playerColor;
     if (S.mode === 'puzzle') return S.puzzle && !S.puzzle.solved && !S.puzzle.busy && !S.puzzle.canonical && turn === S.puzzle.playerColor;
     return false;
   }
   function canInteract() {
-    return !S.paused && !S.annotMode && ['bot', 'pvp', 'puzzle'].indexOf(S.mode) >= 0 && !S.gameOver && !S.viewFen && isHumanTurn() && !promoResolve;
+    return !S.paused && !S.annotMode && ['bot', 'pvp', 'online', 'puzzle'].indexOf(S.mode) >= 0 && !S.gameOver && !S.viewFen && isHumanTurn() && !promoResolve;
   }
   function setStatus(fn, alert) { S.statusFn = fn; S.statusAlert = !!alert; renderStatus(); }
   function renderStatus() {
@@ -596,7 +631,7 @@
     return 'yellow';
   }
   function canUseBoardAnnotations(e) {
-    return !!(e && e.pointerType === 'mouse' && (S.mode === 'bot' || S.mode === 'pvp' || S.mode === 'puzzle') && !S.paused && !S.review.active);
+    return !!(e && e.pointerType === 'mouse' && (S.mode === 'bot' || S.mode === 'pvp' || S.mode === 'online' || S.mode === 'puzzle') && !S.paused && !S.review.active);
   }
   function clearUserAnnotations() {
     S.userAnnot.arrows = [];
@@ -721,7 +756,7 @@
     const hlGroup = els.userAnnotHighlights;
     const arrGroup = els.userAnnotArrows;
     if (!hlGroup || !arrGroup) return;
-    if (S.mode !== 'bot' && S.mode !== 'pvp' && S.mode !== 'puzzle') {
+    if (S.mode !== 'bot' && S.mode !== 'pvp' && S.mode !== 'online' && S.mode !== 'puzzle') {
       if (lastAnnotRenderSig !== '') {
         hlGroup.innerHTML = '';
         arrGroup.innerHTML = '';
@@ -905,7 +940,7 @@
       }
       return;
     }
-    if (S.annotMode && (S.mode === 'bot' || S.mode === 'pvp' || S.mode === 'puzzle') && !S.paused && !S.review.active && (e.button === 0 || e.button === undefined)) {
+    if (S.annotMode && (S.mode === 'bot' || S.mode === 'pvp' || S.mode === 'online' || S.mode === 'puzzle') && !S.paused && !S.review.active && (e.button === 0 || e.button === undefined)) {
       e.preventDefault();
       YoRHaAudio.init();
       const sq = squareFromPoint(e.clientX, e.clientY);
@@ -1100,7 +1135,7 @@
     S.clock[color] += S.clock.inc;
   }
 
-  function playerMove(mv, animate) {
+  function playerMove(mv, animate, fromRemote) {
     const fenBefore = S.chess.fen();
     const m = S.chess.move(mv);
     if (!m) { sound('error'); toast(T('alert.illegal'), true); render(); return; }
@@ -1114,7 +1149,17 @@
     render();
     renderMoveList();
     if (S.mode === 'puzzle') { puzzleOnMove(entry); return; }
-    if (checkGameEnd()) return;
+    const ended = checkGameEnd();
+    if (S.mode === 'online' && !fromRemote && window.OnlineClient && S.online.active) {
+      OnlineClient.sendMove({
+        uci: entry.uci,
+        san: m.san,
+        fenAfter: S.chess.fen(),
+        result: ended ? S.result : null,
+        termination: ended ? S.termination : null
+      });
+    }
+    if (ended) return;
     autoSaveCurrentMatch();
     startTurn();
     if (S.liveEval) coachEvaluate(entry);
@@ -1138,6 +1183,12 @@
       } else {
         botMove();
       }
+    } else if (S.mode === 'online') {
+      const myTurn = turn === S.playerColor;
+      const oppColor = S.playerColor === 'w' ? 'b' : 'w';
+      const oppName = playerLabel(oppColor === 'w' ? S.white : S.black).name;
+      setStatus(() => (S.chess.in_check() ? T('status.check') + ' ' : '') +
+        (myTurn ? T('online.turnYou', { color: sideName(turn) }) : T('online.turnOpp', { name: oppName })), S.chess.in_check());
     }
     startClock();
   }
@@ -1184,7 +1235,7 @@
   }
 
   function autoSaveCurrentMatch() {
-    if ((S.mode !== 'bot' && S.mode !== 'pvp') || !S.history.length) return;
+    if ((S.mode !== 'bot' && S.mode !== 'pvp' && S.mode !== 'online') || !S.history.length) return;
     try {
       const rec = buildMatchRecord();
       const saved = YStorage.saveMatch(rec);
@@ -1307,7 +1358,11 @@
     if (S.clock[turn] <= 0) {
       S.clock[turn] = 0;
       renderPlayers();
-      endGame(turn === 'w' ? '0-1' : '1-0', 'timeout');
+      if (S.mode === 'online' && window.OnlineClient && S.online.active && OnlineClient.isConnected()) {
+        OnlineClient.sendTimeout();
+      } else {
+        endGame(turn === 'w' ? '0-1' : '1-0', 'timeout');
+      }
       return;
     }
     if (S.clock[turn] < 10000 && Math.floor(S.clock[turn] / 1000) !== Math.floor((S.clock[turn] + 200) / 1000)) sound('tick');
@@ -1315,9 +1370,13 @@
   }
 
   /* ------------------------------------------------------------------
-     New game / takeback / resign
+     New game / takeback / resign / online lobby
      ------------------------------------------------------------------ */
-  function resetCommon() {
+  function resetCommon(opts) {
+    opts = opts || {};
+    if (!opts.keepOnline && S.online.active) {
+      disconnectOnlineSession();
+    }
     S.moveToken++;
     S.review.token++;
     Engine.cancelAnalysis();
@@ -1351,6 +1410,280 @@
     renderBotRoster();
     if (els.tcSelect) syncCustomSelect(els.tcSelect);
     openModal('modal-setup');
+  }
+
+  function switchOnlineTab(tab) {
+    S.setup.onlineTab = tab === 'join' ? 'join' : 'create';
+    document.querySelectorAll('#online-tab-select .seg-btn').forEach(x => {
+      x.classList.toggle('active', x.dataset.tab === S.setup.onlineTab);
+    });
+    if ($('online-pane-create')) $('online-pane-create').classList.toggle('hidden', S.setup.onlineTab !== 'create');
+    if ($('online-pane-join')) $('online-pane-join').classList.toggle('hidden', S.setup.onlineTab !== 'join');
+  }
+
+  function setOnlineLobbyStatus(elId, msg, isErr) {
+    const el = $(elId);
+    if (!el) return;
+    el.textContent = msg || '';
+    el.classList.toggle('err', !!isErr);
+  }
+
+  function openOnlineModal(initialTab, prefillJoin) {
+    const profile = YStorage.getProfile();
+    const nameEl = $('online-player-name');
+    const eloEl = $('online-player-elo');
+    if (nameEl) nameEl.value = profile.p1.name || 'Player 1';
+    if (eloEl) eloEl.value = profile.p1.elo || 600;
+    if ($('online-tc-select')) {
+      $('online-tc-select').value = YStorage.getSettings().timeControl || 'none';
+      syncCustomSelect($('online-tc-select'));
+    }
+    const waitBox = $('online-waiting-box');
+    if (waitBox) waitBox.classList.toggle('hidden', !(window.OnlineClient && OnlineClient.isActive() && OnlineClient.getSession().status === 'waiting'));
+    if ($('online-join-input')) {
+      $('online-join-input').value = prefillJoin != null ? String(prefillJoin) : '';
+    }
+    setOnlineLobbyStatus('online-join-status', '', false);
+    switchOnlineTab(initialTab || 'create');
+    openModal('modal-online');
+    if (nameEl && prefillJoin) {
+      setTimeout(() => { try { nameEl.focus(); nameEl.select(); } catch (x) { /* */ } }, 20);
+    }
+  }
+
+  function startOnlineGameFromRoomState(roomState, yourColor) {
+    if (!roomState) return;
+    if (S.review.active) exitReview();
+    S.liveEval = false;
+    YStorage.saveSettings({ liveEval: false });
+    resetCommon({ keepOnline: true });
+
+    const oppColor = yourColor === 'w' ? 'b' : 'w';
+    S.online.active = true;
+    S.online.roomId = roomState.roomId;
+    S.online.inviteUrl = window.OnlineClient ? OnlineClient.buildInviteUrl(roomState.roomId) : '';
+    S.online.opponentConnected = !!(roomState.players && roomState.players[oppColor] && roomState.players[oppColor].connected);
+    S.online.gameSeq = roomState.gameSeq || 1;
+    S.online.rematchPending = false;
+
+    closeModal('modal-online');
+    closeModal('modal-rematch');
+    closeModal('modal-gameover');
+    closeModal('modal-setup');
+    showGameScreen();
+
+    S.mode = 'online';
+    S.playerColor = yourColor === 'b' ? 'b' : 'w';
+    S.orientation = S.playerColor;
+    S.bot = null;
+    S.chess = new Chess();
+    S.startFen = roomState.startFen || Engine.START_FEN;
+    if (S.startFen !== Engine.START_FEN) S.chess.load(S.startFen);
+
+    S.history = [];
+    for (const mv of roomState.moves || []) {
+      const fenBefore = S.chess.fen();
+      const m = S.chess.move(mv.uci ? Engine.parseUci(mv.uci) : mv.san);
+      if (!m) break;
+      S.history.push({
+        ply: S.history.length + 1,
+        san: m.san,
+        uci: m.from + m.to + (m.promotion || ''),
+        color: m.color,
+        piece: m.piece,
+        captured: m.captured || null,
+        flags: m.flags,
+        fenBefore,
+        fenAfter: S.chess.fen(),
+        cls: null,
+        ctx: null
+      });
+    }
+
+    const wP = roomState.players && roomState.players.w;
+    const bP = roomState.players && roomState.players.b;
+    S.white = { name: (wP && wP.name) || 'White', elo: (wP && wP.elo) || 600, isBot: false, botId: null };
+    S.black = { name: (bP && bP.name) || 'Black', elo: (bP && bP.elo) || 600, isBot: false, botId: null };
+
+    S.timeControl = roomState.timeControl || 'none';
+    const rc = roomState.clock;
+    if (rc && rc.enabled) {
+      let wMs = rc.w;
+      let bMs = rc.b;
+      if (roomState.status === 'playing' && S.history.length >= 1 && rc.lastTs > 0) {
+        const elapsed = Math.max(0, Date.now() - rc.lastTs);
+        if (S.chess.turn() === 'w') wMs = Math.max(0, wMs - elapsed);
+        else bMs = Math.max(0, bMs - elapsed);
+      }
+      S.clock = { enabled: true, w: wMs, b: bMs, inc: rc.inc || 0, last: Date.now(), timer: null };
+    } else {
+      setupClock('none');
+    }
+
+    if (roomState.status === 'ended' && roomState.result) {
+      S.gameOver = true;
+      S.result = roomState.result;
+      S.termination = roomState.termination || 'resign';
+    }
+
+    syncAnalysisVisibility();
+    buildBoard();
+    render();
+    renderMoveList();
+    renderPlayers();
+    sound('start');
+
+    if (S.gameOver) {
+      endGame(S.result, S.termination);
+    } else {
+      startTurn();
+    }
+  }
+
+  function applyRemoteOnlineMsg(msg) {
+    if (!S.online.active || msg.gameSeq !== S.online.gameSeq) return;
+    if (msg.clock && msg.clock.enabled && S.clock.enabled) {
+      S.clock.w = msg.clock.w;
+      S.clock.b = msg.clock.b;
+      S.clock.last = Date.now();
+    }
+    if (msg.type === 'move' && msg.move) {
+      const mv = msg.move;
+      if (mv.color === S.playerColor && S.history.length >= mv.ply) {
+        renderPlayers();
+        return;
+      }
+      playerMove(Engine.parseUci(mv.uci), true, true);
+      if (msg.status === 'ended' && !S.gameOver && msg.result) {
+        endGame(msg.result, msg.termination || 'checkmate');
+      }
+      return;
+    }
+    if (msg.type === 'game_over' && !S.gameOver && msg.result) {
+      endGame(msg.result, msg.termination || 'resign');
+    }
+  }
+
+  async function handleNewGameClick() {
+    if (checkPausedBlock()) return;
+    if (S.mode === 'puzzle') {
+      renderPuzzleFilter();
+      renderPuzzleList();
+      openModal('modal-puzzles');
+      return;
+    }
+    if (S.online.active) {
+      if (!S.gameOver && !S.review.active) {
+        if (!(await askConfirm(T('online.leaveConfirm')))) return;
+        disconnectOnlineSession();
+        openOnlineModal('create');
+        return;
+      }
+      if (window.OnlineClient && OnlineClient.isConnected() && S.online.opponentConnected) {
+        const oppColor = S.playerColor === 'w' ? 'b' : 'w';
+        const oppName = playerLabel(oppColor === 'w' ? S.white : S.black).name;
+        OnlineClient.requestRematch();
+        toast(T('online.rematchSent', { name: oppName }));
+        sound('confirm');
+      } else {
+        disconnectOnlineSession();
+        toast(T('online.rematchUnavailable'), true);
+        openOnlineModal('create');
+      }
+      return;
+    }
+    openSetupModal(S.setup.mode);
+  }
+
+  function readOnlinePlayerInputs() {
+    const nameEl = $('online-player-name');
+    const eloEl = $('online-player-elo');
+    const name = String(nameEl ? nameEl.value : '').trim().slice(0, 24);
+    if (!name) {
+      toast(T('online.errName'), true);
+      sound('error');
+      if (nameEl) nameEl.focus();
+      return null;
+    }
+    const elo = Math.max(100, Math.min(3500, parseInt(eloEl ? eloEl.value : 600, 10) || 600));
+    const cur = YStorage.getProfile();
+    YStorage.saveProfile({ p1: { name, elo }, p2: cur.p2, onboarded: true });
+    return { name, elo };
+  }
+
+  function initOnlineClientHandlers() {
+    if (!window.OnlineClient) return;
+    OnlineClient.setHandlers({
+      onRoomState(msg) {
+        const st = msg.state;
+        if (!st) return;
+        const sess = OnlineClient.getSession();
+        if (st.status === 'waiting') {
+          if ($('online-room-code')) $('online-room-code').textContent = sess.roomId || st.roomId;
+          if ($('online-invite-url')) $('online-invite-url').value = sess.inviteUrl || '';
+          if ($('online-waiting-box')) $('online-waiting-box').classList.remove('hidden');
+          setOnlineLobbyStatus('online-wait-status', T('online.waiting'), false);
+        } else if (st.status === 'playing' || st.status === 'ended') {
+          startOnlineGameFromRoomState(st, msg.yourColor);
+        }
+      },
+      onGameStart(st, yourColor) {
+        startOnlineGameFromRoomState(st, yourColor);
+        const oppColor = yourColor === 'w' ? 'b' : 'w';
+        const oppName = (st.players && st.players[oppColor] && st.players[oppColor].name) || '';
+        toast(T('online.connected', { room: st.roomId, opp: oppName }));
+      },
+      onMove(msg) {
+        applyRemoteOnlineMsg(msg);
+      },
+      onGameOver(msg) {
+        applyRemoteOnlineMsg(msg);
+      },
+      onOpponentStatus(msg) {
+        if (!S.online.active || msg.color === S.playerColor) return;
+        S.online.opponentConnected = !!msg.connected;
+        syncOnlineBanner();
+        const oppName = msg.name || playerLabel((S.playerColor === 'w' ? S.black : S.white)).name;
+        toast(T(msg.connected ? 'online.oppReconnected' : 'online.oppDisconnected', { name: oppName }), !msg.connected);
+      },
+      onOpponentLeft(msg) {
+        if (!S.online.active || msg.color === S.playerColor) return;
+        S.online.opponentConnected = false;
+        syncOnlineBanner();
+        toast(T('online.oppLeft', { name: msg.name || '' }), true);
+      },
+      onRematchSent() {
+        S.online.rematchPending = true;
+      },
+      onRematchOffer(msg) {
+        closeModal('modal-gameover');
+        const txt = $('rematch-text');
+        if (txt) txt.textContent = T('online.rematchOffer', { name: msg.fromName || '' });
+        openModal('modal-rematch');
+      },
+      onRematchDeclined(msg) {
+        S.online.rematchPending = false;
+        toast(T('online.rematchDeclined', { name: msg.byName || '' }), true);
+        sound('cancel');
+      },
+      onRematchUnavailable() {
+        S.online.opponentConnected = false;
+        syncOnlineBanner();
+        toast(T('online.rematchUnavailable'), true);
+      },
+      onRematchStart(msg) {
+        if (!msg || !msg.state) return;
+        startOnlineGameFromRoomState(msg.state, msg.yourColor);
+        toast(T('online.rematchStarted', { color: sideName(msg.yourColor) }));
+      },
+      onError(errCode) {
+        if (errCode === 'connect_failed' || errCode === 'connection_lost') {
+          setOnlineLobbyStatus('online-join-status', T('online.errConnect'), true);
+          setOnlineLobbyStatus('online-wait-status', T('online.errConnect'), true);
+          toast(T('online.errConnect'), true);
+        }
+      }
+    });
   }
 
   async function newGame(opts) {
@@ -1435,8 +1768,16 @@
 
   async function resign() {
     if (checkPausedBlock()) return;
-    if (['bot', 'pvp'].indexOf(S.mode) < 0 || S.gameOver) return;
+    if (['bot', 'pvp', 'online'].indexOf(S.mode) < 0 || S.gameOver) return;
     if (!(await askConfirm(T('alert.confirmResign')))) return;
+    if (S.mode === 'online') {
+      if (window.OnlineClient && OnlineClient.isConnected()) {
+        OnlineClient.sendResign();
+      } else {
+        endGame(S.playerColor === 'w' ? '0-1' : '1-0', 'resign');
+      }
+      return;
+    }
     const loser = S.mode === 'bot' ? S.playerColor : S.chess.turn();
     endGame(loser === 'w' ? '0-1' : '1-0', 'resign');
   }
@@ -2010,7 +2351,7 @@
       const displayTitle = m.title || YStorage.formatMatchDefaultTitle(m);
       li.innerHTML = '<div class="ar-title">' + (m.favorite ? '<span class="ar-fav">★</span> ' : '') +
         escapeHtml(displayTitle) + '</div>' +
-        '<div class="ar-meta">' + d.toLocaleString(I18N.lang === 'vi' ? 'vi-VN' : 'en-US') + ' · ' + T('mode.' + (m.mode === 'pvp' ? 'pvp' : m.mode === 'puzzle' ? 'puzzle' : m.mode === 'study' ? 'study' : 'bot')) +
+        '<div class="ar-meta">' + d.toLocaleString(I18N.lang === 'vi' ? 'vi-VN' : 'en-US') + ' · ' + T('mode.' + (m.mode === 'pvp' ? 'pvp' : m.mode === 'online' ? 'online' : m.mode === 'puzzle' ? 'puzzle' : m.mode === 'study' ? 'study' : 'bot')) +
         ' · ' + (m.result || '*') + ' · ' + T('archive.moves', { n: (m.moves || []).length }) +
         (m.accuracy ? ' · ' + m.accuracy.white + '% / ' + m.accuracy.black + '%' : '') + '</div>' +
         '<div class="ar-actions"></div>';
@@ -2324,7 +2665,7 @@
      Custom NieR Dropdowns
      ------------------------------------------------------------------ */
   function syncCustomSelect(selectEl) {
-    if (!selectEl) return;
+    if (!selectEl || !selectEl.parentNode) return;
     let wrap = selectEl.parentNode;
     if (!wrap || !wrap.classList.contains('nier-select-wrap')) {
       wrap = document.createElement('div');
@@ -2523,7 +2864,7 @@
     const next = !!on;
     if (next) {
       if (checkPausedBlock()) return;
-      if (S.review.active || ['bot', 'pvp', 'puzzle'].indexOf(S.mode) < 0) return;
+      if (S.review.active || ['bot', 'pvp', 'online', 'puzzle'].indexOf(S.mode) < 0) return;
       S.annotMode = true;
       S.selected = null;
       S.legal = [];
@@ -2548,6 +2889,7 @@
       els.pauseHoldText.textContent = T(isMobilePauseMode() ? 'pause.hold' : 'pause.click');
     }
     if (els.tcSelect) syncCustomSelect(els.tcSelect);
+    if ($('online-tc-select')) syncCustomSelect($('online-tc-select'));
     syncSettingsUI();
     renderBotRoster();
     renderBotCard();
@@ -2623,6 +2965,7 @@
     };
     $('menu-sub-bot').onclick = () => openSetupModal('bot');
     $('menu-sub-pvp').onclick = () => openSetupModal('pvp');
+    if ($('menu-sub-online')) $('menu-sub-online').onclick = () => openOnlineModal('create');
     $('menu-sub-puzzles').onclick = () => {
       renderPuzzleFilter();
       renderPuzzleList();
@@ -2756,17 +3099,106 @@
     };
     $('opt-autoflip').onchange = (e) => { YStorage.saveSettings({ autoFlip: e.target.checked }); syncSettingsUI(); };
 
-    // Board controls
-    $('btn-new').onclick = () => {
-      if (checkPausedBlock()) return;
-      if (S.mode === 'puzzle') {
-        renderPuzzleFilter();
-        renderPuzzleList();
-        openModal('modal-puzzles');
-      } else {
-        openSetupModal(S.setup.mode);
+    // Online Lobby Modal
+    document.querySelectorAll('#online-tab-select .seg-btn').forEach(b => b.onclick = () => switchOnlineTab(b.dataset.tab));
+    document.querySelectorAll('#online-color-select .seg-btn').forEach(b => b.onclick = () => {
+      S.setup.onlineColor = b.dataset.color || 'w';
+      document.querySelectorAll('#online-color-select .seg-btn').forEach(x => x.classList.toggle('active', x === b));
+    });
+    const copyOnlineUrl = () => {
+      const inp = $('online-invite-url');
+      const url = (inp && inp.value) || S.online.inviteUrl || (window.OnlineClient && OnlineClient.getSession().inviteUrl) || '';
+      if (!url) return;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url).then(() => toast(T('online.linkCopied'))).catch(() => {});
+      } else if (inp) {
+        try { inp.select(); document.execCommand('copy'); toast(T('online.linkCopied')); } catch (x) { /* */ }
       }
+      sound('confirm');
     };
+    if ($('btn-online-copy')) $('btn-online-copy').onclick = copyOnlineUrl;
+    if ($('btn-online-banner-copy')) $('btn-online-banner-copy').onclick = copyOnlineUrl;
+    if ($('btn-online-cancel')) {
+      $('btn-online-cancel').onclick = () => {
+        if (window.OnlineClient) OnlineClient.leaveRoom(false);
+        if ($('online-waiting-box')) $('online-waiting-box').classList.add('hidden');
+        setOnlineLobbyStatus('online-wait-status', '', false);
+        sound('cancel');
+      };
+    }
+    if ($('btn-online-create')) {
+      $('btn-online-create').onclick = async () => {
+        const p = readOnlinePlayerInputs();
+        if (!p || !window.OnlineClient) return;
+        const tc = $('online-tc-select') ? $('online-tc-select').value : 'none';
+        const btn = $('btn-online-create');
+        btn.disabled = true;
+        setOnlineLobbyStatus('online-wait-status', T('online.connecting'), false);
+        if ($('online-waiting-box')) $('online-waiting-box').classList.remove('hidden');
+        try {
+          const sess = await OnlineClient.createRoom({
+            name: p.name,
+            elo: p.elo,
+            color: S.setup.onlineColor || 'w',
+            timeControl: tc
+          });
+          if ($('online-room-code')) $('online-room-code').textContent = sess.roomId;
+          if ($('online-invite-url')) $('online-invite-url').value = sess.inviteUrl;
+          setOnlineLobbyStatus('online-wait-status', T('online.waiting'), false);
+        } catch (err) {
+          if ($('online-waiting-box')) $('online-waiting-box').classList.add('hidden');
+          toast(T('online.errConnect'), true);
+          sound('error');
+        } finally {
+          btn.disabled = false;
+        }
+      };
+    }
+    if ($('btn-online-join')) {
+      $('btn-online-join').onclick = async () => {
+        const p = readOnlinePlayerInputs();
+        if (!p || !window.OnlineClient) return;
+        const raw = $('online-join-input') ? $('online-join-input').value : '';
+        const roomId = OnlineClient.extractRoomId(raw);
+        if (!roomId) {
+          setOnlineLobbyStatus('online-join-status', T('online.errInvalidCode'), true);
+          sound('error');
+          return;
+        }
+        const btn = $('btn-online-join');
+        btn.disabled = true;
+        setOnlineLobbyStatus('online-join-status', T('online.connecting'), false);
+        try {
+          await OnlineClient.joinRoom({ roomInput: roomId, name: p.name, elo: p.elo });
+        } catch (err) {
+          const code = err && err.message ? err.message : '';
+          const msgKey = code === 'room_not_found' ? 'online.errRoomNotFound'
+            : (code === 'room_full' ? 'online.errRoomFull'
+              : (code === 'invalid_room' ? 'online.errInvalidCode' : 'online.errConnect'));
+          setOnlineLobbyStatus('online-join-status', T(msgKey), true);
+          sound('error');
+        } finally {
+          btn.disabled = false;
+        }
+      };
+    }
+    if ($('btn-rematch-accept')) {
+      $('btn-rematch-accept').onclick = () => {
+        closeModal('modal-rematch');
+        if (window.OnlineClient) OnlineClient.acceptRematch();
+        sound('confirm');
+      };
+    }
+    if ($('btn-rematch-decline')) {
+      $('btn-rematch-decline').onclick = () => {
+        closeModal('modal-rematch');
+        if (window.OnlineClient) OnlineClient.declineRematch();
+        sound('cancel');
+      };
+    }
+
+    // Board controls
+    $('btn-new').onclick = handleNewGameClick;
     $('btn-flip').onclick = flip;
     $('btn-takeback').onclick = takeback;
     $('btn-resign').onclick = resign;
@@ -2795,7 +3227,7 @@
 
     // Game Over Modal
     $('btn-go-review').onclick = () => { closeModal('modal-gameover'); startReview(); };
-    $('btn-go-new').onclick = () => { closeModal('modal-gameover'); openSetupModal(S.setup.mode); };
+    $('btn-go-new').onclick = () => { closeModal('modal-gameover'); handleNewGameClick(); };
 
     // Puzzles
     els.puzzleFilter.onchange = (e) => { S.puzzleFilter = e.target.value; renderPuzzleList(); };
@@ -2879,6 +3311,9 @@
     els.toast = $('toast');
     els.paneCoach = $('pane-coach');
     els.paneBot = $('pane-bot');
+    els.paneOnline = $('pane-online');
+    els.onlineStatusDot = $('online-status-dot');
+    els.onlineRoomLabel = $('online-room-label');
     els.panePuzzleActive = $('pane-puzzle-active');
     els.reviewControlsWrap = $('review-controls-wrap');
     els.coachBadge = $('coach-badge'); els.coachEval = $('coach-eval'); els.coachSource = $('coach-source');
@@ -2913,11 +3348,20 @@
     S.white = { name: profile.p1.name, elo: profile.p1.elo, isBot: false, botId: null };
     S.black = { name: profile.p2.name, elo: profile.p2.elo, isBot: false, botId: null };
 
+    initOnlineClientHandlers();
     bind();
     buildBoard();
     applyLanguage();
     render();
     syncAnalysisVisibility();
+
+    try {
+      const sp = new URLSearchParams(window.location.search || '');
+      const joinCode = sp.get('join') || sp.get('room');
+      if (joinCode && window.OnlineClient && OnlineClient.extractRoomId(joinCode)) {
+        openOnlineModal('join', window.location.href || joinCode);
+      }
+    } catch (x) { /* ignore */ }
 
     setStatus(() => T('status.engineLoading'));
     Engine.init().then(kind => {
@@ -2934,6 +3378,7 @@
     newGame, loadPuzzle, startReview, applyLanguage, render, syncSettingsUI,
     syncBoardControlsPlacement,
     setLiveEval, setAnnotMode, canInteract, askMatchName, autoSaveCurrentMatch, renderArchive,
+    openOnlineModal, startOnlineGameFromRoomState, handleNewGameClick,
     drawArrows, clearArrows, clearUserAnnotations, userAnnotColor, canUseBoardAnnotations, buildAnnotArrowPath,
     takeback, resign, flip, showOptimal,
     reviewGo, nextCritical, buildMatchRecord, onPlayerMove: playerMove,

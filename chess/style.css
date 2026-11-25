@@ -1941,6 +1941,149 @@ body[data-mode="review"] .annot-toggle-btn {
   display: none !important;
 }
 
+/* Online PvP Mode Rules */
+body[data-mode="online"] #btn-takeback,
+body[data-mode="online"] #toggle-live {
+  display: none !important;
+}
+
+.online-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: rgba(216, 210, 186, 0.72);
+  border: 1.5px solid var(--nier-dark);
+  border-left: 4px solid var(--nier-dark);
+  font-size: 11.5px;
+  font-weight: 700;
+}
+
+.online-banner.hidden {
+  display: none !important;
+}
+
+.online-dot {
+  width: 9px;
+  height: 9px;
+  flex: none;
+  border: 1px solid var(--nier-dark);
+  background: var(--inacc-amber);
+}
+
+.online-dot.connected {
+  background: var(--best-green);
+}
+
+.online-dot.offline {
+  background: var(--alert-red);
+}
+
+.online-room-label {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  color: var(--nier-dark);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.online-mini-btn {
+  padding: 3px 8px;
+  min-height: 24px;
+  font-size: 10px;
+  flex-shrink: 0;
+}
+
+.online-guide {
+  padding: 9px 11px;
+  margin-bottom: 12px;
+  background: rgba(216, 210, 186, 0.55);
+  border: 1.5px solid var(--nier-dark);
+  border-left: 4px solid var(--nier-dark);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.online-guide-title {
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.7px;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+  color: var(--nier-dark);
+}
+
+.online-guide p {
+  margin: 2px 0;
+}
+
+.online-player-grid {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.online-player-grid .popup-input {
+  margin-bottom: 0;
+}
+
+.online-waiting-box {
+  margin-top: 12px;
+  padding: 10px 12px;
+  background: rgba(235, 230, 212, 0.85);
+  border: 1.5px solid var(--nier-dark);
+  border-left: 4px solid var(--best-green);
+}
+
+.online-code-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.online-code-pill {
+  font-family: var(--font-mono);
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  padding: 2px 10px;
+  background: var(--nier-dark);
+  color: var(--nier-text-light);
+}
+
+.online-link-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 6px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.online-link-row .popup-input {
+  margin-bottom: 0;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+}
+
+.online-status-msg {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--nier-dark);
+  margin-top: 8px;
+  min-height: 18px;
+}
+
+.online-status-msg.err {
+  color: var(--alert-red);
+}
+
 /* Full-Board Pause Cover Overlay (0.2s fade in / fade out) */
 .board-pause-cover {
   position: absolute;
@@ -2220,6 +2363,10 @@ body[data-mode="review"] .annot-toggle-btn {
 
   body[data-mode="review"] .board-controls {
     grid-template-columns: repeat(2, 1fr);
+  }
+
+  body[data-mode="online"] .board-controls {
+    grid-template-columns: repeat(3, 1fr);
   }
 
   body[data-mode="review"] .file-actions {

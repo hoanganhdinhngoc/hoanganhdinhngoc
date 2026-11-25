@@ -1,0 +1,26 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "nier-chess-online",
+  "main": "chess-online-worker.js",
+  "compatibility_date": "2025-05-01",
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "CHESS_ROOMS",
+        "class_name": "ChessRoom"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["ChessRoom"]
+    }
+  ],
+  "routes": [
+    {
+      "pattern": "chess-ws.hoanganhdinhngoc.io.vn",
+      "custom_domain": true
+    }
+  ]
+}
