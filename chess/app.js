@@ -1143,14 +1143,43 @@
   }
 
   async function prefetch() {
+    if (S.review.active || !S.liveEval || ['bot', 'pvp', 'puzzle'].indexOf(S.mode) < 0) return;
+    if (S.chess.in_checkmate()) {
+      const whiteWon = S.chess.turn() === 'b';
+      if (els.evalFill) els.evalFill.style.height = whiteWon ? '100%' : '0%';
+      if (els.evalText) els.evalText.textContent = whiteWon ? '1-0' : '0-1';
+      if (els.coachEval && !S.coach.entry) els.coachEval.textContent = whiteWon ? '1-0' : '0-1';
+      return;
+    }
+    if (S.chess.in_draw() || S.chess.in_stalemate() || S.chess.in_threefold_repetition() || S.chess.insufficient_material()) {
+      updateEvalBar({ cpWhite: 0, mate: null });
+      if (els.coachEval && !S.coach.entry) els.coachEval.textContent = '0.00';
+      return;
+    }
     const fen = S.chess.fen();
     const token = S.moveToken;
-    const a = await Engine.analyze(fen, { multiPV: 3, tag: 'prefetch', priority: 'normal' });
-    if (!a || token !== S.moveToken || S.chess.fen() !== fen) return;
-    updateEvalBar(a);
+    const hasFreshEntryCoach = !!(S.coach.entry && S.coach.entry === S.history[S.history.length - 1]);
     if (!S.coach.entry) {
-      S.coachFn = null;
-      els.coachEval.textContent = Engine.formatEval(a.cpWhite, a.mate);
+      if (els.coachEval) els.coachEval.textContent = '…';
+      S.coachFn = () => T('status.analyzing');
+      renderCoachText();
+    } else if (!hasFreshEntryCoach && els.coachEval) {
+      els.coachEval.textContent = '…';
+    }
+    const a = await Engine.analyze(fen, { multiPV: 3, tag: 'prefetch', priority: 'normal' });
+    if (!a || !S.liveEval || S.review.active || token !== S.moveToken || S.chess.fen() !== fen) return;
+    updateEvalBar(a);
+    const last = S.history[S.history.length - 1];
+    if (!S.coach.entry || S.coach.entry !== last) {
+      if (els.coachEval) els.coachEval.textContent = Engine.formatEval(a.cpWhite, a.mate);
+    }
+    if (!S.coach.entry) {
+      if (S.mode === 'bot' && S.bot && last && last.color !== S.playerColor) {
+        S.coachFn = () => T('coach.botMove', { name: I18N.pick(S.bot.name), move: last.san });
+      } else {
+        S.coachFn = null;
+      }
+      renderCoachText();
     }
   }
 
@@ -2453,19 +2482,27 @@
     syncSettingsUI();
     sound(on ? 'confirm' : 'cancel');
     if (!on) {
+      Engine.cancelAnalysis('prefetch');
+      Engine.cancelAnalysis('coach');
       exitPreview(true);
       if (!S.review.active) resetEvalBar();
       renderCoachText();
-    } else {
-      // Evaluate the latest move or current position immediately when toggled ON
+    } else if (!S.review.active) {
+      // Evaluate the latest move or current position immediately when toggled ON at any moment
       const last = S.history[S.history.length - 1];
-      if (last && !last.cls) {
+      const canCoachLast = !!(last && (S.mode !== 'bot' || last.color === S.playerColor));
+      if (canCoachLast && !last.cls) {
         coachEvaluate(last);
-      } else if (last && last.cls) {
+      } else if (canCoachLast && last.cls) {
         S.coach.entry = last;
         renderCoach();
         if (last.ctx && last.ctx.after) updateEvalBar(last.ctx.after);
-      } else if (isHumanTurn() && !S.gameOver) {
+        else prefetch();
+      } else {
+        if (!S.coach.entry && els.coachBadge) {
+          els.coachBadge.className = 'cls-badge cls-none';
+          els.coachBadge.innerHTML = '—';
+        }
         prefetch();
       }
     }
@@ -2896,7 +2933,7 @@
     showMenuScreen, showGameScreen, showStudyScreen,
     newGame, loadPuzzle, startReview, applyLanguage, render, syncSettingsUI,
     syncBoardControlsPlacement,
-    setAnnotMode, canInteract, askMatchName, autoSaveCurrentMatch, renderArchive,
+    setLiveEval, setAnnotMode, canInteract, askMatchName, autoSaveCurrentMatch, renderArchive,
     drawArrows, clearArrows, clearUserAnnotations, userAnnotColor, canUseBoardAnnotations, buildAnnotArrowPath,
     takeback, resign, flip, showOptimal,
     reviewGo, nextCritical, buildMatchRecord, onPlayerMove: playerMove,
