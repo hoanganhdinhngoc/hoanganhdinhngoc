@@ -1432,6 +1432,7 @@
     if (p2El) {
       p2El.value = S.setup.pvpP2Name || (profile.p2.name && profile.p2.name !== 'Player 2' ? profile.p2.name : '');
     }
+    if ($('opt-autoflip')) $('opt-autoflip').checked = !!YStorage.getSettings().autoFlip;
     renderPvpColorBadges();
   }
 

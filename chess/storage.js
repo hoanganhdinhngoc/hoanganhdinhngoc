@@ -33,7 +33,7 @@
     bgm: true,
     bgmVolume: 0.35,
     liveEval: false,
-    autoFlip: false,
+    autoFlip: true,
     showLegal: true,
     showCoords: true,
     cloudEval: true,
@@ -112,11 +112,19 @@
   /* ---------------- Settings ---------------- */
   function getSettings() {
     const s = readJSON(KEYS.settings, null);
-    return Object.assign({}, DEFAULT_SETTINGS, s && typeof s === 'object' ? s : {});
+    const merged = Object.assign({}, DEFAULT_SETTINGS, s && typeof s === 'object' ? s : {});
+    if (s && typeof s === 'object' && !s.autoFlipExplicit) {
+      merged.autoFlip = true;
+    }
+    return merged;
   }
 
   function saveSettings(partial) {
-    const merged = Object.assign({}, getSettings(), partial || {});
+    const patch = Object.assign({}, partial || {});
+    if (partial && Object.prototype.hasOwnProperty.call(partial, 'autoFlip')) {
+      patch.autoFlipExplicit = true;
+    }
+    const merged = Object.assign({}, getSettings(), patch);
     writeJSON(KEYS.settings, merged);
     return merged;
   }
